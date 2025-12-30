@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首相シミュレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .animate-pulse-fast { animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800 p-4 md:p-8 flex justify-center">
+
+    <div class="max-w-3xl w-full bg-white shadow-xl rounded-xl overflow-hidden border border-slate-200 flex flex-col min-h-[850px]">
+        
+        <!-- Header -->
+        <div class="bg-slate-900 p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <i data-lucide="landmark" class="h-6 w-6"></i>
+                    首相シミュレーター
+                </h1>
+                <p class="text-slate-400 text-sm mt-1" id="turn-display">任期 1 年目 / 全 5 年</p>
+                <p class="text-slate-500 text-xs mt-1">※本シミュレーションのデータおよび結果は教育目的のものであり、現実の状況を反映したものではありません。</p>
+            </div>
+            
+            <!-- Political Capital Display -->
+            <div class="bg-slate-800 rounded-lg p-3 border border-slate-700 w-full md:w-auto">
+                <div class="text-xs text-slate-400 mb-1 flex justify-between">
+                    <span>政治的資本 (HP)</span>
+                    <span id="hp-text" class="font-bold text-white">8 / 8</span>
+                </div>
+                <div class="flex gap-1" id="hp-bar">
+                    <!-- Hearts will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Metrics -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-slate-50 border-b border-slate-200 shrink-0">
+            <!-- Debt -->
+            <div id="card-debt" class="p-4 rounded-lg border bg-white border-slate-100 cursor-pointer transition-all hover:shadow-sm hover:border-blue-200 relative ring-2 ring-offset-1 ring-blue-500 shadow-md" onclick="selectMetric('debt')">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-bold text-slate-500 uppercase">国債残高</span>
+                    <i data-lucide="shield-alert" class="h-4 w-4 text-red-500"></i>
+                </div>
+                <div id="val-debt" class="text-3xl font-bold text-slate-800">1286兆</div>
+                <div id="sub-debt" class="text-sm text-slate-400 mt-1">対GDP比 216.1%</div>
+                <div id="indicator-debt" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rotate-45"></div>
+            </div>
+
+            <!-- GDP -->
+            <div id="card-gdp" class="p-4 rounded-lg border bg-white border-slate-100 cursor-pointer transition-all hover:shadow-sm hover:border-blue-200 relative" onclick="selectMetric('gdp')">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-bold text-slate-500 uppercase">名目 GDP</span>
+                    <i data-lucide="japanese-yen" class="h-4 w-4 text-blue-500"></i>
+                </div>
+                <div id="val-gdp" class="text-3xl font-bold text-slate-800">595兆</div>
+                <div id="sub-gdp" class="text-sm text-slate-400 mt-1">経済規模</div>
+                <div id="indicator-gdp" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rotate-45 hidden"></div>
+            </div>
+
+            <!-- Interest Rate -->
+            <div id="card-interestRate" class="p-4 rounded-lg border bg-white border-slate-100 cursor-pointer transition-all hover:shadow-sm hover:border-blue-200 relative" onclick="selectMetric('interestRate')">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-bold text-slate-500 uppercase">国債金利</span>
+                    <i data-lucide="trending-up" class="h-4 w-4 text-orange-500"></i>
+                </div>
+                <div id="val-interestRate" class="text-3xl font-bold text-slate-800">0.9%</div>
+                <div id="sub-interestRate" class="text-sm text-slate-400 mt-1">利払い負担</div>
+                <div id="indicator-interestRate" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rotate-45 hidden"></div>
+            </div>
+
+            <!-- Approval -->
+            <div id="card-approval" class="p-4 rounded-lg border bg-white border-slate-100 cursor-pointer transition-all hover:shadow-sm hover:border-blue-200 relative" onclick="selectMetric('approval')">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-bold text-slate-500 uppercase">内閣支持率</span>
+                    <i data-lucide="users" class="h-4 w-4 text-green-500"></i>
+                </div>
+                <div id="val-approval" class="text-3xl font-bold text-slate-800">45%</div>
+                <div id="sub-approval" class="text-sm text-slate-400 mt-1">政治的基盤</div>
+                <div id="indicator-approval" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rotate-45 hidden"></div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="bg-white border-b border-slate-200 p-6 shrink-0 h-56">
+            <div class="flex items-center gap-2 mb-4">
+                <i data-lucide="activity" class="h-5 w-5 text-slate-500"></i>
+                <h3 class="text-sm font-bold text-slate-500 uppercase">政権運営データ推移</h3>
+                <span id="chart-label" class="text-xs text-slate-400 ml-auto">国債 (兆円)</span>
+            </div>
+            <div class="h-32 w-full" id="chart-container">
+                <!-- SVG Chart will be injected here -->
+            </div>
+        </div>
+
+        <!-- Game Area (Dynamic Content) -->
+        <div id="game-area" class="p-6 flex-grow flex flex-col justify-center">
+            <!-- Content will be injected by JS -->
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Data Definitions ---
+        const INITIAL_STATE = {
+            turn: 0,
+            debt: 1286,
+            gdp: 595,
+            interestRate: 0.9,
+            approval: 45,
+            hp: 8,
+            history: [],
+            metricsHistory: [{ turn: 0, debt: 1286, gdp: 595, interestRate: 0.9, approval: 45 }],
+            gameOver: false,
+            endingType: null,
+            message: ""
+        };
+
+        const SCENARIOS = [
+            {
+                id: 1,
+                title: "社会保障費の底なし沼",
+                description: "高齢化により医療と年金支出が急増しています。この莫大な支出をどう賄うか決断が必要です。",
+                statContext: "現在の国債残高：1286 兆円",
+                choices: [
+                    {
+                        type: "左派 (増税)",
+                        text: "給付維持、富裕層・企業への大幅増税",
+                        impact: "高齢者の生活は守られましたが、企業が海外流出を示唆し、株価が急落しています。",
+                        tweet: { user: "働くお父さん @salaryman_jp", content: "金持ち優遇はもう終わりだ！でも会社が海外逃げたら俺たちの仕事どうなるの？不安... #富裕層増税 #社会保障" },
+                        effect: (s) => ({ debt: s.debt - 10, approval: s.approval + 5, gdp: s.gdp - 10, history: [...s.history, "1年目：富裕層への増税で社会保障を維持。"] })
+                    },
+                    {
+                        type: "中道 (国債)",
+                        text: "赤字国債を発行し、現状維持",
+                        impact: "問題は先送りされ、ひとまず平穏が保たれています。",
+                        tweet: { user: "経済ニュースbot @eco_bot", content: "また赤字国債発行か。将来のツケが怖いな。子供たちに謝りたい気分。 #国債 #先送り" },
+                        effect: (s) => ({ debt: s.debt + 30, approval: s.approval + 2, history: [...s.history, "1年目：問題先送りを選択、赤字国債発行。"] })
+                    },
+                    {
+                        type: "右派 (削減)",
+                        text: "給付を徹底削減、「自助」を強調",
+                        impact: "財政は劇的に改善しましたが、高齢者が貧困に陥り、社会不安が高まっています。",
+                        tweet: { user: "怒れる年金受給者 @senior_voice", content: "年金カットは死活問題だ！ずっと真面目に働いてきたのに、この仕打ちはなんだ！許せない！ #年金削減 #棄民政策" },
+                        effect: (s) => ({ debt: s.debt - 25, approval: s.approval - 20, gdp: s.gdp + 5, history: [...s.history, "1年目：社会保障費の大ナタ、痛みを伴う改革。"] })
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: "消費税増税の決断",
+                description: "IMFは財政健全化のために消費税増税を強く推奨していますが、家計を直撃することは必至です。",
+                statContext: "個人消費の低迷",
+                choices: [
+                    {
+                        type: "左派 (減税)",
+                        text: "消費税を5%へ減税、家計負担を軽減",
+                        impact: "消費が爆発的に回復しましたが、財政赤字が一気に拡大しました。",
+                        tweet: { user: "主婦の知恵袋 @mama_saver", content: "減税キター！🎉 これで少しはスーパーで買い物しやすくなるかも！総理ありがとう！ #消費税減税 #生活苦" },
+                        effect: (s) => ({ debt: s.debt + 40, gdp: s.gdp + 25, approval: s.approval + 15, interestRate: s.interestRate + 0.1, history: [...s.history, "2年目：大胆な減税で消費を刺激。"] })
+                    },
+                    {
+                        type: "中道 (給付金)",
+                        text: "10%維持、一時給付金を支給",
+                        impact: "根本的な解決にならず、債務は微増、経済効果も限定的です。",
+                        tweet: { user: "冷笑系 @cynical_jp", content: "給付金10万円？焼け石に水だよ。選挙対策のバラマキ乙。 #給付金 #バラマキ" },
+                        effect: (s) => ({ debt: s.debt + 10, gdp: s.gdp + 5, approval: s.approval + 5, history: [...s.history, "2年目：給付金で国民の不満を一時的に緩和。"] })
+                    },
+                    {
+                        type: "右派 (増税)",
+                        text: "15%へ増税、財政規律を堅持",
+                        impact: "財政黒字化目標には近づきましたが、消費が冷え込み、小売店の倒産が相次いでいます。",
+                        tweet: { user: "商店街の悲鳴 @shutter_street", content: "増税ふざけんな！もう店畳むしかないよ。お客さん全然来ない... #消費税増税 #財務省解体" },
+                        effect: (s) => ({ debt: s.debt - 30, gdp: s.gdp - 15, approval: s.approval - 15, history: [...s.history, "2年目：批判を恐れず増税を断行。"] })
+                    }
+                ]
+            },
+            {
+                id: 3,
+                title: "日銀の金利ジレンマ",
+                description: "インフレと円安のダブルパンチです。日銀総裁が次の一手を仰いでいます。",
+                statContext: "現在の金利：0.9% (上昇傾向)",
+                choices: [
+                    {
+                        type: "左派 (緩和)",
+                        text: "金融緩和を継続、政府支出を拡大",
+                        impact: "円相場は170円を突破、物価高騰が止まりませんが、輸出企業の利益は過去最高です。",
+                        tweet: { user: "物価高騰苦しい @inflation_hell", content: "円安が止まらない！ガソリン高すぎ！スーパーの卵も値上がり...生活できないよ😭 #円安 #物価高" },
+                        effect: (s) => ({ interestRate: s.interestRate - 0.2, debt: s.debt + 20, gdp: s.gdp + 10, approval: s.approval - 10, history: [...s.history, "3年目：インフレを無視し緩和を継続。"] })
+                    },
+                    {
+                        type: "中道 (漸進)",
+                        text: "段階的に利上げ、軟着陸を目指す",
+                        impact: "市場の反応は冷静ですが、利払い負担が徐々に重くのしかかっています。",
+                        tweet: { user: "マイホームパパ @loan_worrier", content: "住宅ローンの金利が上がり始めた...変動金利で借りてるからマジで怖い。 #金利引き上げ #住宅ローン" },
+                        effect: (s) => ({ interestRate: s.interestRate + 0.5, debt: s.debt + (s.debt * 0.01), approval: s.approval - 5, history: [...s.history, "3年目：慎重な利上げでバランスを図る。"] })
+                    },
+                    {
+                        type: "右派 (引締)",
+                        text: "急激な利上げ、インフレを徹底退治",
+                        impact: "インフレは沈静化し円高に戻りましたが、国債利払い費が爆発し予算危機が発生。",
+                        tweet: { user: "株トレーダーX @market_crash", content: "金利急騰で株価暴落！サーキットブレーカー発動！日本経済終わったな...📉 #日経平均 #ブラックマンデー" },
+                        effect: (s) => ({ interestRate: s.interestRate + 2.0, debt: s.debt + (s.debt * 0.03), gdp: s.gdp - 10, approval: s.approval - 10, history: [...s.history, "3年目：タカ派的利上げショック療法。"] })
+                    }
+                ]
+            },
+            {
+                id: 4,
+                title: "地政学リスクと防衛費",
+                description: "地域の緊張が高まっています。同盟国から防衛費の大幅増額を求められています。",
+                statContext: "防衛予算の逼迫",
+                choices: [
+                    {
+                        type: "左派 (平和)",
+                        text: "軍拡拒否、予算を民生・外交へ",
+                        impact: "同盟国との関係は緊張しましたが、国内の福祉予算は確保されました。",
+                        tweet: { user: "ピースウォーカー @no_war_jp", content: "平和憲法を守ろう！軍拡反対！外交努力で平和を作るべきだ🕊️ #憲法9条 #平和" },
+                        effect: (s) => ({ debt: s.debt - 5, approval: s.approval + 5, gdp: s.gdp + 5, history: [...s.history, "4年目：平和憲法路線を選択。"] })
+                    },
+                    {
+                        type: "中道 (折衷)",
+                        text: "小幅な増額、増税で賄う",
+                        impact: "誰からも満足されませんが、最低限の国防と財政を維持しました。",
+                        tweet: { user: "政治ウォッチャー @seiji_watch", content: "防衛費のために増税？復興特別所得税の転用とか意味わからん。納得いかないな。 #防衛増税 #岸田政権" },
+                        effect: (s) => ({ gdp: s.gdp - 5, approval: s.approval - 5, history: [...s.history, "4年目：増税による小幅な軍拡。"] })
+                    },
+                    {
+                        type: "右派 (強兵)",
+                        text: "「防衛国債」を発行、軍費倍増",
+                        impact: "軍需産業が活況ですが、国の財政赤字は過去最悪を更新しました。",
+                        tweet: { user: "憂国の士 @patriot_jp", content: "国を守るには金がかかる。ミサイル買わなきゃ国が滅ぶぞ。国債発行は仕方ない選択だ。 #防衛費 #国防" },
+                        effect: (s) => ({ debt: s.debt + 50, gdp: s.gdp + 15, interestRate: s.interestRate + 0.4, approval: s.approval + 5, history: [...s.history, "4年目：防衛国債で軍備増強。"] })
+                    }
+                ]
+            },
+            {
+                id: 5,
+                title: "最後の賭け：人口危機と移民",
+                description: "労働力が枯渇し、地方が消滅の危機に瀕しています。国の人口政策の方向性を決める必要があります。",
+                statContext: "労働力不足：極めて深刻",
+                choices: [
+                    {
+                        type: "左派 (開放)",
+                        text: "移民の全面開放、永住権付与",
+                        impact: "経済に強力な活力が注入されGDPが飛躍しましたが、社会・文化的摩擦が激化しています。",
+                        tweet: { user: "地元住民 @local_voice", content: "最近、コンビニも工場も外国人ばかりだ。街の雰囲気が変わったな...治安大丈夫かな？ #移民政策 #多文化共生" },
+                        effect: (s) => ({ gdp: s.gdp + 40, debt: s.debt - 15, approval: s.approval - 20, history: [...s.history, "5年目：開国、移民国家への転換。"] })
+                    },
+                    {
+                        type: "中道 (制限)",
+                        text: "技能実習生拡大、在留期限あり",
+                        impact: "安価な労働力は確保しましたが、国際的な批判を浴び、労働者の定着率も低いです。",
+                        tweet: { user: "中小企業オヤジ @sme_boss", content: "技能実習生頼みでいいのか？彼らも最近は賃金の高い他の国に行っちゃうよ。根本的な解決になってない。 #人手不足 #外国人労働者" },
+                        effect: (s) => ({ gdp: s.gdp + 10, debt: s.debt - 5, approval: s.approval - 5, history: [...s.history, "5年目：短期的な外国人労働力に依存。"] })
+                    },
+                    {
+                        type: "右派 (封鎖)",
+                        text: "単一民族維持、AI自動化へ全力投資",
+                        impact: "治安は良いですが、人手不足で中小企業の倒産が相次いでいます。",
+                        tweet: { user: "技術立国日本 @tech_japan", content: "移民に頼るな！ロボットとAIで乗り切るぞ！これこそが日本流の生き残り方だ🇯🇵 #自動化 #AI" },
+                        effect: (s) => ({ gdp: s.gdp - 10, debt: s.debt + 20, approval: s.approval + 10, history: [...s.history, "5年目：移民拒否、自動化へ投資。"] })
+                    }
+                ]
+            }
+        ];
+
+        // --- State Management ---
+        let gameState = { ...INITIAL_STATE };
+        let selectedMetric = 'debt'; // debt, gdp, interestRate, approval
+        let currentChoiceImpact = "";
+        let currentAnalysis = []; // Stores the breakdown
+        let currentChoiceTweet = null;
+        let lostHp = 0; // HP lost in current turn
+
+        // --- Core Functions ---
+
+        function init() {
+            lucide.createIcons();
+            renderHp();
+            renderDashboard();
+            renderGameArea();
+            renderChart();
+        }
+
+        function renderHp() {
+            const hpContainer = document.getElementById('hp-bar');
+            const hpText = document.getElementById('hp-text');
+            hpContainer.innerHTML = '';
+            
+            // Render Hearts
+            for (let i = 0; i < 8; i++) {
+                const isFull = i < gameState.hp;
+                const heart = document.createElement('div');
+                heart.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="${isFull ? '#ef4444' : '#334155'}" stroke="${isFull ? '#ef4444' : '#475569'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+                hpContainer.appendChild(heart);
+            }
+            hpText.innerText = `${gameState.hp} / 8`;
+            
+            if (gameState.hp <= 2) {
+                hpText.classList.add('text-red-400', 'animate-pulse');
+                hpText.classList.remove('text-white');
+            } else {
+                hpText.classList.remove('text-red-400', 'animate-pulse');
+                hpText.classList.add('text-white');
+            }
+        }
+
+        function selectMetric(metric) {
+            selectedMetric = metric;
+            
+            // Update UI styles
+            ['debt', 'gdp', 'interestRate', 'approval'].forEach(m => {
+                const el = document.getElementById(`card-${m}`);
+                const indicator = document.getElementById(`indicator-${m}`);
+                
+                if (m === metric) {
+                    el.classList.add('ring-2', 'ring-offset-1', 'ring-blue-500', 'shadow-md');
+                    el.classList.remove('hover:shadow-sm', 'hover:border-blue-200');
+                    indicator.classList.remove('hidden');
+                } else {
+                    el.classList.remove('ring-2', 'ring-offset-1', 'ring-blue-500', 'shadow-md');
+                    el.classList.add('hover:shadow-sm', 'hover:border-blue-200');
+                    indicator.classList.add('hidden');
+                }
+            });
+            
+            renderChart();
+        }
+
+        function renderDashboard() {
+            // Update Turn
+            const turnText = gameState.turn > 5 ? 5 : gameState.turn + 1;
+            document.getElementById('turn-display').innerText = `任期 ${turnText} 年目 / 全 5 年`;
+
+            // Update Metrics
+            const debtRatio = gameState.gdp > 0 ? ((gameState.debt / gameState.gdp) * 100).toFixed(1) : "---";
+            
+            updateCard('debt', `${gameState.debt.toFixed(0)}兆円`, `対GDP比 ${debtRatio}%`, gameState.debt > 1400);
+            updateCard('gdp', `${gameState.gdp.toFixed(0)}兆円`, `経済規模`, gameState.gdp < 550);
+            updateCard('interestRate', `${gameState.interestRate.toFixed(1)}%`, `利払い負担`, gameState.interestRate > 2.0);
+            updateCard('approval', `${gameState.approval.toFixed(0)}%`, `政治的基盤`, gameState.approval < 30);
+        }
+
+        function updateCard(id, val, sub, isBad) {
+            const valEl = document.getElementById(`val-${id}`);
+            valEl.innerText = val;
+            valEl.className = `text-3xl font-bold ${isBad ? 'text-red-700' : 'text-slate-800'}`;
+            document.getElementById(`sub-${id}`).innerText = sub;
+            
+            const cardEl = document.getElementById(`card-${id}`);
+            if (isBad) {
+                cardEl.classList.add('bg-red-50', 'border-red-200');
+                cardEl.classList.remove('bg-white', 'border-slate-100');
+            } else {
+                cardEl.classList.add('bg-white', 'border-slate-100');
+                cardEl.classList.remove('bg-red-50', 'border-red-200');
+            }
+        }
+
+        function renderGameArea() {
+            const area = document.getElementById('game-area');
+            area.innerHTML = '';
+
+            // 0. Start Screen
+            if (gameState.turn === 0 && !gameState.gameOver) {
+                area.innerHTML = `
+                    <div class="text-center space-y-6 max-w-lg mx-auto">
+                        <div class="bg-red-50 border-l-4 border-red-500 p-4 text-left">
+                            <p class="font-bold text-red-800">財務省報告：</p>
+                            <p class="text-red-700 text-sm mt-1">総理、我が国の債務規模は危険水域に達しています。改革を行わなければ、数年以内に利払い費が予算を食い尽くすでしょう。しかし、どの改革も有権者の反発を招くか、経済を殺す可能性があります。</p>
+                            <p class="text-slate-600 text-sm mt-3 font-bold">ゲームルール：あなたは8ポイントの政治的資本を持っています。いずれかの指標（国債、GDP、金利、支持率）が悪化するたびに1ポイント失います。ゼロになると内閣総辞職となります。</p>
+                        </div>
+                        <button onclick="startGame()" class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-lg font-bold transition-all w-full md:w-auto shadow-lg">
+                            就任宣誓・政策決定を開始
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Game Over Screen
+            if (gameState.gameOver) {
+                const endingColors = {
+                    'bankruptcy': 'text-red-600',
+                    'growth': 'text-green-600',
+                    'neutral': 'text-slate-700',
+                    'inflation': 'text-orange-600',
+                    'early_election': 'text-purple-600'
+                };
+                const finalRatio = ((gameState.debt / gameState.gdp) * 100).toFixed(1);
+
+                area.innerHTML = `
+                    <div class="space-y-6 text-center animate-fade-in max-w-lg mx-auto">
+                        <h2 class="text-3xl font-black ${endingColors[gameState.endingType]}">
+                            ${getEndingTitle(gameState.endingType)}
+                        </h2>
+                        
+                        <div class="bg-slate-50 p-6 rounded-lg text-left space-y-4 border border-slate-200">
+                            <p class="text-lg font-medium leading-relaxed">${gameState.message}</p>
+                            <div class="border-t border-slate-200 pt-4">
+                                <h4 class="font-bold text-sm text-slate-400 mb-2">政権運営の軌跡：</h4>
+                                <ul class="text-sm space-y-1 text-slate-600">
+                                    ${gameState.history.map(h => `<li>• ${h}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div class="bg-slate-100 p-2 rounded font-mono">最終債務比率：${finalRatio}%</div>
+                            <div class="bg-slate-100 p-2 rounded font-mono">最終金利：${gameState.interestRate.toFixed(1)}%</div>
+                        </div>
+
+                        <button onclick="restartGame()" class="bg-slate-900 hover:bg-slate-800 text-white px-8 py-3 rounded-lg font-bold transition-all shadow-lg">
+                            もう一度挑戦する
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            // Scenario Screen
+            if (currentChoiceImpact) {
+                // Showing Result with Detailed Breakdown
+                const breakdownHtml = currentAnalysis.map(item => `
+                    <div class="flex justify-between items-center text-sm border-b border-slate-100 py-1 last:border-0">
+                        <span class="text-slate-500">${item.label}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="${item.change > 0 ? (item.isBad ? 'text-red-600' : 'text-green-600') : item.change < 0 ? (item.isBad ? 'text-red-600' : 'text-green-600') : 'text-slate-400'} font-mono">
+                                ${item.change > 0 ? '+' : ''}${item.change}${item.unit}
+                            </span>
+                            ${item.isBad ? '<span class="text-xs bg-red-100 text-red-700 px-1 rounded">-1 pt</span>' : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                area.innerHTML = `
+                    <div class="space-y-6 text-center max-w-lg mx-auto">
+                        <div class="inline-flex items-center justify-center p-3 bg-green-100 text-green-700 rounded-full mb-2 animate-bounce">
+                            <i data-lucide="arrow-right" class="h-6 w-6"></i>
+                        </div>
+                        
+                        <!-- HP Loss Notification -->
+                        ${lostHp > 0 ? 
+                            `<div class="bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded-lg font-bold animate-pulse">
+                                ⚠️ 警告：指標が悪化し、政治的資本を ${lostHp} ポイント失いました！
+                             </div>` : 
+                            `<div class="bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-lg font-bold">
+                                ✅ 政治情勢は安定しています
+                             </div>`
+                        }
+
+                        <div class="text-left bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+                            <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                                <i data-lucide="bar-chart-2" class="h-4 w-4 text-blue-500"></i> 詳細影響分析
+                            </h4>
+                            <div class="space-y-1">
+                                ${breakdownHtml}
+                            </div>
+                        </div>
+
+                        <!-- Simulated Tweet -->
+                        <div class="text-left mt-2 bg-slate-50 border border-slate-200 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500">
+                                    ${currentChoiceTweet.user.charAt(0)}
+                                </div>
+                                <div class="text-sm">
+                                    <span class="font-bold text-slate-900">${currentChoiceTweet.user.split('@')[0]}</span>
+                                    <span class="text-slate-400 text-xs">${currentChoiceTweet.user.includes('@') ? '@' + currentChoiceTweet.user.split('@')[1] : ''}</span>
+                                </div>
+                                <i data-lucide="twitter" class="h-3 w-3 text-blue-400 ml-auto"></i>
+                            </div>
+                            <p class="text-sm text-slate-700 leading-snug">
+                                ${currentChoiceTweet.content}
+                            </p>
+                        </div>
+
+                        <button onclick="nextTurn()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold w-full shadow-md transition-colors">
+                            翌年度へ進む
+                        </button>
+                    </div>
+                `;
+                lucide.createIcons();
+            } else {
+                // Showing Choices (No Changes Here)
+                const scenario = SCENARIOS[gameState.turn - 1];
+                area.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex items-center gap-2 text-red-600 font-bold uppercase tracking-wider text-sm">
+                            <i data-lucide="alert-triangle" class="h-4 w-4"></i> 危機的決断 #${gameState.turn}
+                        </div>
+                        
+                        <h2 class="text-2xl font-bold text-slate-900">
+                            ${scenario.title}
+                        </h2>
+                        
+                        <p class="text-slate-600 leading-relaxed">
+                            ${scenario.description}
+                        </p>
+
+                        <div class="bg-blue-50 text-blue-800 px-4 py-2 rounded text-sm font-medium inline-block mb-2">
+                            重要データ：${scenario.statContext}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                            ${scenario.choices.map((choice, idx) => {
+                                const styles = idx === 0 ? 'bg-red-50 border-red-200 hover:border-red-500 hover:bg-red-100' : 
+                                               idx === 1 ? 'bg-slate-50 border-slate-200 hover:border-slate-500 hover:bg-slate-100' : 
+                                               'bg-blue-50 border-blue-200 hover:border-blue-500 hover:bg-blue-100';
+                                const badge = idx === 0 ? 'bg-red-200 text-red-800' : 
+                                              idx === 1 ? 'bg-slate-200 text-slate-800' : 
+                                              'bg-blue-200 text-blue-800';
+                                
+                                return `
+                                <button onclick="handleChoice(${idx})" class="group relative flex flex-col items-start p-4 border-2 rounded-xl transition-all hover:shadow-lg text-left h-full ${styles}">
+                                    <div class="text-xs font-black uppercase mb-1 px-2 py-0.5 rounded ${badge}">
+                                        ${choice.type}
+                                    </div>
+                                    <span class="font-bold text-base mb-2 leading-tight text-slate-800">${choice.text}</span>
+                                    <span class="mt-auto text-xs text-slate-500 pt-2 border-t border-slate-200/50 w-full">
+                                       実行する
+                                    </span>
+                                </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        // --- Game Logic ---
+
+        function startGame() {
+            gameState.turn = 1;
+            renderHp();
+            renderDashboard();
+            renderGameArea();
+        }
+
+        function handleChoice(choiceIdx) {
+            const scenario = SCENARIOS[gameState.turn - 1];
+            const choice = scenario.choices[choiceIdx];
+            
+            // Store previous state for comparison
+            const prev = {
+                debt: gameState.debt,
+                gdp: gameState.gdp,
+                interestRate: gameState.interestRate,
+                approval: gameState.approval
+            };
+
+            // Apply effects
+            const changes = choice.effect(gameState);
+            
+            // Interest Compound Logic
+            const interestBurden = (gameState.debt * gameState.interestRate * 0.01) * 2; 
+            const newDebt = (changes.debt || gameState.debt) + interestBurden;
+
+            // Update State
+            gameState = {
+                ...gameState,
+                ...changes,
+                debt: newDebt
+            };
+
+            // Calculate Deltas and HP Loss
+            const deltas = {
+                debt: gameState.debt - prev.debt,
+                gdp: gameState.gdp - prev.gdp,
+                interestRate: gameState.interestRate - prev.interestRate,
+                approval: gameState.approval - prev.approval
+            };
+
+            // Determine if metrics deteriorated (Bad is >0 for debt/rate, <0 for gdp/approval)
+            // Rounding to avoid floating point floating precision issues causing false flags on 0 change
+            const isBad = {
+                debt: deltas.debt > 0.1,
+                gdp: deltas.gdp < -0.1,
+                interestRate: deltas.interestRate > 0.01,
+                approval: deltas.approval < -0.1
+            };
+
+            // Calculate damage
+            let damage = 0;
+            if (isBad.debt) damage++;
+            if (isBad.gdp) damage++;
+            if (isBad.interestRate) damage++;
+            if (isBad.approval) damage++;
+
+            gameState.hp -= damage;
+            lostHp = damage;
+
+            // Build Analysis Data
+            currentAnalysis = [
+                { label: '国債残高', change: parseFloat(deltas.debt.toFixed(1)), unit: '兆円', isBad: isBad.debt },
+                { label: '名目 GDP', change: parseFloat(deltas.gdp.toFixed(1)), unit: '兆円', isBad: isBad.gdp },
+                { label: '国債金利', change: parseFloat(deltas.interestRate.toFixed(2)), unit: '%', isBad: isBad.interestRate },
+                { label: '内閣支持率', change: parseFloat(deltas.approval.toFixed(1)), unit: '%', isBad: isBad.approval }
+            ];
+
+            // Record History
+            const nextTurn = gameState.turn + 1;
+            gameState.metricsHistory.push({
+                turn: nextTurn,
+                debt: gameState.debt,
+                gdp: gameState.gdp,
+                interestRate: gameState.interestRate,
+                approval: gameState.approval
+            });
+
+            currentChoiceImpact = choice.impact;
+            currentChoiceTweet = choice.tweet;
+
+            // Check for Early Game Over
+            if (gameState.hp <= 0) {
+                gameState.gameOver = true;
+                gameState.endingType = 'early_election';
+                gameState.message = "【内閣総辞職】支持率の低迷と経済指標の悪化により、あなたの政治的資本は尽きました。与党内から退陣を求める声が上がり、あなたは解散総選挙に追い込まれました。";
+            }
+
+            renderHp();
+            renderDashboard();
+            renderGameArea();
+            renderChart();
+        }
+
+        function nextTurn() {
+            if (gameState.gameOver) {
+                renderGameArea(); // Refresh to show Game Over screen
+                return;
+            }
+
+            gameState.turn += 1;
+            currentChoiceImpact = "";
+            currentChoiceTweet = null;
+            
+            if (gameState.turn > 5) {
+                determineEnding();
+            }
+            
+            renderDashboard();
+            renderGameArea();
+        }
+
+        function determineEnding() {
+            const finalRatio = (gameState.debt / gameState.gdp) * 100;
+            gameState.gameOver = true;
+
+            // Priority: Bankruptcy -> Capital Depleted (handled in handleChoice) -> Growth -> Neutral -> Inflation
+            if (gameState.debt > 1600 || gameState.interestRate > 3.5) {
+                gameState.endingType = 'bankruptcy';
+                gameState.message = "【国家破産】利払い費が税収を超え、日本国債はデフォルトしました。円は紙くずとなり、IMFが財政を管理下に置きました。あなたは歴史的な汚名を残すことになりました。";
+            } else if (finalRatio < 240 && gameState.gdp > 600) {
+                gameState.endingType = 'growth';
+                gameState.message = "【奇跡の復興】痛みを伴う改革と成長戦略により、あなたは債務比率の制御に成功しました。支持率は高くありませんが、あなたは日本の未来を救いました。";
+            } else if (gameState.approval < 15) {
+                gameState.endingType = 'neutral';
+                gameState.message = "【内閣総辞職】財政は維持しましたが、あなたの政策は国民の怒りを買いました。任期満了を待たずに退陣を迫られ、問題は次期政権に持ち越されました。";
+            } else {
+                gameState.endingType = 'inflation';
+                gameState.message = "【茹でガエル】あなたの指導の下、日本は現状維持を続けました。債務は積み上がり、緩やかな衰退が続いています。これは静かなる黄昏です。";
+            }
+        }
+
+        function getEndingTitle(type) {
+            switch(type) {
+                case 'bankruptcy': return 'GAME OVER: 国家破産';
+                case 'growth': return 'VICTORY: 財政再建成功';
+                case 'neutral': return '結局：内閣総辞職';
+                case 'early_election': return 'GAME OVER: 信頼失墜';
+                default: return '結局：未来への霧';
+            }
+        }
+
+        function restartGame() {
+            gameState = { ...INITIAL_STATE, metricsHistory: [{ turn: 0, debt: 1286, gdp: 595, interestRate: 0.9, approval: 45 }] };
+            currentChoiceImpact = "";
+            currentChoiceTweet = null;
+            startGame();
+        }
+
+        // --- Chart Logic (SVG) ---
+        function renderChart() {
+            const container = document.getElementById('chart-container');
+            const data = gameState.metricsHistory;
+            const dataKey = selectedMetric;
+            
+            // Config
+            const labels = {
+                'debt': { color: '#ef4444', name: '国債' },
+                'gdp': { color: '#3b82f6', name: 'GDP' },
+                'interestRate': { color: '#f97316', name: '金利' },
+                'approval': { color: '#22c55e', name: '支持率' }
+            };
+            const config = labels[dataKey];
+            
+            // Update Label text
+            const firstVal = data[0][dataKey];
+            const lastVal = data[data.length-1][dataKey];
+            document.getElementById('chart-label').innerText = `${config.name}: ${firstVal.toFixed(1)} → ${lastVal.toFixed(1)}`;
+
+            // Calculate Scales
+            const values = data.map(d => d[dataKey]);
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const range = max - min || 1; 
+            
+            const width = 100;
+            const height = 50;
+            const padding = 5;
+
+            // Generate Points
+            const points = data.map((d, i) => {
+                const x = (i / 5) * (width - padding * 2) + padding; 
+                const y = height - padding - ((d[dataKey] - min) / range) * (height - padding * 2);
+                return `${x},${y}`;
+            }).join(' ');
+
+            // Generate Dots
+            const dots = data.map((d, i) => {
+                const x = (i / 5) * (width - padding * 2) + padding;
+                const y = height - padding - ((d[dataKey] - min) / range) * (height - padding * 2);
+                return `<circle cx="${x}" cy="${y}" r="1.5" fill="white" stroke="${config.color}" stroke-width="1" />`;
+            }).join('');
+
+            // SVG Template
+            const svg = `
+                <svg viewBox="0 0 ${width} ${height}" class="w-full h-full overflow-visible" preserveAspectRatio="none">
+                    <line x1="${padding}" y1="${padding}" x2="${width-padding}" y2="${padding}" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2" />
+                    <line x1="${padding}" y1="${height-padding}" x2="${width-padding}" y2="${height-padding}" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="2" />
+                    
+                    <polyline
+                        fill="none"
+                        stroke="${config.color}"
+                        stroke-width="2"
+                        points="${points}"
+                        vector-effect="non-scaling-stroke" 
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                    ${dots}
+                </svg>
+                <div class="flex justify-between text-[10px] text-slate-400 mt-1 px-1 font-mono">
+                    <span>開始</span>
+                    <span>1年</span>
+                    <span>2年</span>
+                    <span>3年</span>
+                    <span>4年</span>
+                    <span>終了</span>
+                </div>
+            `;
+            
+            container.innerHTML = svg;
+        }
+
+        // Initialize
+        init();
+
+    </script>
+</body>
+</html>
