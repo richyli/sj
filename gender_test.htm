@@ -1,493 +1,583 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, CheckCircle, XCircle, AlertTriangle, RefreshCcw, BookOpen, Award, ArrowRight, Star, TrendingUp } from 'lucide-react';
-
-const GenderDetectiveGame = () => {
-  const [gameState, setGameState] = useState('start'); // start, playing, explanation, result
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [streak, setStreak] = useState(0);
-  const [userAnswer, setUserAnswer] = useState(null); // 'safe' or 'warning'
-  const [showConfetti, setShowConfetti] = useState(false);
-  
-  // 用於滾動到頂部
-  const topRef = useRef(null);
-
-  // 20題題庫：由淺入深
-  const questions = [
-    // --- Level 1: 新手級 (明顯的刻板印象) ---
-    {
-      id: 1,
-      level: 1,
-      difficulty: "新手級",
-      category: "玩具廣告",
-      text: "這款變形機器人功能強大，是送給兒子的最棒禮物！",
-      isAppropriate: false,
-      reason: "玩具性別化",
-      explanation: "將「機器人」與「兒子」強烈連結，暗示只有男生能玩機器人。玩具不應區分性別，女生也可以喜歡機械。",
-      correction: "修正建議：「這款變形機器人功能強大，是送給孩子的棒禮物！」"
-    },
-    {
-      id: 2,
-      level: 1,
-      difficulty: "新手級",
-      category: "學校考卷",
-      text: "題目：若某個家庭的媽媽很愛碎碎念，請問這種嘮叨的基因最容易遺傳給誰？",
-      isAppropriate: false,
-      reason: "負面性別連結",
-      explanation: "這題將「嘮叨」與「媽媽」連結，強化了女性愛碎念的負面刻板印象，且缺乏科學根據。",
-      correction: "修正建議：使用中性特徵如「捲舌」或「單眼皮」來描述遺傳。"
-    },
-    {
-      id: 3,
-      level: 1,
-      difficulty: "新手級",
-      category: "讚美？",
-      text: "妳雖然是女生，但是數學考得真好！",
-      isAppropriate: false,
-      reason: "能力貶低",
-      explanation: "這句話隱含了「女生通常數學不好」的偏見。「雖然...但是...」的句型反而強化了性別對立。",
-      correction: "修正建議：「妳這次數學考得真好！」（直接稱讚能力即可）"
-    },
-    {
-      id: 4,
-      level: 1,
-      difficulty: "新手級",
-      category: "情緒教育",
-      text: "跌倒了不准哭！你是男生，要像個男子漢一樣堅強。",
-      isAppropriate: false,
-      reason: "有毒的男子氣概",
-      explanation: "強制男性壓抑情緒，否定了男生表達脆弱的權利，這對心理健康有害。",
-      correction: "修正建議：「跌倒了很痛吧？想哭可以哭出來沒關係。」"
-    },
-    {
-      id: 5,
-      level: 1,
-      difficulty: "新手級",
-      category: "班級幹部",
-      text: "班長需要有威嚴的人來當，我們推舉大明（男生）比較適合。",
-      isAppropriate: false,
-      reason: "領導力偏見",
-      explanation: "預設男生才會有「威嚴」或領導力，而忽視了女生的領導潛能。",
-      correction: "修正建議：「我們推舉大明，因為他負責又有統籌能力。」（針對特質而非性別）"
-    },
-    {
-      id: 6,
-      level: 1,
-      difficulty: "新手級",
-      category: "生活對話",
-      text: "小美最近剪了短頭髮，看起來好俐落、好帥氣。",
-      isAppropriate: true,
-      reason: "中性描述",
-      explanation: "稱讚女生的外型俐落帥氣，是打破「女生必須長髮溫柔」框架的正向表達。",
-      correction: "此句敘述恰當。"
-    },
-
-    // --- Level 2: 進階級 (常見的生活/職場偏見) ---
-    {
-      id: 7,
-      level: 2,
-      difficulty: "進階級",
-      category: "家庭分工",
-      text: "爸爸真是新好男人，下班後還會「幫忙」媽媽做家事。",
-      isAppropriate: false,
-      reason: "主從角色固化",
-      explanation: "「幫忙」暗示家事本質是媽媽的責任。家務應是家庭成員共同分擔的義務。",
-      correction: "修正建議：「爸爸和媽媽下班後會一起分擔家事。」"
-    },
-    {
-      id: 8,
-      level: 2,
-      difficulty: "進階級",
-      category: "醫療職場",
-      text: "張醫師雖然是女醫師，但她的開刀技術非常精湛，一點都不輸給男生。",
-      isAppropriate: false,
-      reason: "預設能力偏見",
-      explanation: "特別強調「女」醫師並與男生比較，隱含了女性專業能力較弱的預設前提。",
-      correction: "修正建議：「張醫師的開刀技術非常精湛。」"
-    },
-    {
-      id: 9,
-      level: 2,
-      difficulty: "進階級",
-      category: "校園勞動",
-      text: "搬書這種粗重工作給男同學做，女同學負責擦窗戶就好。",
-      isAppropriate: false,
-      reason: "本質主義",
-      explanation: "直接依性別分配工作，限制了學生的發展機會。有些女生力氣也很大，有些男生可能較細心。",
-      correction: "修正建議：「力氣大的同學幫忙搬書，細心的同學負責擦窗戶。」"
-    },
-    {
-      id: 10,
-      level: 2,
-      difficulty: "進階級",
-      category: "職場稱呼",
-      text: "我們部門來了一位新護理師，是很細心的男生喔！",
-      isAppropriate: true,
-      reason: "中性職稱",
-      explanation: "使用了正確的職稱「護理師」（而非男護士），並稱讚其特質，這是恰當的表達。",
-      correction: "此句敘述恰當。"
-    },
-    {
-      id: 11,
-      level: 2,
-      difficulty: "進階級",
-      category: "交通偏見",
-      text: "前面那台車開得扭扭捏捏，一定是女司機開的。",
-      isAppropriate: false,
-      reason: "駕駛刻板印象",
-      explanation: "這是常見的「馬路三寶」偏見，將駕駛技術與性別掛鉤，忽視了個人技術差異。",
-      correction: "修正建議：「前面那台車開得不太穩，我們要小心一點。」"
-    },
-    {
-      id: 12,
-      level: 2,
-      difficulty: "進階級",
-      category: "物理題目",
-      text: "小明施力 50N 推動箱子，計算摩擦力與加速度。",
-      isAppropriate: true,
-      reason: "中性對照",
-      explanation: "標準的學術題目，使用常見代名詞且未涉及性別評價。",
-      correction: "此題敘述恰當。"
-    },
-    {
-      id: 13,
-      level: 2,
-      difficulty: "進階級",
-      category: "興趣休閒",
-      text: "小強（男生）最近迷上了編織，做了一條圍巾送給朋友。",
-      isAppropriate: true,
-      reason: "打破框架",
-      explanation: "男生也可以有文靜、手作的興趣。這句描述很自然，沒有使用嘲諷語氣，值得鼓勵。",
-      correction: "此句敘述恰當。"
-    },
-
-    // --- Level 3: 專家級 (隱晦的預設、職場微歧視) ---
-    {
-      id: 14,
-      level: 3,
-      difficulty: "專家級",
-      category: "親師溝通",
-      text: "老師對全班說：「這張校外教學通知單，請帶回去給媽媽簽名。」",
-      isAppropriate: false,
-      reason: "預設主要照顧者",
-      explanation: "這預設了「媽媽」是負責管小孩瑣事的人。單親、隔代教養或爸爸負責的家庭會感到被排除。",
-      correction: "修正建議：「請帶回去給家長（或爸媽）簽名。」"
-    },
-    {
-      id: 15,
-      level: 3,
-      difficulty: "專家級",
-      category: "職場分工",
-      text: "會議開始了，小美妳是我們部門唯一的女生，幫大家倒個茶吧！",
-      isAppropriate: false,
-      reason: "職場家務勞動",
-      explanation: "將「服務性質」的雜事自動指派給女性員工，而非依照職級或輪值，這是職場常見的微歧視。",
-      correction: "修正建議：輪流負責，或由會議主辦人處理，不應針對特定性別。"
-    },
-    {
-      id: 16,
-      level: 3,
-      difficulty: "專家級",
-      category: "人事考量",
-      text: "考量到她剛結婚可能快生小孩了，這個高壓的跨國專案先不要派給她。",
-      isAppropriate: false,
-      reason: "保護性歧視",
-      explanation: "這是一種「善意的」歧視（Benevolent Sexism）。主管擅自替女性決定她無法兼顧家庭與工作，剝奪了她的升遷機會。",
-      correction: "修正建議：直接詢問本人的意願與職涯規劃，而非擅自預設。"
-    },
-    {
-      id: 17,
-      level: 3,
-      difficulty: "專家級",
-      category: "職場評價",
-      text: "王經理今天穿得很漂亮，真不愧是我們業務部的門面（花瓶）。",
-      isAppropriate: false,
-      reason: "物化女性",
-      explanation: "在專業場合過度聚焦女性外表而非能力，並使用「花瓶」等詞，暗示其功能僅供觀賞。",
-      correction: "修正建議：「王經理今天提案的表現很專業，不愧是我們的王牌。」"
-    },
-    {
-      id: 18,
-      level: 3,
-      difficulty: "專家級",
-      category: "情緒歸因",
-      text: "她今天火氣這麼大，對同事不耐煩，是不是那個（生理期）來了？",
-      isAppropriate: false,
-      reason: "生理歸因謬誤",
-      explanation: "將女性的負面情緒直接歸咎於荷爾蒙或生理期，這是否定女性情緒的正當性，也是一種職場騷擾。",
-      correction: "修正建議：「她今天看起來心情不太好，是不是工作上遇到什麼困難？」"
-    },
-    {
-      id: 19,
-      level: 3,
-      difficulty: "專家級",
-      category: "成功歸因",
-      text: "她這麼年輕就當上總監，長得又漂亮，背後一定有「乾爹」或靠關係。",
-      isAppropriate: false,
-      reason: "抹煞努力",
-      explanation: "當女性獲得高成就時，謠言常將其歸因於性資源交換或特殊關係，而非個人能力。",
-      correction: "修正建議：肯定其工作績效與領導能力。"
-    },
-    {
-      id: 20,
-      level: 3,
-      difficulty: "專家級",
-      category: "尾牙邀請",
-      text: "今年的公司尾牙，歡迎各位同仁攜帶您的「伴侶」或家屬參加。",
-      isAppropriate: true,
-      reason: "包容性語言",
-      explanation: "使用「伴侶」而非「先生/太太」，能包容未婚、同性伴侶等多元家庭型態，是非常友善的說法。",
-      correction: "此句敘述恰當。"
-    }
-  ];
-
-  useEffect(() => {
-    // 每次換題或切換狀態時回到頂部，避免在手機上看不到題目
-    if (topRef.current) {
-      topRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [currentQuestionIndex, gameState]);
-
-  const handleStart = () => {
-    setGameState('playing');
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setStreak(0);
-    setShowConfetti(false);
-  };
-
-  const handleAnswer = (choice) => {
-    const currentQ = questions[currentQuestionIndex];
-    const isCorrect = (choice === 'safe' && currentQ.isAppropriate) || 
-                      (choice === 'warning' && !currentQ.isAppropriate);
-
-    setUserAnswer(choice);
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>性別用語特搜隊</title>
     
-    if (isCorrect) {
-      // 難度越高，分數越高
-      const basePoints = currentQ.level * 100;
-      setScore(score + basePoints + (streak * 10));
-      setStreak(streak + 1);
-      setShowConfetti(true);
-    } else {
-      setStreak(0);
-      setShowConfetti(false);
-    }
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 React 和 ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
+    <!-- 引入 Babel 用於解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    setGameState('explanation');
-  };
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div id="root"></div>
 
-  const handleNext = () => {
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setGameState('playing');
-      setUserAnswer(null);
-      setShowConfetti(false);
-    } else {
-      setGameState('result');
-    }
-  };
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-  // Helper to get difficulty color
-  const getDifficultyColor = (level) => {
-    switch(level) {
-      case 1: return "bg-green-100 text-green-700 border-green-200";
-      case 2: return "bg-yellow-100 text-yellow-700 border-yellow-200";
-      case 3: return "bg-red-100 text-red-700 border-red-200";
-      default: return "bg-slate-100 text-slate-700";
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans text-slate-800" ref={topRef}>
-      
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 relative">
-        
-        {/* Header Decoration */}
-        <div className="h-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 w-full"></div>
-
-        {/* --- START SCREEN --- */}
-        {gameState === 'start' && (
-          <div className="p-8 text-center flex flex-col items-center">
-            <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mb-6 text-indigo-600 shadow-sm">
-              <Search size={48} />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-800 mb-3">性別用語特搜隊</h1>
-            <div className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-semibold mb-6">
-              20 題挑戰版
-            </div>
-            <p className="text-slate-500 mb-8 leading-relaxed">
-              從考卷題目到職場潛規則，你能識破那些隱藏的性別偏見嗎？<br/>
-              <span className="text-xs mt-2 block text-slate-400">難度將會逐漸提升喔！</span>
-            </p>
-            
-            <button 
-              onClick={handleStart}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-1 flex items-center justify-center gap-2"
+        // --- Icons Components (取代 lucide-react 依賴) ---
+        const IconBase = ({ size = 24, className = "", children, ...props }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+                {...props}
             >
-              開始檢測 <ArrowRight size={20} />
-            </button>
-          </div>
-        )}
+                {children}
+            </svg>
+        );
 
-        {/* --- PLAYING SCREEN --- */}
-        {gameState === 'playing' && (
-          <div className="p-6">
-            {/* Top Stats */}
-            <div className="flex justify-between items-center mb-6">
-               <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                 Question {currentQuestionIndex + 1} / {questions.length}
-               </div>
-               <div className="flex items-center gap-2">
-                 <div className="px-3 py-1 bg-slate-100 rounded-full text-indigo-600 font-bold text-sm">
-                   {score} 分
-                 </div>
-                 {streak > 1 && (
-                    <div className="px-2 py-1 bg-orange-100 text-orange-600 text-xs font-bold rounded-full animate-pulse">
-                      {streak} 連擊
-                    </div>
-                 )}
-               </div>
-            </div>
+        const Search = (props) => (
+            <IconBase {...props}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></IconBase>
+        );
+        const CheckCircle = (props) => (
+            <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>
+        );
+        const XCircle = (props) => (
+            <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></IconBase>
+        );
+        const AlertTriangle = (props) => (
+            <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>
+        );
+        const RefreshCcw = (props) => (
+            <IconBase {...props}><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></IconBase>
+        );
+        const BookOpen = (props) => (
+            <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>
+        );
+        const Award = (props) => (
+            <IconBase {...props}><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></IconBase>
+        );
+        const ArrowRight = (props) => (
+            <IconBase {...props}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></IconBase>
+        );
+        const Star = (props) => (
+            <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>
+        );
+        const TrendingUp = (props) => (
+            <IconBase {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></IconBase>
+        );
 
-            {/* Difficulty Badge */}
-            <div className="flex justify-center mb-6">
-              <span className={`px-4 py-1.5 rounded-full text-sm font-bold border flex items-center gap-2 ${getDifficultyColor(questions[currentQuestionIndex].level)}`}>
-                <TrendingUp size={16} />
-                {questions[currentQuestionIndex].difficulty}
-              </span>
-            </div>
-
-            {/* Question Card */}
-            <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100 shadow-inner min-h-[200px] flex flex-col items-center justify-center text-center">
-              <div className="text-xs font-bold text-slate-400 uppercase mb-3 tracking-widest">
-                情境: {questions[currentQuestionIndex].category}
-              </div>
-              <h2 className="text-xl md:text-2xl font-medium text-slate-800 leading-relaxed">
-                "{questions[currentQuestionIndex].text}"
-              </h2>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={() => handleAnswer('safe')}
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-slate-100 hover:border-green-500 hover:bg-green-50 active:scale-95 transition-all group bg-white shadow-sm"
-              >
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                  <CheckCircle size={28} className="text-green-600" />
-                </div>
-                <span className="font-bold text-slate-600 group-hover:text-green-800">我覺得很 OK</span>
-              </button>
-
-              <button 
-                onClick={() => handleAnswer('warning')}
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-slate-100 hover:border-red-500 hover:bg-red-50 active:scale-95 transition-all group bg-white shadow-sm"
-              >
-                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
-                  <AlertTriangle size={28} className="text-red-600" />
-                </div>
-                <span className="font-bold text-slate-600 group-hover:text-red-800">有點不妥...</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* --- EXPLANATION SCREEN --- */}
-        {gameState === 'explanation' && (
-          <div className="p-6 bg-slate-50 min-h-[500px] flex flex-col">
+        // --- Main Game Component ---
+        const GenderDetectiveGame = () => {
+            const [gameState, setGameState] = useState('start'); // start, playing, explanation, result
+            const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [streak, setStreak] = useState(0);
+            const [userAnswer, setUserAnswer] = useState(null); // 'safe' or 'warning'
+            const [showConfetti, setShowConfetti] = useState(false);
             
-            {/* Result Header */}
-            <div className={`p-4 rounded-xl mb-5 flex items-center gap-3 shadow-sm border ${
-              (userAnswer === 'safe' && questions[currentQuestionIndex].isAppropriate) || (userAnswer === 'warning' && !questions[currentQuestionIndex].isAppropriate)
-                ? 'bg-green-100 text-green-800 border-green-200'
-                : 'bg-red-100 text-red-800 border-red-200'
-            }`}>
-               {((userAnswer === 'safe' && questions[currentQuestionIndex].isAppropriate) || (userAnswer === 'warning' && !questions[currentQuestionIndex].isAppropriate)) 
-                ? <CheckCircle className="shrink-0 w-6 h-6" /> 
-                : <XCircle className="shrink-0 w-6 h-6" />
-               }
-               <div>
-                 <p className="font-bold text-lg leading-tight">
-                   {((userAnswer === 'safe' && questions[currentQuestionIndex].isAppropriate) || (userAnswer === 'warning' && !questions[currentQuestionIndex].isAppropriate))
-                    ? "判斷正確！" 
-                    : "哎呀，沒發現問題！"}
-                 </p>
-                 <p className="text-xs opacity-80 mt-1">
-                    目前分數: {score}
-                 </p>
-               </div>
-            </div>
+            const topRef = useRef(null);
 
-            {/* Detective Note */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex-grow">
-              <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
-                <BookOpen size={20} className="text-indigo-500"/> 
-                <h3 className="font-bold text-slate-800 text-lg">
-                  偵探筆記：{questions[currentQuestionIndex].reason}
-                </h3>
-              </div>
-              
-              <div className="space-y-4">
-                <p className="text-slate-600 leading-relaxed">
-                  {questions[currentQuestionIndex].explanation}
-                </p>
+            // 20題題庫：由淺入深
+            const questions = [
+                // --- Level 1: 新手級 (明顯的刻板印象) ---
+                {
+                id: 1,
+                level: 1,
+                difficulty: "新手級",
+                category: "玩具廣告",
+                text: "這款變形機器人功能強大，是送給兒子的最棒禮物！",
+                isAppropriate: false,
+                reason: "玩具性別化",
+                explanation: "將「機器人」與「兒子」強烈連結，暗示只有男生能玩機器人。玩具不應區分性別，女生也可以喜歡機械。",
+                correction: "修正建議：「這款變形機器人功能強大，是送給孩子的棒禮物！」"
+                },
+                {
+                id: 2,
+                level: 1,
+                difficulty: "新手級",
+                category: "學校考卷",
+                text: "題目：若某個家庭的媽媽很愛碎碎念，請問這種嘮叨的基因最容易遺傳給誰？",
+                isAppropriate: false,
+                reason: "負面性別連結",
+                explanation: "這題將「嘮叨」與「媽媽」連結，強化了女性愛碎念的負面刻板印象，且缺乏科學根據。",
+                correction: "修正建議：使用中性特徵如「捲舌」或「單眼皮」來描述遺傳。"
+                },
+                {
+                id: 3,
+                level: 1,
+                difficulty: "新手級",
+                category: "讚美？",
+                text: "妳雖然是女生，但是數學考得真好！",
+                isAppropriate: false,
+                reason: "能力貶低",
+                explanation: "這句話隱含了「女生通常數學不好」的偏見。「雖然...但是...」的句型反而強化了性別對立。",
+                correction: "修正建議：「妳這次數學考得真好！」（直接稱讚能力即可）"
+                },
+                {
+                id: 4,
+                level: 1,
+                difficulty: "新手級",
+                category: "情緒教育",
+                text: "跌倒了不准哭！你是男生，要像個男子漢一樣堅強。",
+                isAppropriate: false,
+                reason: "有毒的男子氣概",
+                explanation: "強制男性壓抑情緒，否定了男生表達脆弱的權利，這對心理健康有害。",
+                correction: "修正建議：「跌倒了很痛吧？想哭可以哭出來沒關係。」"
+                },
+                {
+                id: 5,
+                level: 1,
+                difficulty: "新手級",
+                category: "班級幹部",
+                text: "班長需要有威嚴的人來當，我們推舉大明（男生）比較適合。",
+                isAppropriate: false,
+                reason: "領導力偏見",
+                explanation: "預設男生才會有「威嚴」或領導力，而忽視了女生的領導潛能。",
+                correction: "修正建議：「我們推舉大明，因為他負責又有統籌能力。」（針對特質而非性別）"
+                },
+                {
+                id: 6,
+                level: 1,
+                difficulty: "新手級",
+                category: "生活對話",
+                text: "小美最近剪了短頭髮，看起來好俐落、好帥氣。",
+                isAppropriate: true,
+                reason: "中性描述",
+                explanation: "稱讚女生的外型俐落帥氣，是打破「女生必須長髮溫柔」框架的正向表達。",
+                correction: "此句敘述恰當。"
+                },
+
+                // --- Level 2: 進階級 (常見的生活/職場偏見) ---
+                {
+                id: 7,
+                level: 2,
+                difficulty: "進階級",
+                category: "家庭分工",
+                text: "爸爸真是新好男人，下班後還會「幫忙」媽媽做家事。",
+                isAppropriate: false,
+                reason: "主從角色固化",
+                explanation: "「幫忙」暗示家事本質是媽媽的責任。家務應是家庭成員共同分擔的義務。",
+                correction: "修正建議：「爸爸和媽媽下班後會一起分擔家事。」"
+                },
+                {
+                id: 8,
+                level: 2,
+                difficulty: "進階級",
+                category: "醫療職場",
+                text: "張醫師雖然是女醫師，但她的開刀技術非常精湛，一點都不輸給男生。",
+                isAppropriate: false,
+                reason: "預設能力偏見",
+                explanation: "特別強調「女」醫師並與男生比較，隱含了女性專業能力較弱的預設前提。",
+                correction: "修正建議：「張醫師的開刀技術非常精湛。」"
+                },
+                {
+                id: 9,
+                level: 2,
+                difficulty: "進階級",
+                category: "校園勞動",
+                text: "搬書這種粗重工作給男同學做，女同學負責擦窗戶就好。",
+                isAppropriate: false,
+                reason: "本質主義",
+                explanation: "直接依性別分配工作，限制了學生的發展機會。有些女生力氣也很大，有些男生可能較細心。",
+                correction: "修正建議：「力氣大的同學幫忙搬書，細心的同學負責擦窗戶。」"
+                },
+                {
+                id: 10,
+                level: 2,
+                difficulty: "進階級",
+                category: "職場稱呼",
+                text: "我們部門來了一位新護理師，是很細心的男生喔！",
+                isAppropriate: true,
+                reason: "中性職稱",
+                explanation: "使用了正確的職稱「護理師」（而非男護士），並稱讚其特質，這是恰當的表達。",
+                correction: "此句敘述恰當。"
+                },
+                {
+                id: 11,
+                level: 2,
+                difficulty: "進階級",
+                category: "交通偏見",
+                text: "前面那台車開得扭扭捏捏，一定是女司機開的。",
+                isAppropriate: false,
+                reason: "駕駛刻板印象",
+                explanation: "這是常見的「馬路三寶」偏見，將駕駛技術與性別掛鉤，忽視了個人技術差異。",
+                correction: "修正建議：「前面那台車開得不太穩，我們要小心一點。」"
+                },
+                {
+                id: 12,
+                level: 2,
+                difficulty: "進階級",
+                category: "物理題目",
+                text: "小明施力 50N 推動箱子，計算摩擦力與加速度。",
+                isAppropriate: true,
+                reason: "中性對照",
+                explanation: "標準的學術題目，使用常見代名詞且未涉及性別評價。",
+                correction: "此題敘述恰當。"
+                },
+                {
+                id: 13,
+                level: 2,
+                difficulty: "進階級",
+                category: "興趣休閒",
+                text: "小強（男生）最近迷上了編織，做了一條圍巾送給朋友。",
+                isAppropriate: true,
+                reason: "打破框架",
+                explanation: "男生也可以有文靜、手作的興趣。這句描述很自然，沒有使用嘲諷語氣，值得鼓勵。",
+                correction: "此句敘述恰當。"
+                },
+
+                // --- Level 3: 專家級 (隱晦的預設、職場微歧視) ---
+                {
+                id: 14,
+                level: 3,
+                difficulty: "專家級",
+                category: "親師溝通",
+                text: "老師對全班說：「這張校外教學通知單，請帶回去給媽媽簽名。」",
+                isAppropriate: false,
+                reason: "預設主要照顧者",
+                explanation: "這預設了「媽媽」是負責管小孩瑣事的人。單親、隔代教養或爸爸負責的家庭會感到被排除。",
+                correction: "修正建議：「請帶回去給家長（或爸媽）簽名。」"
+                },
+                {
+                id: 15,
+                level: 3,
+                difficulty: "專家級",
+                category: "職場分工",
+                text: "會議開始了，小美妳是我們部門唯一的女生，幫大家倒個茶吧！",
+                isAppropriate: false,
+                reason: "職場家務勞動",
+                explanation: "將「服務性質」的雜事自動指派給女性員工，而非依照職級或輪值，這是職場常見的微歧視。",
+                correction: "修正建議：輪流負責，或由會議主辦人處理，不應針對特定性別。"
+                },
+                {
+                id: 16,
+                level: 3,
+                difficulty: "專家級",
+                category: "人事考量",
+                text: "考量到她剛結婚可能快生小孩了，這個高壓的跨國專案先不要派給她。",
+                isAppropriate: false,
+                reason: "保護性歧視",
+                explanation: "這是一種「善意的」歧視（Benevolent Sexism）。主管擅自替女性決定她無法兼顧家庭與工作，剝奪了她的升遷機會。",
+                correction: "修正建議：直接詢問本人的意願與職涯規劃，而非擅自預設。"
+                },
+                {
+                id: 17,
+                level: 3,
+                difficulty: "專家級",
+                category: "職場評價",
+                text: "王經理今天穿得很漂亮，真不愧是我們業務部的門面（花瓶）。",
+                isAppropriate: false,
+                reason: "物化女性",
+                explanation: "在專業場合過度聚焦女性外表而非能力，並使用「花瓶」等詞，暗示其功能僅供觀賞。",
+                correction: "修正建議：「王經理今天提案的表現很專業，不愧是我們的王牌。」"
+                },
+                {
+                id: 18,
+                level: 3,
+                difficulty: "專家級",
+                category: "情緒歸因",
+                text: "她今天火氣這麼大，對同事不耐煩，是不是那個（生理期）來了？",
+                isAppropriate: false,
+                reason: "生理歸因謬誤",
+                explanation: "將女性的負面情緒直接歸咎於荷爾蒙或生理期，這是否定女性情緒的正當性，也是一種職場騷擾。",
+                correction: "修正建議：「她今天看起來心情不太好，是不是工作上遇到什麼困難？」"
+                },
+                {
+                id: 19,
+                level: 3,
+                difficulty: "專家級",
+                category: "成功歸因",
+                text: "她這麼年輕就當上總監，長得又漂亮，背後一定有「乾爹」或靠關係。",
+                isAppropriate: false,
+                reason: "抹煞努力",
+                explanation: "當女性獲得高成就時，謠言常將其歸因於性資源交換或特殊關係，而非個人能力。",
+                correction: "修正建議：肯定其工作績效與領導能力。"
+                },
+                {
+                id: 20,
+                level: 3,
+                difficulty: "專家級",
+                category: "尾牙邀請",
+                text: "今年的公司尾牙，歡迎各位同仁攜帶您的「伴侶」或家屬參加。",
+                isAppropriate: true,
+                reason: "包容性語言",
+                explanation: "使用「伴侶」而非「先生/太太」，能包容未婚、同性伴侶等多元家庭型態，是非常友善的說法。",
+                correction: "此句敘述恰當。"
+                }
+            ];
+
+            useEffect(() => {
+                if (topRef.current) {
+                    topRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, [currentQuestionIndex, gameState]);
+
+            const handleStart = () => {
+                setGameState('playing');
+                setCurrentQuestionIndex(0);
+                setScore(0);
+                setStreak(0);
+                setShowConfetti(false);
+            };
+
+            const handleAnswer = (choice) => {
+                const currentQ = questions[currentQuestionIndex];
+                const isCorrect = (choice === 'safe' && currentQ.isAppropriate) || 
+                                (choice === 'warning' && !currentQ.isAppropriate);
+
+                setUserAnswer(choice);
                 
-                {!questions[currentQuestionIndex].isAppropriate && (
-                  <div className="bg-indigo-50 p-4 rounded-xl border-l-4 border-indigo-500 mt-4">
-                    <p className="text-xs text-indigo-500 font-extrabold mb-1 uppercase tracking-wider flex items-center gap-1">
-                      <Star size={12} fill="currentColor" /> Better way
-                    </p>
-                    <p className="text-indigo-900 font-medium text-base">
-                      {questions[currentQuestionIndex].correction}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+                if (isCorrect) {
+                    const basePoints = currentQ.level * 100;
+                    setScore(score + basePoints + (streak * 10));
+                    setStreak(streak + 1);
+                    setShowConfetti(true);
+                } else {
+                    setStreak(0);
+                    setShowConfetti(false);
+                }
 
-            <button 
-              onClick={handleNext}
-              className="mt-auto w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-300"
-            >
-              {currentQuestionIndex < questions.length - 1 ? "挑戰下一題" : "查看成績"} <ArrowRight size={20} />
-            </button>
-          </div>
-        )}
+                setGameState('explanation');
+            };
 
-        {/* --- RESULT SCREEN --- */}
-        {gameState === 'result' && (
-          <div className="p-8 text-center flex flex-col items-center h-full justify-center">
-            <div className="w-28 h-28 bg-yellow-50 rounded-full flex items-center justify-center mb-6 text-yellow-500 shadow-sm border-4 border-white">
-              <Award size={56} />
-            </div>
-            
-            <h2 className="text-3xl font-bold text-slate-800 mb-2">檢測完成！</h2>
-            <div className="text-6xl font-black text-indigo-600 mb-6 tracking-tight drop-shadow-sm">{score} <span className="text-2xl font-medium text-slate-400">分</span></div>
-            
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 w-full mb-8">
-              <p className="text-slate-600 font-medium leading-relaxed">
-                {score >= 3500 
-                  ? "太神了！你是性別平權大師，任何微小的偏見都逃不過你的法眼！" 
-                  : score >= 2500
-                  ? "表現很棒！你對大多數的性別議題都有正確的觀念，繼續保持！"
-                  : "不錯喔！透過這個遊戲，相信你已經學會如何辨識更多潛藏的偏見了。"}
-              </p>
-            </div>
+            const handleNext = () => {
+                if (currentQuestionIndex < questions.length - 1) {
+                    setCurrentQuestionIndex(currentQuestionIndex + 1);
+                    setGameState('playing');
+                    setUserAnswer(null);
+                    setShowConfetti(false);
+                } else {
+                    setGameState('result');
+                }
+            };
 
-            <button 
-              onClick={handleStart}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200"
-            >
-              <RefreshCcw size={20} />
-              再玩一次
-            </button>
-          </div>
-        )}
+            const getDifficultyColor = (level) => {
+                switch(level) {
+                    case 1: return "bg-green-100 text-green-700 border-green-200";
+                    case 2: return "bg-yellow-100 text-yellow-700 border-yellow-200";
+                    case 3: return "bg-red-100 text-red-700 border-red-200";
+                    default: return "bg-slate-100 text-slate-700";
+                }
+            };
 
-      </div>
-    </div>
-  );
-};
+            return (
+                <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans text-slate-800" ref={topRef}>
+                    <div className="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 relative animate-fade-in-up">
+                        
+                        {/* Header Decoration */}
+                        <div className="h-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 w-full"></div>
 
-export default GenderDetectiveGame;
+                        {/* --- START SCREEN --- */}
+                        {gameState === 'start' && (
+                        <div className="p-8 text-center flex flex-col items-center">
+                            <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mb-6 text-indigo-600 shadow-sm">
+                                <Search size={48} />
+                            </div>
+                            <h1 className="text-3xl font-bold text-slate-800 mb-3">性別用語特搜隊</h1>
+                            <div className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-semibold mb-6">
+                                20 題挑戰版
+                            </div>
+                            <p className="text-slate-500 mb-8 leading-relaxed">
+                                從考卷題目到職場潛規則，你能識破那些隱藏的性別偏見嗎？<br/>
+                                <span className="text-xs mt-2 block text-slate-400">難度將會逐漸提升喔！</span>
+                            </p>
+                            
+                            <button 
+                                onClick={handleStart}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-indigo-200 transform hover:-translate-y-1 flex items-center justify-center gap-2"
+                            >
+                                開始檢測 <ArrowRight size={20} />
+                            </button>
+                        </div>
+                        )}
+
+                        {/* --- PLAYING SCREEN --- */}
+                        {gameState === 'playing' && (
+                        <div className="p-6">
+                            {/* Top Stats */}
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    Question {currentQuestionIndex + 1} / {questions.length}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="px-3 py-1 bg-slate-100 rounded-full text-indigo-600 font-bold text-sm">
+                                    {score} 分
+                                    </div>
+                                    {streak > 1 && (
+                                        <div className="px-2 py-1 bg-orange-100 text-orange-600 text-xs font-bold rounded-full animate-pulse">
+                                        {streak} 連擊
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Difficulty Badge */}
+                            <div className="flex justify-center mb-6">
+                                <span className={`px-4 py-1.5 rounded-full text-sm font-bold border flex items-center gap-2 ${getDifficultyColor(questions[currentQuestionIndex].level)}`}>
+                                    <TrendingUp size={16} />
+                                    {questions[currentQuestionIndex].difficulty}
+                                </span>
+                            </div>
+
+                            {/* Question Card */}
+                            <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100 shadow-inner min-h-[200px] flex flex-col items-center justify-center text-center">
+                                <div className="text-xs font-bold text-slate-400 uppercase mb-3 tracking-widest">
+                                    情境: {questions[currentQuestionIndex].category}
+                                </div>
+                                <h2 className="text-xl md:text-2xl font-medium text-slate-800 leading-relaxed">
+                                    "{questions[currentQuestionIndex].text}"
+                                </h2>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <button 
+                                    onClick={() => handleAnswer('safe')}
+                                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-slate-100 hover:border-green-500 hover:bg-green-50 active:scale-95 transition-all group bg-white shadow-sm"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                                        <CheckCircle size={28} className="text-green-600" />
+                                    </div>
+                                    <span className="font-bold text-slate-600 group-hover:text-green-800">我覺得很 OK</span>
+                                </button>
+
+                                <button 
+                                    onClick={() => handleAnswer('warning')}
+                                    className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-slate-100 hover:border-red-500 hover:bg-red-50 active:scale-95 transition-all group bg-white shadow-sm"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center group-hover:bg-red-200 transition-colors">
+                                        <AlertTriangle size={28} className="text-red-600" />
+                                    </div>
+                                    <span className="font-bold text-slate-600 group-hover:text-red-800">有點不妥...</span>
+                                </button>
+                            </div>
+                        </div>
+                        )}
+
+                        {/* --- EXPLANATION SCREEN --- */}
+                        {gameState === 'explanation' && (
+                        <div className="p-6 bg-slate-50 min-h-[500px] flex flex-col">
+                            
+                            {/* Result Header */}
+                            <div className={`p-4 rounded-xl mb-5 flex items-center gap-3 shadow-sm border ${
+                            (userAnswer === 'safe' && questions[currentQuestionIndex].isAppropriate) || (userAnswer === 'warning' && !questions[currentQuestionIndex].isAppropriate)
+                                ? 'bg-green-100 text-green-800 border-green-200'
+                                : 'bg-red-100 text-red-800 border-red-200'
+                            }`}>
+                                {((userAnswer === 'safe' && questions[currentQuestionIndex].isAppropriate) || (userAnswer === 'warning' && !questions[currentQuestionIndex].isAppropriate)) 
+                                    ? <CheckCircle className="shrink-0 w-6 h-6" /> 
+                                    : <XCircle className="shrink-0 w-6 h-6" />
+                                }
+                                <div>
+                                    <p className="font-bold text-lg leading-tight">
+                                    {((userAnswer === 'safe' && questions[currentQuestionIndex].isAppropriate) || (userAnswer === 'warning' && !questions[currentQuestionIndex].isAppropriate))
+                                        ? "判斷正確！" 
+                                        : "哎呀，沒發現問題！"}
+                                    </p>
+                                    <p className="text-xs opacity-80 mt-1">
+                                        目前分數: {score}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Detective Note */}
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex-grow">
+                                <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
+                                    <BookOpen size={20} className="text-indigo-500"/> 
+                                    <h3 className="font-bold text-slate-800 text-lg">
+                                    偵探筆記：{questions[currentQuestionIndex].reason}
+                                    </h3>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <p className="text-slate-600 leading-relaxed">
+                                    {questions[currentQuestionIndex].explanation}
+                                    </p>
+                                    
+                                    {!questions[currentQuestionIndex].isAppropriate && (
+                                    <div className="bg-indigo-50 p-4 rounded-xl border-l-4 border-indigo-500 mt-4">
+                                        <p className="text-xs text-indigo-500 font-extrabold mb-1 uppercase tracking-wider flex items-center gap-1">
+                                            <Star size={12} fill="currentColor" /> Better way
+                                        </p>
+                                        <p className="text-indigo-900 font-medium text-base">
+                                            {questions[currentQuestionIndex].correction}
+                                        </p>
+                                    </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={handleNext}
+                                className="mt-auto w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-slate-300"
+                            >
+                                {currentQuestionIndex < questions.length - 1 ? "挑戰下一題" : "查看成績"} <ArrowRight size={20} />
+                            </button>
+                        </div>
+                        )}
+
+                        {/* --- RESULT SCREEN --- */}
+                        {gameState === 'result' && (
+                        <div className="p-8 text-center flex flex-col items-center h-full justify-center">
+                            <div className="w-28 h-28 bg-yellow-50 rounded-full flex items-center justify-center mb-6 text-yellow-500 shadow-sm border-4 border-white">
+                                <Award size={56} />
+                            </div>
+                            
+                            <h2 className="text-3xl font-bold text-slate-800 mb-2">檢測完成！</h2>
+                            <div className="text-6xl font-black text-indigo-600 mb-6 tracking-tight drop-shadow-sm">{score} <span className="text-2xl font-medium text-slate-400">分</span></div>
+                            
+                            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 w-full mb-8">
+                                <p className="text-slate-600 font-medium leading-relaxed">
+                                    {score >= 3500 
+                                    ? "太神了！你是性別平權大師，任何微小的偏見都逃不過你的法眼！" 
+                                    : score >= 2500
+                                    ? "表現很棒！你對大多數的性別議題都有正確的觀念，繼續保持！"
+                                    : "不錯喔！透過這個遊戲，相信你已經學會如何辨識更多潛藏的偏見了。"}
+                                </p>
+                            </div>
+
+                            <button 
+                                onClick={handleStart}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200"
+                            >
+                                <RefreshCcw size={20} />
+                                再玩一次
+                            </button>
+                        </div>
+                        )}
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<GenderDetectiveGame />);
+    </script>
+</body>
+</html>
