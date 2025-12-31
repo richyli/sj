@@ -38,14 +38,13 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // --- Icons Components (Inline SVGs for single file portability) ---
+        // --- Icons Components ---
         const Icon = ({ path, className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {path}
             </svg>
         );
 
-        // Fixed: Wrapped multiple SVG paths in Fragments <></> to avoid JSX syntax error
         const icons = {
             Search: <path d="m21 21-4.3-4.3M11 17a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/>,
             Target: <><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01"/><path d="M16 12a10 10 0 1 0-2 18"/><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></>,
@@ -80,135 +79,135 @@
                     id: 1,
                     question: "眼前有一幅看不懂的抽象畫，你的第一個念頭是？",
                     options: [
-                        { text: "這幅畫想要表達什麼？畫家的背景是誰？", type: "news", iconName: "Search" },
-                        { text: "這幅畫掛在哪裡最適合？誰會想買它？", type: "ad", iconName: "Target" },
-                        { text: "盯著它的顏色和線條，單純感受它帶給我的情緒。", type: "rtf", iconName: "Eye" }
+                        { text: "這幅畫想要表達什麼？畫家的背景是誰？", scores: { news: 3, ad: 1, rtf: 1 }, iconName: "Search" },
+                        { text: "這幅畫掛在哪裡最適合？誰會想買它？", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "Target" },
+                        { text: "盯著它的顏色和線條，單純感受它帶給我的情緒。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Eye" }
                     ]
                 },
                 {
                     id: 2,
                     question: "朋友和你分享一個他做的奇怪夢境，你會？",
                     options: [
-                        { text: "幫他分析夢裡的象徵，試著解釋這反映了他最近什麼壓力。", type: "news", iconName: "Brain" },
-                        { text: "告訴他：「這代表你快發財了！」（隨便說個好聽的讓他開心）。", type: "ad", iconName: "MessageCircle" },
-                        { text: "閉上眼想像那個夢境的畫面，覺得那個場景好酷。", type: "rtf", iconName: "Aperture" }
+                        { text: "幫他分析夢裡的象徵，試著解釋這反映了他最近什麼壓力。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Brain" },
+                        { text: "告訴他：「這代表你快發財了！」（隨便說個好聽的讓他開心）。", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "MessageCircle" },
+                        { text: "閉上眼想像那個夢境的畫面，覺得那個場景好酷。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Aperture" }
                     ]
                 },
                 {
                     id: 3,
                     question: "去一個陌生的城市旅行，你最不能接受哪種情況？",
                     options: [
-                        { text: "迷路，而且完全搞不清楚東南西北，沒有地圖。", type: "news", iconName: "Compass" },
-                        { text: "去的地方很無聊，沒有任何好玩或值得打卡分享的點。", type: "ad", iconName: "Zap" },
-                        { text: "風景很醜，到處都是灰濛濛的水泥牆，沒有美感。", type: "rtf", iconName: "Feather" }
+                        { text: "迷路，而且完全搞不清楚東南西北，沒有地圖。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Compass" },
+                        { text: "去的地方很無聊，沒有任何好玩或值得打卡分享的點。", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "Zap" },
+                        { text: "風景很醜，到處都是灰濛濛的水泥牆，沒有美感。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Feather" }
                     ]
                 },
                 {
                     id: 4,
                     question: "如果要把一段記憶永久保存下來，你希望形式是？",
                     options: [
-                        { text: "一本詳細的筆記，精確記錄時間、地點和發生的事。", type: "news", iconName: "Search" },
-                        { text: "一個精緻的時光膠囊，打開時會給未來的自己一個驚喜。", type: "ad", iconName: "Lightbulb" },
-                        { text: "一段錄音或影片，能讓我重溫當時的空氣、聲音和光線。", type: "rtf", iconName: "Mic" }
+                        { text: "一本詳細的筆記，精確記錄時間、地點和發生的事。", scores: { news: 3, ad: 0, rtf: 0 }, iconName: "Search" },
+                        { text: "一個精緻的時光膠囊，打開時會給未來的自己一個驚喜。", scores: { news: 0, ad: 3, rtf: 2 }, iconName: "Lightbulb" },
+                        { text: "一段錄音或影片，能讓我重溫當時的空氣、聲音和光線。", scores: { news: 1, ad: 0, rtf: 3 }, iconName: "Mic" }
                     ]
                 },
                 {
                     id: 5,
                     question: "在團隊合作中，當大家意見不合僵持不下，你會？",
                     options: [
-                        { text: "把大家的觀點列出來，找出邏輯矛盾點，看誰最有道理。", type: "news", iconName: "Brain" },
-                        { text: "觀察誰是關鍵意見領袖，試著說服他，或提出折衷方案來破冰。", type: "ad", iconName: "Users" },
-                        { text: "覺得氣氛太僵了，試著放個音樂或開個玩笑來轉換氛圍。", type: "rtf", iconName: "Heart" }
+                        { text: "把大家的觀點列出來，找出邏輯矛盾點，看誰最有道理。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Brain" },
+                        { text: "觀察誰是關鍵意見領袖，試著說服他，或提出折衷方案來破冰。", scores: { news: 1, ad: 3, rtf: 0 }, iconName: "Users" },
+                        { text: "覺得氣氛太僵了，試著放個音樂或開個玩笑來轉換氛圍。", scores: { news: 0, ad: 2, rtf: 3 }, iconName: "Heart" }
                     ]
                 },
                 {
                     id: 6,
                     question: "你覺得什麼樣的人最有魅力？",
                     options: [
-                        { text: "博學多聞，說話有憑有據，從不信口開河的人。", type: "news", iconName: "Search" },
-                        { text: "幽默風趣，總能輕易帶動氣氛，成為全場焦點的人。", type: "ad", iconName: "Zap" },
-                        { text: "氣質獨特，這人本身就像一部電影，充滿故事感的人。", type: "rtf", iconName: "Feather" }
+                        { text: "博學多聞，說話有憑有據，從不信口開河的人。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Search" },
+                        { text: "幽默風趣，總能輕易帶動氣氛，成為全場焦點的人。", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "Zap" },
+                        { text: "氣質獨特，這人本身就像一部電影，充滿故事感的人。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Feather" }
                     ]
                 },
                 {
                     id: 7,
                     question: "如果世界末日來臨，只能帶走一樣東西，你會選？",
                     options: [
-                        { text: "百科全書或硬碟，保存人類的知識與歷史。", type: "news", iconName: "Brain" },
-                        { text: "通訊器材，確保我還能聯繫上倖存者並組織他們。", type: "ad", iconName: "Target" },
-                        { text: "樂器或畫具，即使在末日也要保有心靈的寄託。", type: "rtf", iconName: "Aperture" }
+                        { text: "百科全書或硬碟，保存人類的知識與歷史。", scores: { news: 3, ad: 0, rtf: 0 }, iconName: "Brain" },
+                        { text: "通訊器材，確保我還能聯繫上倖存者並組織他們。", scores: { news: 1, ad: 3, rtf: 0 }, iconName: "Target" },
+                        { text: "樂器或畫具，即使在末日也要保有心靈的寄託。", scores: { news: 0, ad: 0, rtf: 3 }, iconName: "Aperture" }
                     ]
                 },
                 {
                     id: 8,
                     question: "你比較擅長處理哪種「不確定性」？",
                     options: [
-                        { text: "複雜的謎團：透過線索拼湊出真相。", type: "news", iconName: "Compass" },
-                        { text: "人心難測：預測對方的反應並引導他們。", type: "ad", iconName: "Lightbulb" },
-                        { text: "創作瓶頸：在空白中無中生有，創造出作品。", type: "rtf", iconName: "Feather" }
+                        { text: "複雜的謎團：透過線索拼湊出真相。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Compass" },
+                        { text: "人心難測：預測對方的反應並引導他們。", scores: { news: 1, ad: 3, rtf: 1 }, iconName: "Lightbulb" },
+                        { text: "創作瓶頸：在空白中無中生有，創造出作品。", scores: { news: 0, ad: 2, rtf: 3 }, iconName: "Feather" }
                     ]
                 },
                 {
                     id: 9,
                     question: "看電影時，哪個瞬間最讓你出戲（無法投入）？",
                     options: [
-                        { text: "劇情出現巨大的邏輯漏洞，根本不合理。", type: "news", iconName: "Search" },
-                        { text: "置入性行銷太明顯，或台詞說教感太重。", type: "ad", iconName: "Target" },
-                        { text: "演員演技太爛，或是特效假到讓人尷尬。", type: "rtf", iconName: "Eye" }
+                        { text: "劇情出現巨大的邏輯漏洞，根本不合理。", scores: { news: 3, ad: 0, rtf: 1 }, iconName: "Search" },
+                        { text: "置入性行銷太明顯，或台詞說教感太重。", scores: { news: 1, ad: 3, rtf: 0 }, iconName: "Target" },
+                        { text: "演員演技太爛，或是特效假到讓人尷尬。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Eye" }
                     ]
                 },
                 {
                     id: 10,
                     question: "最後，你認為「話語」的最大力量在於？",
                     options: [
-                        { text: "揭露：讓被隱藏的事物顯現。", type: "news", iconName: "Mic" },
-                        { text: "煽動：激發人們採取行動。", type: "ad", iconName: "Zap" },
-                        { text: "感動：觸摸靈魂深處的柔軟。", type: "rtf", iconName: "Heart" }
+                        { text: "揭露：讓被隱藏的事物顯現。", scores: { news: 3, ad: 0, rtf: 1 }, iconName: "Mic" },
+                        { text: "煽動：激發人們採取行動。", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "Zap" },
+                        { text: "感動：觸摸靈魂深處的柔軟。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Heart" }
                     ]
                 },
                 {
                     id: 11,
                     question: "如果要在搶劫電影中扮演一個角色，你會是？",
                     options: [
-                        { text: "情報專家：負責研究藍圖、破解保全系統邏輯。", type: "news", iconName: "Brain" },
-                        { text: "談判專家：負責詐騙警衛、控制人質心理。", type: "ad", iconName: "Users" },
-                        { text: "偽裝大師：負責製作假證件、易容、營造假象。", type: "rtf", iconName: "Aperture" }
+                        { text: "情報專家：負責研究藍圖、破解保全系統邏輯。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Brain" },
+                        { text: "談判專家：負責詐騙警衛、控制人質心理。", scores: { news: 1, ad: 3, rtf: 1 }, iconName: "Users" },
+                        { text: "偽裝大師：負責製作假證件、易容、營造假象。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Aperture" }
                     ]
                 },
                 {
                     id: 12,
                     question: "送禮物給重要的人，你的挑選標準是？",
                     options: [
-                        { text: "實用性：他最近剛好缺少的東西，解決他的問題。", type: "news", iconName: "Search" },
-                        { text: "象徵性：這禮物代表了我們之間的關係，能說服他我重視他。", type: "ad", iconName: "Heart" },
-                        { text: "獨特性：最好是手工做的，或是全世界獨一無二的藝術品。", type: "rtf", iconName: "Feather" }
+                        { text: "實用性：他最近剛好缺少的東西，解決他的問題。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Search" },
+                        { text: "象徵性：這禮物代表了我們之間的關係，能說服他我重視他。", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "Heart" },
+                        { text: "獨特性：最好是手工做的，或是全世界獨一無二的藝術品。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Feather" }
                     ]
                 },
                 {
                     id: 13,
                     question: "你理想中的工作環境長什麼樣子？",
                     options: [
-                        { text: "像指揮中心，有多個螢幕監控資訊，井然有序。", type: "news", iconName: "Compass" },
-                        { text: "開放式空間，大家隨時可以丟出點子互相激盪。", type: "ad", iconName: "Lightbulb" },
-                        { text: "燈光昏暗有氣氛的工作室，放著好聽的音樂。", type: "rtf", iconName: "Mic" }
+                        { text: "像指揮中心，有多個螢幕監控資訊，井然有序。", scores: { news: 3, ad: 0, rtf: 1 }, iconName: "Compass" },
+                        { text: "開放式空間，大家隨時可以丟出點子互相激盪。", scores: { news: 0, ad: 3, rtf: 2 }, iconName: "Lightbulb" },
+                        { text: "燈光昏暗有氣氛的工作室，放著好聽的音樂。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Mic" }
                     ]
                 },
                 {
                     id: 14,
                     question: "如果可以擁有一把傳說中的武器，你會選？",
                     options: [
-                        { text: "真理之劍：能斬斷一切虛假與幻象。", type: "news", iconName: "Search" },
-                        { text: "魅惑權杖：能指揮千軍萬馬聽你號令。", type: "ad", iconName: "Target" },
-                        { text: "造物神筆：畫出來的東西都會變成真的。", type: "rtf", iconName: "Feather" }
+                        { text: "真理之劍：能斬斷一切虛假與幻象。", scores: { news: 3, ad: 0, rtf: 0 }, iconName: "Search" },
+                        { text: "魅惑權杖：能指揮千軍萬馬聽你號令。", scores: { news: 0, ad: 3, rtf: 1 }, iconName: "Target" },
+                        { text: "造物神筆：畫出來的東西都會變成真的。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Feather" }
                     ]
                 },
                 {
                     id: 15,
                     question: "你覺得哪種「自由」對你來說最重要？",
                     options: [
-                        { text: "知的自由：沒有審查，沒有秘密被隱瞞。", type: "news", iconName: "Eye" },
-                        { text: "選擇的自由：有能力去影響結果，不被命運擺佈。", type: "ad", iconName: "Zap" },
-                        { text: "表達的自由：能隨心所欲展現內心的想像世界。", type: "rtf", iconName: "Aperture" }
+                        { text: "知的自由：沒有審查，沒有秘密被隱瞞。", scores: { news: 3, ad: 1, rtf: 0 }, iconName: "Eye" },
+                        { text: "選擇的自由：有能力去影響結果，不被命運擺佈。", scores: { news: 0, ad: 3, rtf: 0 }, iconName: "Zap" },
+                        { text: "表達的自由：能隨心所欲展現內心的想像世界。", scores: { news: 0, ad: 1, rtf: 3 }, iconName: "Aperture" }
                     ]
                 }
             ];
@@ -233,8 +232,12 @@
                 setStep('quiz');
             };
 
-            const handleAnswer = (type) => {
-                setScores(prev => ({ ...prev, [type]: prev[type] + 1 }));
+            const handleAnswer = (optionScores) => {
+                setScores(prev => ({ 
+                    news: prev.news + optionScores.news, 
+                    ad: prev.ad + optionScores.ad, 
+                    rtf: prev.rtf + optionScores.rtf 
+                }));
                 
                 if (currentQ < shuffledQuestions.length - 1) {
                     setCurrentQ(prev => prev + 1);
@@ -245,68 +248,101 @@
             };
 
             const getWinner = () => {
-                const { news, ad, rtf } = scores;
-                const max = Math.max(news, ad, rtf);
-                const min = Math.min(news, ad, rtf);
+                const scoreArray = [
+                    { type: 'news', val: scores.news },
+                    { type: 'ad', val: scores.ad },
+                    { type: 'rtf', val: scores.rtf }
+                ];
+                // Sort descending
+                scoreArray.sort((a, b) => b.val - a.val);
                 
-                const sortedScores = [news, ad, rtf].sort((a, b) => b - a);
-                const isTightRace = (sortedScores[0] - sortedScores[1]) <= 1;
-                const isBalanced = (max - min) <= 3;
+                const top1 = scoreArray[0];
+                const top2 = scoreArray[1];
+                const top3 = scoreArray[2];
 
-                if (isBalanced || isTightRace) return 'balanced';
-                
-                if (news === max) return 'news';
-                if (ad === max) return 'ad';
-                if (rtf === max) return 'rtf';
-                
-                return 'balanced';
+                // Check for Balanced: if the gap between 1st and 3rd place is small (e.g. <= 4 points), it's balanced.
+                if ((top1.val - top3.val) <= 4) return 'balanced';
+
+                // Return combination string: e.g. "news_ad"
+                return `${top1.type}_${top2.type}`;
             };
 
             const results = {
-                news: {
-                    title: "真相探勘者 (The Investigator)",
-                    dept: "建議路徑：新聞系 / 資訊傳播",
-                    keywords: "結構邏輯、批判思考、求真本能",
-                    desc: "你的思維模式像是一把手術刀，總能精準地切開表象，看見內在的結構。你不容易被情緒勒索，也不盲從潮流。在混亂的資訊中，你本能地尋找「順序」、「證據」與「因果關係」。",
-                    fit: "你適合處理複雜資訊，將其轉化為大眾能理解的事實。",
-                    career: "調查記者、數據分析師、編輯、策展人、社會觀察家。",
-                    color: "bg-blue-600",
-                    bg: "bg-blue-50"
+                news_ad: {
+                    title: "資訊策展人 (The Info-Curator)",
+                    dept: "基因組成：新聞系 60% + 廣告系 40%",
+                    keywords: "邏輯求真、行銷包裝、策略溝通",
+                    desc: "你不是傳統的記者，你是懂得「說故事」的數據專家。你有新聞人的求真邏輯，也有廣告人的行銷手腕。你擅長處理複雜、生硬的資訊，並將其轉化為大眾愛看、易懂的內容。你是現代媒體最稀缺的混血人才。",
+                    fit: "你適合去需要將硬知識「軟化」的領域。",
+                    career: "數據新聞記者、品牌公關、內容行銷經理、科普YouTuber、智庫分析師。",
+                    color: "bg-teal-600",
+                    bg: "bg-teal-50"
                 },
-                ad: {
-                    title: "心智駭客 (The Strategist)",
-                    dept: "建議路徑：廣告系 / 公共關係",
-                    keywords: "洞察人心、策略佈局、價值轉化",
-                    desc: "你的思維模式像是一位棋手，你看的不是「現在是什麼」，而是「未來可以變成什麼」。你極度敏銳於人際之間的動力流動，懂得如何包裝觀點讓他人接受。",
-                    fit: "你適合結合創意與商業策略，解決人的問題。",
-                    career: "品牌策略師、創意總監、公關經理、社群操盤手、活動企劃。",
-                    color: "bg-yellow-500",
-                    bg: "bg-yellow-50"
+                ad_news: {
+                    title: "輿論操盤手 (The Spin Doctor)",
+                    dept: "基因組成：廣告系 60% + 新聞系 40%",
+                    keywords: "洞察人心、議題設定、危機處理",
+                    desc: "你深知「事實」是可以被篩選和排列的。與單純的廣告人不同，你更重視證據和邏輯；與單純的新聞人不同，你清楚每個訊息背後的目的。你擅長利用真實的素材來引導公眾視聽，是天生的公關與危機處理專家。",
+                    fit: "你適合在充滿爭議或需要高度策略的環境中工作。",
+                    career: "危機處理顧問、政治公關、企業發言人、議題策展人、競選團隊核心。",
+                    color: "bg-indigo-600",
+                    bg: "bg-indigo-50"
                 },
-                rtf: {
-                    title: "感官造夢師 (The Creator)",
-                    dept: "建議路徑：廣電系 / 電影創作",
-                    keywords: "美學直覺、情感共鳴、敘事靈魂",
-                    desc: "你的思維模式像是一位詩人或畫家，你對世界的理解來自於「感受」而非「數據」。你對光影、節奏、聲音的細微變化異常敏感。你不需要太多理由，只要那個瞬間能打動人心。",
-                    fit: "你適合用影像與聲音說故事，創造沉浸式體驗。",
-                    career: "導演、編劇、攝影師、剪輯師、YouTuber、Podcast 製作人。",
-                    color: "bg-purple-600",
-                    bg: "bg-purple-50"
+                news_rtf: {
+                    title: "紀實影像家 (The Realist Creator)",
+                    dept: "基因組成：新聞系 60% + 廣電系 40%",
+                    keywords: "真實記錄、鏡頭語言、深度報導",
+                    desc: "對你來說，真實比小說更精彩。你喜歡用影像說話，但你的鏡頭永遠對準現實世界，而非虛構的幻想。你不滿足於文字的蒼白，也不喜歡過度的特效包裝。你致力於用充滿美感的畫面，去揭露社會的真實面貌。",
+                    fit: "你適合用影像為弱勢發聲，或記錄時代的變遷。",
+                    career: "紀錄片導演、新聞專題製作人、戰地攝影師、人文紀實攝影師。",
+                    color: "bg-cyan-700",
+                    bg: "bg-cyan-50"
+                },
+                rtf_news: {
+                    title: "社會觀察家 (The Social Auteur)",
+                    dept: "基因組成：廣電系 60% + 新聞系 40%",
+                    keywords: "社會批判、獨特觀點、影音創作",
+                    desc: "你的創作不只是為了美，更是為了傳達某種社會觀點或批判。你的作品通常「言之有物」，不會流於空泛的娛樂。你擅長用隱喻、象徵的手法來探討嚴肅的社會議題，讓觀眾在被感動的同時，也被迫思考。",
+                    fit: "你適合創作具有思想深度與社會影響力的作品。",
+                    career: "獨立電影導演、社會議題YouTuber、Podcast製作人、深度專欄作家。",
+                    color: "bg-emerald-600",
+                    bg: "bg-emerald-50"
+                },
+                ad_rtf: {
+                    title: "創意總監 (The Creative Director)",
+                    dept: "基因組成：廣告系 60% + 廣電系 40%",
+                    keywords: "商業美學、市場敏銳、視覺衝擊",
+                    desc: "你懂市場，也懂美學。這是一組非常強勢的組合。你的創意不僅天馬行空，還能精準落地，轉換成商業價值。你知道什麼樣的畫面能賣錢，什麼樣的節奏能留住觀眾。你是商業與藝術之間的完美翻譯官。",
+                    fit: "你適合在商業體系中發揮創意，引領潮流。",
+                    career: "廣告導演、創意總監、品牌形象顧問、時尚編輯、MV導演。",
+                    color: "bg-orange-500",
+                    bg: "bg-orange-50"
+                },
+                rtf_ad: {
+                    title: "流量煉金術師 (The Viral Hitmaker)",
+                    dept: "基因組成：廣電系 60% + 廣告系 40%",
+                    keywords: "感官體驗、觀眾心理、爆款製造",
+                    desc: "你對感官節奏有極強的直覺，同時也精準掌握觀眾想要看什麼。你天生知道如何製造「爆款」。你不一定追求深奧的藝術哲理，但你絕對知道如何在三秒鐘內抓住眼球，讓內容在網路上瘋傳。",
+                    fit: "你適合在新媒體與短影音的戰場上攻城掠地。",
+                    career: "短影音創作者、社群影音總監、直播策劃、娛樂節目製作人。",
+                    color: "bg-pink-600",
+                    bg: "bg-pink-50"
                 },
                 balanced: {
                     title: "荒野開拓者 (The Pathfinder)",
-                    dept: "建議路徑：人煙稀少的小徑",
+                    dept: "基因組成：各項數值均衡發展",
                     keywords: "全能潛力、不甘平凡、跨域整合",
-                    desc: "你的測驗結果顯示你的能力非常平均，這代表現有的單一科系框架可能都無法完全滿足你。與其在熱門的領域（如廣告或拍片）跟隨大流，建議你選擇一條「人少」的路。",
-                    fit: "你應該嘗試去結合最難結合的東西。例如：用新聞的嚴謹邏輯去做電影，或是用廣告的行銷思維去跑新聞。不要只是選一個系，要去創造屬於你的「混血」專業。",
+                    desc: "你的測驗結果顯示你的能力非常平均，這代表現有的單一科系框架可能都無法完全滿足你。與其在熱門的領域（如廣告或拍片）跟隨大流，建議你選擇一條「人少」的路，去創造屬於你的「混血」專業。",
+                    fit: "你應該嘗試去結合最難結合的東西。",
                     career: "獨立媒體創辦人、跨領域專案製作人、社會企業家、實驗藝術家。",
                     color: "bg-gray-700",
                     bg: "bg-gray-100"
                 }
             };
 
-            const winnerKey = step === 'result' ? getWinner() : 'news';
-            const resultData = results[winnerKey];
+            const winnerKey = step === 'result' ? getWinner() : 'news_ad';
+            const resultData = results[winnerKey] || results['balanced'];
+            const maxScore = 45;
 
             return (
                 <div className="flex items-center justify-center p-4 min-h-screen">
@@ -365,7 +401,7 @@
                                         {shuffledQuestions[currentQ].options.map((opt, idx) => (
                                             <button
                                                 key={idx}
-                                                onClick={() => handleAnswer(opt.type)}
+                                                onClick={() => handleAnswer(opt.scores)}
                                                 className="w-full text-left p-5 rounded-xl border border-gray-200 hover:border-black hover:bg-gray-50 transition-all group flex items-start gap-4"
                                             >
                                                 <div className="mt-1 text-gray-400 group-hover:text-black transition-colors">
@@ -434,14 +470,16 @@
                                         </div>
                                     </div>
 
-                                    <div className="opacity-50 hover:opacity-100 transition-opacity">
-                                        <div className="flex gap-1 h-1 w-full rounded-full overflow-hidden">
-                                            <div className="bg-blue-500" style={{ width: `${(scores.news/15)*100}%` }}></div>
-                                            <div className="bg-yellow-500" style={{ width: `${(scores.ad/15)*100}%` }}></div>
-                                            <div className="bg-purple-500" style={{ width: `${(scores.rtf/15)*100}%` }}></div>
+                                    <div className="opacity-70 hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-1 h-2 w-full rounded-full overflow-hidden mb-1">
+                                            <div className="bg-blue-500 transition-all duration-1000" style={{ width: `${(scores.news/maxScore)*100}%` }}></div>
+                                            <div className="bg-yellow-500 transition-all duration-1000" style={{ width: `${(scores.ad/maxScore)*100}%` }}></div>
+                                            <div className="bg-purple-500 transition-all duration-1000" style={{ width: `${(scores.rtf/maxScore)*100}%` }}></div>
                                         </div>
-                                        <div className="text-center text-[10px] text-gray-400 mt-1">
-                                            DEBUG: N{scores.news} A{scores.ad} R{scores.rtf}
+                                        <div className="flex justify-between text-[10px] text-gray-400 font-mono px-1">
+                                            <span>News: {scores.news}</span>
+                                            <span>Ads: {scores.ad}</span>
+                                            <span>RTF: {scores.rtf}</span>
                                         </div>
                                     </div>
 
