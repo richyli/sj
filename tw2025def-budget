@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>決戰時刻：守護台灣的關鍵 5 分鐘</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --hud-primary: #00ff9d;
+            --hud-danger: #ff3333;
+            --hud-bg: #0a0f14;
+            --hud-panel: rgba(16, 24, 32, 0.95);
+            --scan-line-color: rgba(0, 255, 157, 0.1);
+        }
+
+        body {
+            background-color: var(--hud-bg);
+            color: #e0e0e0;
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                linear-gradient(rgba(0, 20, 10, 0.8), rgba(0, 10, 20, 0.9)),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231a2633' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Tech/HUD Fonts */
+        .font-tech {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* CRT Scanline Effect */
+        .scanlines::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 50;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        /* HUD Borders & Glows */
+        .hud-border {
+            border: 1px solid var(--hud-primary);
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.2);
+            position: relative;
+        }
+        
+        .hud-border::after {
+            content: '';
+            position: absolute;
+            top: -2px; left: -2px;
+            width: 10px; height: 10px;
+            border-top: 2px solid var(--hud-primary);
+            border-left: 2px solid var(--hud-primary);
+        }
+        .hud-border::before {
+            content: '';
+            position: absolute;
+            bottom: -2px; right: -2px;
+            width: 10px; height: 10px;
+            border-bottom: 2px solid var(--hud-primary);
+            border-right: 2px solid var(--hud-primary);
+        }
+
+        .hud-btn {
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px solid var(--hud-primary);
+            color: var(--hud-primary);
+            transition: all 0.3s ease;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            cursor: pointer;
+        }
+        .hud-btn:hover {
+            background: var(--hud-primary);
+            color: #000;
+            box-shadow: 0 0 20px var(--hud-primary);
+        }
+        .hud-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+        }
+
+        /* Radar Animation */
+        .radar-sweep {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 255, 157, 0.5) 360deg);
+            animation: radar-spin 4s linear infinite;
+            mask-image: radial-gradient(circle, transparent 0%, black 100%);
+            -webkit-mask-image: radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 70%); 
+            opacity: 0.3;
+        }
+        
+        @keyframes radar-spin {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .blinking-dot {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Health Bar */
+        .health-segment {
+            transition: all 0.5s ease;
+        }
+        .health-lost {
+            background-color: #333 !important;
+            box-shadow: none !important;
+            border-color: #555 !important;
+        }
+
+        /* Glitch Text Effect */
+        .glitch-text {
+            position: relative;
+        }
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -1px 0 red;
+            clip: rect(24px, 550px, 90px, 0);
+            animation: glitch-anim-2 3s infinite linear alternate-reverse;
+        }
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -1px 0 blue;
+            clip: rect(85px, 550px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+        @keyframes glitch-anim {
+            0% { clip: rect(11px, 9999px, 83px, 0); }
+            20% { clip: rect(96px, 9999px, 5px, 0); }
+            40% { clip: rect(2px, 9999px, 48px, 0); }
+            60% { clip: rect(66px, 9999px, 19px, 0); }
+            80% { clip: rect(89px, 9999px, 93px, 0); }
+            100% { clip: rect(26px, 9999px, 5px, 0); }
+        }
+
+        /* Modal Transitions */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 300ms, transform 300ms;
+        }
+        .modal-exit {
+            opacity: 1;
+        }
+        .modal-exit-active {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 300ms, transform 300ms;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center relative scanlines">
+
+    <!-- Background Map Grid -->
+    <div class="fixed inset-0 z-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(var(--hud-primary) 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+    <!-- MAIN GAME CONTAINER -->
+    <main id="game-container" class="relative z-10 w-full max-w-4xl p-4 md:p-8">
+        
+        <!-- INTRO SCREEN -->
+        <div id="intro-screen" class="hud-border bg-gray-900/90 p-8 md:p-12 text-center backdrop-blur-sm">
+            <div class="mb-6 inline-block border border-green-500/30 p-2 rounded-full">
+                <span class="text-green-400 font-tech text-sm tracking-widest">DEFENSE SIMULATION V2.026</span>
+            </div>
+            <h1 class="text-4xl md:text-6xl font-bold mb-4 text-white tracking-tight glitch-text" data-text="決戰時刻：守護台灣">
+                決戰時刻：守護台灣
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-300 mb-8 font-light">
+                你是指揮官，你的每個決定都將影響 2300 萬人的命運。
+            </p>
+            <div class="text-left bg-black/40 p-6 rounded mb-8 border-l-4 border-green-500">
+                <h3 class="text-green-400 font-bold mb-2 font-tech">MISSION BRIEFING</h3>
+                <ul class="space-y-3 text-gray-400 text-sm md:text-base">
+                    <li class="flex items-center"><span class="w-2 h-2 bg-green-500 rounded-full mr-3"></span>初始防衛值：<span class="text-white font-bold ml-1">10</span> 分</li>
+                    <li class="flex items-center"><span class="w-2 h-2 bg-yellow-500 rounded-full mr-3"></span>作戰目標：抵禦 5 波現代化攻勢</li>
+                    <li class="flex items-center"><span class="w-2 h-2 bg-red-500 rounded-full mr-3"></span>失敗條件：防衛值跌至 5 分以下（即失敗 3 次）</li>
+                    <li class="flex items-center"><span class="w-2 h-2 bg-red-500 rounded-full mr-3"></span>懲罰：錯誤決策將扣除 2 分</li>
+                </ul>
+            </div>
+            <button onclick="startGame()" class="hud-btn w-full md:w-auto px-12 py-4 text-xl font-bold uppercase tracking-widest">
+                啟動戰棋推演
+            </button>
+        </div>
+
+        <!-- GAMEPLAY SCREEN (Hidden by default) -->
+        <div id="game-screen" class="hidden flex flex-col gap-6">
+            
+            <!-- HUD Header -->
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-black/60 border-b border-green-500/30 p-4">
+                <div class="flex items-center gap-4">
+                    <div class="text-xs font-tech text-gray-500">SYSTEM STATUS</div>
+                    <div class="flex items-center gap-2">
+                        <span class="relative flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                        <span class="text-red-500 font-bold tracking-widest animate-pulse">DEFCON 1</span>
+                    </div>
+                </div>
+                
+                <!-- Health Bar -->
+                <div class="w-full md:w-1/2">
+                    <div class="flex justify-between text-xs text-green-400 mb-1 font-tech">
+                        <span>DEFENSE INTEGRITY</span>
+                        <span id="health-text">100%</span>
+                    </div>
+                    <div class="flex gap-1 h-4" id="health-bar-container">
+                        <!-- Segments generated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization Area (Radar/Map) -->
+            <div class="relative h-48 md:h-64 bg-gray-900 border border-gray-700 overflow-hidden flex items-center justify-center">
+                <!-- Grid -->
+                <div class="absolute inset-0" style="background-image: linear-gradient(rgba(0, 255, 157, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 157, 0.1) 1px, transparent 1px); background-size: 20px 20px;"></div>
+                <!-- Radar Circle -->
+                <div class="relative w-40 h-40 md:w-56 md:h-56 rounded-full border border-green-500/30">
+                    <div class="radar-sweep"></div>
+                    <!-- Central Taiwan Icon (Abstract) -->
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-8 bg-green-600 blur-sm"></div>
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-6 bg-white"></div>
+                    
+                    <!-- Dynamic Threats (Injected by JS) -->
+                    <div id="radar-threats"></div>
+                </div>
+                
+                <!-- Overlay Text -->
+                <div class="absolute top-2 left-4 text-xs font-tech text-green-700">
+                    SATELLITE UPLINK: ACTIVE<br>
+                    TARGET TRACKING: ENGAGED
+                </div>
+            </div>
+
+            <!-- Scenario Text -->
+            <div class="hud-border bg-gray-900/80 p-6 min-h-[180px]">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-red-500 font-tech text-sm">INCOMING THREAT //</span>
+                    <h2 id="scenario-title" class="text-xl md:text-2xl font-bold text-white"></h2>
+                </div>
+                <p id="scenario-desc" class="text-gray-300 leading-relaxed"></p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Removed specific colors and labels to make them neutral -->
+                <button onclick="makeChoice(0)" id="btn-option-a" class="hud-btn p-6 text-left group relative overflow-hidden">
+                    <div class="relative z-10">
+                        <span class="block text-xs uppercase tracking-widest opacity-70 mb-1 group-hover:text-white">Option A</span>
+                        <span id="text-option-a" class="text-lg font-bold"></span>
+                    </div>
+                </button>
+
+                <button onclick="makeChoice(1)" id="btn-option-b" class="hud-btn p-6 text-left group relative overflow-hidden">
+                    <div class="relative z-10">
+                        <span class="block text-xs uppercase tracking-widest opacity-70 mb-1 group-hover:text-white">Option B</span>
+                        <span id="text-option-b" class="text-lg font-bold"></span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- RESULT MODAL (Overlay) -->
+        <div id="result-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 hidden opacity-0 transition-opacity duration-300">
+            <div class="bg-gray-900 border-2 border-white w-full max-w-2xl p-1 shadow-2xl transform scale-95 transition-transform duration-300" id="modal-content">
+                <div class="bg-black p-6 md:p-8 h-full relative overflow-hidden">
+                    <!-- Decor -->
+                    <div class="absolute top-0 right-0 w-16 h-16 border-t-4 border-r-4 border-white/20 rounded-tr-xl"></div>
+                    <div class="absolute bottom-0 left-0 w-16 h-16 border-b-4 border-l-4 border-white/20 rounded-bl-xl"></div>
+                    
+                    <h3 id="modal-title" class="text-3xl font-bold mb-4 font-tech uppercase"></h3>
+                    
+                    <!-- Analysis Box -->
+                    <div class="bg-gray-800/50 p-4 border-l-4 mb-6" id="modal-border-color">
+                        <h4 class="font-bold text-gray-200 mb-2 text-sm uppercase tracking-widest">戰術分析報告</h4>
+                        <p id="modal-feedback" class="text-gray-300 leading-relaxed text-sm md:text-base"></p>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm font-tech text-gray-500" id="modal-status-code">CODE: 404-FAIL</div>
+                        <button id="modal-next-btn" onclick="nextLevel()" class="bg-white text-black hover:bg-gray-200 px-6 py-2 font-bold uppercase tracking-widest text-sm transition-colors">
+                            指揮官，下一波攻擊來了 >>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENDING SCREEN -->
+        <div id="ending-screen" class="hidden hud-border bg-gray-900/95 p-8 md:p-12 text-center">
+            <div id="ending-icon" class="text-6xl mb-6"></div>
+            <h2 id="ending-title" class="text-4xl md:text-5xl font-bold mb-6 text-white tracking-tight"></h2>
+            <div class="w-full h-px bg-gray-700 my-6"></div>
+            <p id="ending-desc" class="text-lg text-gray-300 leading-relaxed mb-8 max-w-2xl mx-auto"></p>
+            
+            <div id="ending-stats" class="grid grid-cols-2 gap-4 max-w-lg mx-auto mb-8 text-left bg-black/30 p-4 rounded border border-gray-700">
+                <!-- Stats injected here -->
+            </div>
+
+            <button onclick="location.reload()" class="hud-btn px-8 py-3 text-sm font-bold uppercase tracking-widest">
+                重新啟動模擬
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        // --- GAME STATE ---
+        const gameState = {
+            currentStage: 0,
+            maxStages: 5,
+            defenseScore: 10,
+            scoreThreshold: 5,
+            history: [],
+            currentRoundOptions: [] // Added to store shuffled options
+        };
+
+        // --- SCENARIO DATA ---
+        const scenarios = [
+            {
+                id: 1,
+                title: "灰色地帶與無人機飽和攻擊",
+                desc: "雷達警報！福建沿海升空超過 300 架不明飛行物，正低空快速接近我方雷達站。這是典型的「無人機蜂群」飽和攻擊，企圖消耗我方防空資源。",
+                threatVisual: `<div class="absolute top-1/4 right-1/4 w-2 h-2 bg-red-500 rounded-full blinking-dot"></div>
+                               <div class="absolute top-1/3 right-1/3 w-2 h-2 bg-red-500 rounded-full blinking-dot" style="animation-delay: 0.2s"></div>
+                               <div class="absolute top-1/2 right-1/4 w-2 h-2 bg-red-500 rounded-full blinking-dot" style="animation-delay: 0.4s"></div>
+                               <div class="absolute bottom-1/3 right-1/3 w-2 h-2 bg-red-500 rounded-full blinking-dot" style="animation-delay: 0.1s"></div>`,
+                options: [
+                    {
+                        text: "命令愛國者飛彈全數開火，務必擊落所有目標！",
+                        isCorrect: false,
+                        feedback: "錯誤！雖然擊落了部分無人機，但我方一枚數千萬的防空飛彈耗盡，只換掉對方廉價無人機。後續主力戰機進犯時，我方已無彈藥可用。",
+                        policyNote: "台灣目前缺乏足夠的低成本反制系統（如軟殺干擾或雷射），若用昂貴飛彈硬碰硬將無法持久。我們需要這筆預算來採購專門的無人機反制系統。"
+                    },
+                    {
+                        text: "啟動「反制系統」電子干擾，並派出無人機攔截。",
+                        isCorrect: true,
+                        feedback: "正確！電子干擾網成功癱瘓敵方無人機群，我方無人機升空補位。重要設施完好，且主力飛彈庫存充足。",
+                        policyNote: "這就是「不對稱戰力」。利用預算採購的反制系統，成功以低成本守住了高價值目標。"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                title: "海空封鎖與孤島危機",
+                desc: "共軍宣佈在台灣周邊海域實彈演習，形成「全島封鎖」。天然氣船無法進港，能源與物資僅剩 10 天存量。敵軍企圖不戰而屈人之兵。",
+                threatVisual: `<div class="absolute inset-0 border-4 border-red-500/50 rounded-full animate-pulse"></div>`,
+                options: [
+                    {
+                        text: "派出所有大型驅逐艦，正面衝破封鎖線！",
+                        isCorrect: false,
+                        feedback: "錯誤！大型軍艦出港後成為敵方衛星與長程飛彈的活靶，損失慘重且無法解除封鎖。能源耗盡，社會動盪。",
+                        policyNote: "台灣目前艦艇數量與噸位不及對方，硬碰硬必敗。我們需要新預算來強化國內自主生產彈藥與物資的能力，並部署機動飛彈，才能在封鎖中生存。"
+                    },
+                    {
+                        text: "部署「岸置遠程飛彈」壓制，並啟動國內戰備產線。",
+                        isCorrect: true,
+                        feedback: "正確！岸置飛彈迫使敵艦後撤，封鎖線出現破口。同時國內兵工產線全開，補給不中斷，社會人心穩定。",
+                        policyNote: "您運用了「重層攔截」與「防衛韌性」。這筆預算投資的國內供應鏈，讓我們能撐得比敵人久。"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                title: "兩棲登陸與通訊斬首",
+                desc: "敵軍準備搶灘登陸。同時，駭客切斷通訊光纖，指揮中心螢幕一片漆黑，前線部隊收不到指令，陷入混亂。",
+                threatVisual: `<div class="absolute top-1/2 left-1/2 w-full h-1 bg-red-500 transform -translate-x-1/2 rotate-45"></div>
+                               <div class="absolute top-1/2 left-1/2 w-full h-1 bg-red-500 transform -translate-x-1/2 -rotate-45"></div>`,
+                options: [
+                    {
+                        text: "依靠各部隊自由發揮，命令坦克直接開往海灘決戰。",
+                        isCorrect: false,
+                        feedback: "錯誤！缺乏情報整合，部隊各自為政。坦克在移動中被摧毀，敵軍成功登陸，戰火燒進城鎮。",
+                        policyNote: "台灣目前的通訊系統在面對高強度電子戰時可能失效。我們急需預算採購 AI 輔助指揮系統，才能在通訊混亂中迅速整合戰場情報。"
+                    },
+                    {
+                        text: "啟動「AI 指揮系統」整合情報，利用精準火砲源頭打擊。",
+                        isCorrect: true,
+                        feedback: "正確！AI 迅速整合無人機數據，標定位置。我方精準火砲在敵軍上岸前就摧毀其主力，登陸失敗。",
+                        policyNote: "透過採購 AI 系統與精準彈藥，能加速「擊殺鏈」，將戰火阻絕在境外。"
+                    }
+                ]
+            },
+            {
+                id: 4,
+                title: "敵軍裝甲部隊搶灘",
+                desc: "敵軍兩棲突擊車突破防線，數百輛坦克即將登陸。我方灘岸守備兵力面臨極大壓力。",
+                threatVisual: `<div class="absolute bottom-1/4 left-1/2 w-3 h-3 bg-red-600 rounded-sm animate-bounce"></div>
+                               <div class="absolute bottom-1/4 left-1/3 w-3 h-3 bg-red-600 rounded-sm animate-bounce" style="animation-delay: 0.1s"></div>
+                               <div class="absolute bottom-1/4 right-1/3 w-3 h-3 bg-red-600 rounded-sm animate-bounce" style="animation-delay: 0.2s"></div>`,
+                options: [
+                    {
+                        text: "派遣主力戰車營前往灘岸進行近距離砲戰。",
+                        isCorrect: false,
+                        feedback: "錯誤！在敵方掌握空優的情況下，集結的戰車部隊容易成為攻擊直升機的目標，且戰損交換比極不划算。",
+                        policyNote: "傳統坦克對決代價太高。台灣目前缺乏足夠數量的新式單兵反裝甲武器與遊蕩彈藥（自殺無人機），需要新預算來填補這些不對稱戰力。"
+                    },
+                    {
+                        text: "運用「反裝甲飛彈」與遊蕩彈藥進行機動伏擊。",
+                        isCorrect: true,
+                        feedback: "正確！利用地形掩護，以單兵飛彈與自殺無人機精準摧毀敵軍坦克，敵軍攻勢受阻，無法建立灘頭堡。",
+                        policyNote: "利用高機動性的反裝甲飛彈，讓敵軍坦克成為廢鐵。這就是預算中強調的「多層次削弱」戰術。"
+                    }
+                ]
+            },
+            {
+                id: 5,
+                title: "敵軍集結與源頭打擊",
+                desc: "衛星偵測到對岸港口集結大量登陸船團與物資，準備發動總攻擊。這是敵軍最脆弱的時刻。",
+                threatVisual: `<div class="absolute top-0 right-0 w-16 h-16 border-l-2 border-b-2 border-red-500/50 rounded-bl-3xl"></div>`,
+                options: [
+                    {
+                        text: "固守本島，等待敵軍進犯後再反擊。",
+                        isCorrect: false,
+                        feedback: "錯誤！被動防禦會讓戰火在本土燃燒，造成平民重大傷亡，且一旦敵軍登陸，防守難度將倍增。",
+                        policyNote: "過去我們缺乏長程打擊能力，只能被動挨打。現在需要新預算採購「遠程精準打擊飛彈」，建立「只要你敢集結，我就能打得到」的嚇阻力。"
+                    },
+                    {
+                        text: "使用「遠程精準打擊飛彈」攻擊敵方集結港口與補給庫。",
+                        isCorrect: true,
+                        feedback: "正確！敵方港口陷入火海，登陸船團在出發前即受重創，進攻計畫被迫延後或取消。",
+                        policyNote: "這就是「源頭打擊」。透過採購案中的遠程飛彈，我們將防衛縱深推向對岸，確保台灣本島安全。"
+                    }
+                ]
+            }
+        ];
+
+        // --- DOM ELEMENTS ---
+        const screens = {
+            intro: document.getElementById('intro-screen'),
+            game: document.getElementById('game-screen'),
+            ending: document.getElementById('ending-screen')
+        };
+        const els = {
+            healthBar: document.getElementById('health-bar-container'),
+            healthText: document.getElementById('health-text'),
+            radarThreats: document.getElementById('radar-threats'),
+            scenarioTitle: document.getElementById('scenario-title'),
+            scenarioDesc: document.getElementById('scenario-desc'),
+            btnA: document.getElementById('btn-option-a'),
+            btnB: document.getElementById('btn-option-b'),
+            textA: document.getElementById('text-option-a'),
+            textB: document.getElementById('text-option-b'),
+            modal: document.getElementById('result-modal'),
+            modalContent: document.getElementById('modal-content'),
+            modalTitle: document.getElementById('modal-title'),
+            modalFeedback: document.getElementById('modal-feedback'),
+            modalBorder: document.getElementById('modal-border-color'),
+            modalStatus: document.getElementById('modal-status-code'),
+            modalNextBtn: document.getElementById('modal-next-btn')
+        };
+
+        // --- FUNCTIONS ---
+
+        function initHealthBar() {
+            els.healthBar.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const seg = document.createElement('div');
+                seg.className = 'flex-1 bg-green-500 rounded-sm shadow-[0_0_10px_#00ff9d] health-segment';
+                els.healthBar.appendChild(seg);
+            }
+        }
+
+        function updateHealthDisplay() {
+            const percentage = (gameState.defenseScore / 10) * 100;
+            els.healthText.innerText = `${percentage}%`;
+            
+            // 10 points = 5 segments. Each segment = 2 points.
+            const segments = els.healthBar.children;
+            const activeSegments = Math.ceil(gameState.defenseScore / 2);
+
+            for(let i=0; i<5; i++) {
+                if (i < activeSegments) {
+                    segments[i].classList.remove('health-lost');
+                    // Color change based on health
+                    if(activeSegments <= 2) {
+                        segments[i].classList.remove('bg-green-500', 'shadow-[0_0_10px_#00ff9d]');
+                        segments[i].classList.add('bg-red-600', 'shadow-[0_0_10px_#ff0000]');
+                    }
+                } else {
+                    segments[i].classList.add('health-lost');
+                }
+            }
+        }
+
+        function startGame() {
+            gameState.currentStage = 0;
+            gameState.defenseScore = 10;
+            gameState.history = [];
+            
+            screens.intro.classList.add('hidden');
+            screens.game.classList.remove('hidden');
+            screens.ending.classList.add('hidden');
+            
+            initHealthBar();
+            loadScenario(0);
+        }
+
+        function loadScenario(index) {
+            if(index >= scenarios.length) {
+                endGame();
+                return;
+            }
+
+            const data = scenarios[index];
+            
+            // Randomize options for this round
+            // We create a shallow copy and sort randomly
+            gameState.currentRoundOptions = [...data.options].sort(() => Math.random() - 0.5);
+
+            // Content
+            els.scenarioTitle.innerText = `SCENARIO 0${index+1}: ${data.title}`;
+            els.scenarioDesc.innerText = data.desc;
+            
+            // Assign shuffled options to buttons
+            els.textA.innerText = gameState.currentRoundOptions[0].text;
+            els.textB.innerText = gameState.currentRoundOptions[1].text;
+            
+            // Visuals
+            els.radarThreats.innerHTML = data.threatVisual;
+
+            // Reset buttons state
+            els.btnA.disabled = false;
+            els.btnB.disabled = false;
+        }
+
+        function makeChoice(optionIndex) {
+            // Retrieve the option from our randomized array
+            const choice = gameState.currentRoundOptions[optionIndex];
+            
+            // Logic
+            if(!choice.isCorrect) {
+                gameState.defenseScore -= 2;
+                showModal(false, choice.feedback, choice.policyNote);
+            } else {
+                showModal(true, choice.feedback, choice.policyNote);
+            }
+
+            updateHealthDisplay();
+
+            // Check immediate fail state or update history
+            gameState.history.push({
+                stage: gameState.currentStage + 1,
+                result: choice.isCorrect ? "SUCCESS" : "FAIL"
+            });
+        }
+
+        function showModal(isSuccess, feedback, policyNote) {
+            els.modal.classList.remove('hidden');
+            // Trigger animation
+            requestAnimationFrame(() => {
+                els.modal.classList.remove('opacity-0');
+                els.modalContent.classList.remove('scale-95');
+            });
+
+            if (isSuccess) {
+                els.modalTitle.innerText = "戰術執行成功";
+                els.modalTitle.className = "text-3xl font-bold mb-4 font-tech uppercase text-green-500";
+                els.modalBorder.className = "bg-gray-800/50 p-4 border-l-4 mb-6 border-green-500";
+                els.modalStatus.innerText = "CODE: 200-OK // TARGET NEUTRALIZED";
+                els.modalStatus.className = "text-sm font-tech text-green-500";
+            } else {
+                els.modalTitle.innerText = "戰術執行失敗";
+                els.modalTitle.className = "text-3xl font-bold mb-4 font-tech uppercase text-red-500";
+                els.modalBorder.className = "bg-gray-800/50 p-4 border-l-4 mb-6 border-red-500";
+                els.modalStatus.innerText = "CODE: 500-CRITICAL // DEFENSE BREACHED";
+                els.modalStatus.className = "text-sm font-tech text-red-500";
+            }
+
+            els.modalFeedback.innerHTML = `${feedback}<br><br><span class="text-white font-bold">★ 國防知識點：</span>${policyNote}`;
+
+            // Check for Game Over condition to update button text
+            if (gameState.defenseScore <= gameState.scoreThreshold) {
+                els.modalNextBtn.innerText = "解放軍已經進入台北市 >>";
+                els.modalNextBtn.className = "bg-red-600 text-white hover:bg-red-700 px-6 py-2 font-bold uppercase tracking-widest text-sm transition-colors";
+            } else {
+                els.modalNextBtn.innerText = "指揮官，下一波攻擊來了 >>";
+                els.modalNextBtn.className = "bg-white text-black hover:bg-gray-200 px-6 py-2 font-bold uppercase tracking-widest text-sm transition-colors";
+            }
+        }
+
+        function nextLevel() {
+            // Hide modal
+            els.modal.classList.add('opacity-0');
+            els.modalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                els.modal.classList.add('hidden');
+                
+                // Check death condition
+                if(gameState.defenseScore <= gameState.scoreThreshold) {
+                    triggerEnding(false);
+                } else {
+                    gameState.currentStage++;
+                    loadScenario(gameState.currentStage);
+                }
+            }, 300);
+        }
+
+        function endGame() {
+            // If they survived all stages
+            triggerEnding(true);
+        }
+
+        function triggerEnding(isVictory) {
+            screens.game.classList.add('hidden');
+            screens.ending.classList.remove('hidden');
+
+            const title = document.getElementById('ending-title');
+            const desc = document.getElementById('ending-desc');
+            const icon = document.getElementById('ending-icon');
+            const stats = document.getElementById('ending-stats');
+
+            if(isVictory) {
+                screens.ending.className = "hud-border bg-gray-900/95 p-8 md:p-12 text-center border-green-500 shadow-[0_0_50px_rgba(0,255,157,0.2)]";
+                icon.innerHTML = "🛡️";
+                title.innerText = "系統公告：成功守護家園";
+                title.className = "text-4xl md:text-5xl font-bold mb-6 text-green-400 tracking-tight";
+                desc.innerHTML = `指揮官，您善用了「強化防衛韌性及不對稱戰力」預算。<br><br>
+                                  1. <strong>多層次防禦</strong> 成功抵禦了敵軍 5 波現代化攻勢。<br>
+                                  2. <strong>精準打擊</strong> 阻斷了敵軍的集結。<br>
+                                  3. <strong>自主國防產業</strong> 支撐了持久戰。<br><br>
+                                  解放軍經過評估，可能會有不一樣的想法。`;
+            } else {
+                screens.ending.className = "hud-border bg-gray-900/95 p-8 md:p-12 text-center border-red-600 shadow-[0_0_50px_rgba(255,0,0,0.3)]";
+                icon.innerHTML = "☠️";
+                title.innerText = "系統公告：台灣防衛體系崩潰";
+                title.className = "text-4xl md:text-5xl font-bold mb-6 text-red-600 tracking-tight";
+                desc.innerHTML = `由於缺乏新預算支持的「不對稱戰力」，在面對連續 5 波現代化攻勢時，傳統兵力消耗殆盡。<br>
+                                  彈藥補給線中斷，指揮系統癱瘓。<br><br>
+                                  <strong>這是解放軍樂見的情況。</strong>`;
+            }
+
+            // Stats
+            stats.innerHTML = `
+                <div class="text-gray-400 text-sm">最終防衛值</div>
+                <div class="text-right font-bold ${isVictory ? 'text-green-400' : 'text-red-500'} font-tech">${gameState.defenseScore}/10</div>
+                <div class="text-gray-400 text-sm">存活波次</div>
+                <div class="text-right font-bold text-white font-tech">${gameState.currentStage}/${gameState.maxStages}</div>
+            `;
+        }
+
+    </script>
+</body>
+</html>
