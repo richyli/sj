@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>傳播學院分類帽</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Google Fonts (Noto Sans TC) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons Components (Inline SVGs for single file portability) ---
+        const Icon = ({ path, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+
+        // Fixed: Wrapped multiple SVG paths in Fragments <></> to avoid JSX syntax error
+        const icons = {
+            Search: <path d="m21 21-4.3-4.3M11 17a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/>,
+            Target: <><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01"/><path d="M16 12a10 10 0 1 0-2 18"/><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></>,
+            Eye: <><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></>,
+            Brain: <><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></>,
+            MessageCircle: <path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/>,
+            Aperture: <><circle cx="12" cy="12" r="10"/><path d="m14.31 8 5.74 9.94"/><path d="M9.69 8h11.48"/><path d="m7.38 12 5.74-9.94"/><path d="M9.69 16 3.95 6.06"/><path d="M14.31 16H2.83"/><path d="m16.62 12-5.74 9.94"/></>,
+            Compass: <><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></>,
+            Zap: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>,
+            Feather: <><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" x2="2" y1="8" y2="22"/><line x1="17.5" x2="9" y1="15" y2="15"/></>,
+            Lightbulb: <><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2.4 1.5-3.8 0-3.2-2.8-5.7-6-5.7s-6 2.5-6 5.7c0 1.4.5 2.8 1.5 3.8.8.8 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></>,
+            Mic: <><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></>,
+            Users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+            Heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>,
+            Map: <><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></>,
+            RefreshCw: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>,
+            ChevronRight: <path d="m9 18 6-6-6-6"/>,
+            Key: <><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></>,
+            Anchor: <><circle cx="12" cy="5" r="3"/><line x1="12" x2="12" y1="22" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/></>
+        };
+
+        const renderIcon = (name, className) => <Icon path={icons[name]} className={className} />;
+
+        const CommunicationMajorSorter = () => {
+            const [step, setStep] = useState('intro'); // intro, quiz, analyzing, result
+            const [currentQ, setCurrentQ] = useState(0);
+            const [scores, setScores] = useState({ news: 0, ad: 0, rtf: 0 });
+            const [shuffledQuestions, setShuffledQuestions] = useState([]);
+
+            const rawQuestions = [
+                {
+                    id: 1,
+                    question: "眼前有一幅看不懂的抽象畫，你的第一個念頭是？",
+                    options: [
+                        { text: "這幅畫想要表達什麼？畫家的背景是誰？", type: "news", iconName: "Search" },
+                        { text: "這幅畫掛在哪裡最適合？誰會想買它？", type: "ad", iconName: "Target" },
+                        { text: "盯著它的顏色和線條，單純感受它帶給我的情緒。", type: "rtf", iconName: "Eye" }
+                    ]
+                },
+                {
+                    id: 2,
+                    question: "朋友和你分享一個他做的奇怪夢境，你會？",
+                    options: [
+                        { text: "幫他分析夢裡的象徵，試著解釋這反映了他最近什麼壓力。", type: "news", iconName: "Brain" },
+                        { text: "告訴他：「這代表你快發財了！」（隨便說個好聽的讓他開心）。", type: "ad", iconName: "MessageCircle" },
+                        { text: "閉上眼想像那個夢境的畫面，覺得那個場景好酷。", type: "rtf", iconName: "Aperture" }
+                    ]
+                },
+                {
+                    id: 3,
+                    question: "去一個陌生的城市旅行，你最不能接受哪種情況？",
+                    options: [
+                        { text: "迷路，而且完全搞不清楚東南西北，沒有地圖。", type: "news", iconName: "Compass" },
+                        { text: "去的地方很無聊，沒有任何好玩或值得打卡分享的點。", type: "ad", iconName: "Zap" },
+                        { text: "風景很醜，到處都是灰濛濛的水泥牆，沒有美感。", type: "rtf", iconName: "Feather" }
+                    ]
+                },
+                {
+                    id: 4,
+                    question: "如果要把一段記憶永久保存下來，你希望形式是？",
+                    options: [
+                        { text: "一本詳細的筆記，精確記錄時間、地點和發生的事。", type: "news", iconName: "Search" },
+                        { text: "一個精緻的時光膠囊，打開時會給未來的自己一個驚喜。", type: "ad", iconName: "Lightbulb" },
+                        { text: "一段錄音或影片，能讓我重溫當時的空氣、聲音和光線。", type: "rtf", iconName: "Mic" }
+                    ]
+                },
+                {
+                    id: 5,
+                    question: "在團隊合作中，當大家意見不合僵持不下，你會？",
+                    options: [
+                        { text: "把大家的觀點列出來，找出邏輯矛盾點，看誰最有道理。", type: "news", iconName: "Brain" },
+                        { text: "觀察誰是關鍵意見領袖，試著說服他，或提出折衷方案來破冰。", type: "ad", iconName: "Users" },
+                        { text: "覺得氣氛太僵了，試著放個音樂或開個玩笑來轉換氛圍。", type: "rtf", iconName: "Heart" }
+                    ]
+                },
+                {
+                    id: 6,
+                    question: "你覺得什麼樣的人最有魅力？",
+                    options: [
+                        { text: "博學多聞，說話有憑有據，從不信口開河的人。", type: "news", iconName: "Search" },
+                        { text: "幽默風趣，總能輕易帶動氣氛，成為全場焦點的人。", type: "ad", iconName: "Zap" },
+                        { text: "氣質獨特，這人本身就像一部電影，充滿故事感的人。", type: "rtf", iconName: "Feather" }
+                    ]
+                },
+                {
+                    id: 7,
+                    question: "如果世界末日來臨，只能帶走一樣東西，你會選？",
+                    options: [
+                        { text: "百科全書或硬碟，保存人類的知識與歷史。", type: "news", iconName: "Brain" },
+                        { text: "通訊器材，確保我還能聯繫上倖存者並組織他們。", type: "ad", iconName: "Target" },
+                        { text: "樂器或畫具，即使在末日也要保有心靈的寄託。", type: "rtf", iconName: "Aperture" }
+                    ]
+                },
+                {
+                    id: 8,
+                    question: "你比較擅長處理哪種「不確定性」？",
+                    options: [
+                        { text: "複雜的謎團：透過線索拼湊出真相。", type: "news", iconName: "Compass" },
+                        { text: "人心難測：預測對方的反應並引導他們。", type: "ad", iconName: "Lightbulb" },
+                        { text: "創作瓶頸：在空白中無中生有，創造出作品。", type: "rtf", iconName: "Feather" }
+                    ]
+                },
+                {
+                    id: 9,
+                    question: "看電影時，哪個瞬間最讓你出戲（無法投入）？",
+                    options: [
+                        { text: "劇情出現巨大的邏輯漏洞，根本不合理。", type: "news", iconName: "Search" },
+                        { text: "置入性行銷太明顯，或台詞說教感太重。", type: "ad", iconName: "Target" },
+                        { text: "演員演技太爛，或是特效假到讓人尷尬。", type: "rtf", iconName: "Eye" }
+                    ]
+                },
+                {
+                    id: 10,
+                    question: "最後，你認為「話語」的最大力量在於？",
+                    options: [
+                        { text: "揭露：讓被隱藏的事物顯現。", type: "news", iconName: "Mic" },
+                        { text: "煽動：激發人們採取行動。", type: "ad", iconName: "Zap" },
+                        { text: "感動：觸摸靈魂深處的柔軟。", type: "rtf", iconName: "Heart" }
+                    ]
+                },
+                {
+                    id: 11,
+                    question: "如果要在搶劫電影中扮演一個角色，你會是？",
+                    options: [
+                        { text: "情報專家：負責研究藍圖、破解保全系統邏輯。", type: "news", iconName: "Brain" },
+                        { text: "談判專家：負責詐騙警衛、控制人質心理。", type: "ad", iconName: "Users" },
+                        { text: "偽裝大師：負責製作假證件、易容、營造假象。", type: "rtf", iconName: "Aperture" }
+                    ]
+                },
+                {
+                    id: 12,
+                    question: "送禮物給重要的人，你的挑選標準是？",
+                    options: [
+                        { text: "實用性：他最近剛好缺少的東西，解決他的問題。", type: "news", iconName: "Search" },
+                        { text: "象徵性：這禮物代表了我們之間的關係，能說服他我重視他。", type: "ad", iconName: "Heart" },
+                        { text: "獨特性：最好是手工做的，或是全世界獨一無二的藝術品。", type: "rtf", iconName: "Feather" }
+                    ]
+                },
+                {
+                    id: 13,
+                    question: "你理想中的工作環境長什麼樣子？",
+                    options: [
+                        { text: "像指揮中心，有多個螢幕監控資訊，井然有序。", type: "news", iconName: "Compass" },
+                        { text: "開放式空間，大家隨時可以丟出點子互相激盪。", type: "ad", iconName: "Lightbulb" },
+                        { text: "燈光昏暗有氣氛的工作室，放著好聽的音樂。", type: "rtf", iconName: "Mic" }
+                    ]
+                },
+                {
+                    id: 14,
+                    question: "如果可以擁有一把傳說中的武器，你會選？",
+                    options: [
+                        { text: "真理之劍：能斬斷一切虛假與幻象。", type: "news", iconName: "Search" },
+                        { text: "魅惑權杖：能指揮千軍萬馬聽你號令。", type: "ad", iconName: "Target" },
+                        { text: "造物神筆：畫出來的東西都會變成真的。", type: "rtf", iconName: "Feather" }
+                    ]
+                },
+                {
+                    id: 15,
+                    question: "你覺得哪種「自由」對你來說最重要？",
+                    options: [
+                        { text: "知的自由：沒有審查，沒有秘密被隱瞞。", type: "news", iconName: "Eye" },
+                        { text: "選擇的自由：有能力去影響結果，不被命運擺佈。", type: "ad", iconName: "Zap" },
+                        { text: "表達的自由：能隨心所欲展現內心的想像世界。", type: "rtf", iconName: "Aperture" }
+                    ]
+                }
+            ];
+
+            const shuffleArray = (array) => {
+                const newArray = [...array];
+                for (let i = newArray.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                }
+                return newArray;
+            };
+
+            const startQuiz = () => {
+                const randomizedQuestions = rawQuestions.map(q => ({
+                    ...q,
+                    options: shuffleArray(q.options)
+                }));
+                setShuffledQuestions(randomizedQuestions);
+                setScores({ news: 0, ad: 0, rtf: 0 });
+                setCurrentQ(0);
+                setStep('quiz');
+            };
+
+            const handleAnswer = (type) => {
+                setScores(prev => ({ ...prev, [type]: prev[type] + 1 }));
+                
+                if (currentQ < shuffledQuestions.length - 1) {
+                    setCurrentQ(prev => prev + 1);
+                } else {
+                    setStep('analyzing');
+                    setTimeout(() => setStep('result'), 2000);
+                }
+            };
+
+            const getWinner = () => {
+                const { news, ad, rtf } = scores;
+                const max = Math.max(news, ad, rtf);
+                const min = Math.min(news, ad, rtf);
+                
+                const sortedScores = [news, ad, rtf].sort((a, b) => b - a);
+                const isTightRace = (sortedScores[0] - sortedScores[1]) <= 1;
+                const isBalanced = (max - min) <= 3;
+
+                if (isBalanced || isTightRace) return 'balanced';
+                
+                if (news === max) return 'news';
+                if (ad === max) return 'ad';
+                if (rtf === max) return 'rtf';
+                
+                return 'balanced';
+            };
+
+            const results = {
+                news: {
+                    title: "真相探勘者 (The Investigator)",
+                    dept: "建議路徑：新聞系 / 資訊傳播",
+                    keywords: "結構邏輯、批判思考、求真本能",
+                    desc: "你的思維模式像是一把手術刀，總能精準地切開表象，看見內在的結構。你不容易被情緒勒索，也不盲從潮流。在混亂的資訊中，你本能地尋找「順序」、「證據」與「因果關係」。",
+                    fit: "你適合處理複雜資訊，將其轉化為大眾能理解的事實。",
+                    career: "調查記者、數據分析師、編輯、策展人、社會觀察家。",
+                    color: "bg-blue-600",
+                    bg: "bg-blue-50"
+                },
+                ad: {
+                    title: "心智駭客 (The Strategist)",
+                    dept: "建議路徑：廣告系 / 公共關係",
+                    keywords: "洞察人心、策略佈局、價值轉化",
+                    desc: "你的思維模式像是一位棋手，你看的不是「現在是什麼」，而是「未來可以變成什麼」。你極度敏銳於人際之間的動力流動，懂得如何包裝觀點讓他人接受。",
+                    fit: "你適合結合創意與商業策略，解決人的問題。",
+                    career: "品牌策略師、創意總監、公關經理、社群操盤手、活動企劃。",
+                    color: "bg-yellow-500",
+                    bg: "bg-yellow-50"
+                },
+                rtf: {
+                    title: "感官造夢師 (The Creator)",
+                    dept: "建議路徑：廣電系 / 電影創作",
+                    keywords: "美學直覺、情感共鳴、敘事靈魂",
+                    desc: "你的思維模式像是一位詩人或畫家，你對世界的理解來自於「感受」而非「數據」。你對光影、節奏、聲音的細微變化異常敏感。你不需要太多理由，只要那個瞬間能打動人心。",
+                    fit: "你適合用影像與聲音說故事，創造沉浸式體驗。",
+                    career: "導演、編劇、攝影師、剪輯師、YouTuber、Podcast 製作人。",
+                    color: "bg-purple-600",
+                    bg: "bg-purple-50"
+                },
+                balanced: {
+                    title: "荒野開拓者 (The Pathfinder)",
+                    dept: "建議路徑：人煙稀少的小徑",
+                    keywords: "全能潛力、不甘平凡、跨域整合",
+                    desc: "你的測驗結果顯示你的能力非常平均，這代表現有的單一科系框架可能都無法完全滿足你。與其在熱門的領域（如廣告或拍片）跟隨大流，建議你選擇一條「人少」的路。",
+                    fit: "你應該嘗試去結合最難結合的東西。例如：用新聞的嚴謹邏輯去做電影，或是用廣告的行銷思維去跑新聞。不要只是選一個系，要去創造屬於你的「混血」專業。",
+                    career: "獨立媒體創辦人、跨領域專案製作人、社會企業家、實驗藝術家。",
+                    color: "bg-gray-700",
+                    bg: "bg-gray-100"
+                }
+            };
+
+            const winnerKey = step === 'result' ? getWinner() : 'news';
+            const resultData = results[winnerKey];
+
+            return (
+                <div className="flex items-center justify-center p-4 min-h-screen">
+                    <div className="max-w-2xl w-full bg-white rounded-3xl shadow-xl overflow-hidden min-h-[600px] flex flex-col">
+                        
+                        {/* Header */}
+                        <div className="bg-gray-900 p-6 text-white flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                                {renderIcon('Map', 'w-6 h-6 text-pink-400')}
+                                <h1 className="text-xl font-bold tracking-wide">傳播學院分類帽</h1>
+                            </div>
+                            {step === 'quiz' && (
+                                <div className="text-xs font-mono text-gray-400">
+                                    SCANNING... {Math.round(((currentQ + 1) / shuffledQuestions.length) * 100)}%
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Content Area */}
+                        <div className="flex-1 p-8 flex flex-col justify-center">
+                            
+                            {step === 'intro' && (
+                                <div className="text-center animate-fade-in">
+                                    <div className="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center border-4 border-gray-200">
+                                        {renderIcon('Brain', 'w-12 h-12 text-gray-800')}
+                                    </div>
+                                    <h2 className="text-3xl font-bold mb-4">歡迎來到分類儀式</h2>
+                                    <p className="text-gray-600 mb-8 leading-relaxed text-lg">
+                                        在傳播的領域裡，<br/>
+                                        有些人擅長看穿謊言，<br/>
+                                        有些人擅長編織夢境，<br/>
+                                        有些人擅長操控人心。<br/>
+                                        <br/>
+                                        這裡沒有科系名稱，只有關於你靈魂本質的拷問。<br/>
+                                        回答 15 道情境題，找出你原本屬於哪裡。
+                                    </p>
+                                    <button 
+                                        onClick={startQuiz}
+                                        className="bg-black text-white px-10 py-4 rounded-full font-bold hover:bg-gray-800 transition-all flex items-center gap-2 mx-auto shadow-lg transform hover:scale-105"
+                                    >
+                                        戴上分類帽 {renderIcon('ChevronRight', 'w-5 h-5')}
+                                    </button>
+                                </div>
+                            )}
+
+                            {step === 'quiz' && shuffledQuestions.length > 0 && (
+                                <div className="animate-fade-in w-full">
+                                    <div className="mb-8">
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2 block">Question {String(currentQ + 1).padStart(2, '0')} / 15</span>
+                                        <h3 className="text-2xl font-bold text-gray-900 leading-tight">
+                                            {shuffledQuestions[currentQ].question}
+                                        </h3>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {shuffledQuestions[currentQ].options.map((opt, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => handleAnswer(opt.type)}
+                                                className="w-full text-left p-5 rounded-xl border border-gray-200 hover:border-black hover:bg-gray-50 transition-all group flex items-start gap-4"
+                                            >
+                                                <div className="mt-1 text-gray-400 group-hover:text-black transition-colors">
+                                                    {renderIcon(opt.iconName, 'w-5 h-5')}
+                                                </div>
+                                                <span className="text-lg text-gray-700 group-hover:text-black font-medium">
+                                                    {opt.text}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 'analyzing' && (
+                                <div className="text-center animate-pulse">
+                                    <div className="mx-auto mb-6 w-16 h-16 flex items-center justify-center">
+                                        {renderIcon('RefreshCw', 'w-16 h-16 text-gray-800 animate-spin')}
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-gray-800">分類帽正在思考...</h3>
+                                    <p className="text-gray-500 mt-2">分析你的潛意識路徑...</p>
+                                </div>
+                            )}
+
+                            {step === 'result' && (
+                                <div className="animate-fade-in h-full flex flex-col">
+                                    <div className={`flex-1 rounded-2xl p-8 ${resultData.bg} mb-6 border-2 border-opacity-10 border-black shadow-inner`}>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <span className={`inline-block px-4 py-1 rounded-full text-white text-xs font-bold ${resultData.color}`}>
+                                                SORTING RESULT
+                                            </span>
+                                            {winnerKey === 'balanced' && renderIcon('Compass', 'w-6 h-6 text-gray-600')}
+                                        </div>
+                                        
+                                        <h2 className="text-3xl font-bold text-gray-900 mb-2">{resultData.title}</h2>
+                                        <h3 className="text-xl text-gray-700 mb-6 font-mono border-b border-black border-opacity-10 pb-4 inline-block">
+                                            {resultData.dept}
+                                        </h3>
+                                        
+                                        <div className="flex flex-wrap gap-2 mb-6">
+                                            {resultData.keywords.split('、').map((k, i) => (
+                                                <span key={i} className="bg-white px-3 py-1 rounded-lg border border-gray-200 text-sm font-bold text-gray-600 shadow-sm">
+                                                    #{k}
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        <p className="text-gray-800 leading-relaxed mb-8 text-lg font-medium">
+                                            {resultData.desc}
+                                        </p>
+
+                                        <div className="grid gap-4">
+                                            <div className="bg-white bg-opacity-70 p-4 rounded-xl border border-white">
+                                                <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                                    {renderIcon('Key', 'w-4 h-4')} 為什麼適合你？
+                                                </h4>
+                                                <p className="text-sm text-gray-600">{resultData.fit}</p>
+                                            </div>
+                                            
+                                            <div className="bg-white bg-opacity-70 p-4 rounded-xl border border-white">
+                                                <h4 className="font-bold text-gray-900 mb-2 flex items-center gap-2 text-sm uppercase tracking-wide">
+                                                    {renderIcon('Anchor', 'w-4 h-4')} 未來定位
+                                                </h4>
+                                                <p className="text-sm text-gray-600">{resultData.career}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="opacity-50 hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-1 h-1 w-full rounded-full overflow-hidden">
+                                            <div className="bg-blue-500" style={{ width: `${(scores.news/15)*100}%` }}></div>
+                                            <div className="bg-yellow-500" style={{ width: `${(scores.ad/15)*100}%` }}></div>
+                                            <div className="bg-purple-500" style={{ width: `${(scores.rtf/15)*100}%` }}></div>
+                                        </div>
+                                        <div className="text-center text-[10px] text-gray-400 mt-1">
+                                            DEBUG: N{scores.news} A{scores.ad} R{scores.rtf}
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => {
+                                            setStep('intro');
+                                            setScores({ news: 0, ad: 0, rtf: 0 });
+                                            setCurrentQ(0);
+                                        }}
+                                        className="w-full py-4 mt-4 text-gray-500 hover:bg-gray-100 hover:text-black rounded-xl transition-all flex items-center justify-center gap-2 font-bold"
+                                    >
+                                        {renderIcon('RefreshCw', 'w-4 h-4')} 重新分類
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CommunicationMajorSorter />);
+    </script>
+</body>
+</html>
