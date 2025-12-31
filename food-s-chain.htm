@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>農食鏈歸位大挑戰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom Animations */
+        @keyframes bounce-slow {
+            0%, 100% { transform: translateY(-5%); }
+            50% { transform: translateY(5%); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 2s infinite;
+        }
+        .transition-width {
+            transition: width 1s ease-out;
+        }
+        
+        /* Disable text selection for better drag experience */
+        body {
+            user-select: none;
+            -webkit-user-select: none;
+            overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
+        }
+
+        /* Hide scrollbar for dock */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800 flex items-center justify-center">
+
+    <!-- App Container 
+         Mobile: Full width/height (h-screen), vertical flex
+         Desktop (md): Max width 5xl, aspect ratio 16/9 (horizontal), rounded corners, centered
+    -->
+    <div id="app" class="w-full h-screen md:h-auto md:aspect-[16/9] md:max-w-6xl bg-white shadow-2xl relative flex flex-col md:rounded-2xl overflow-hidden">
+        <!-- Content will be injected here by JavaScript -->
+    </div>
+
+    <script>
+        // --- Data & Configuration ---
+        const CATEGORIES = [
+            { id: 'production', name: '初級生產', icon: 'sprout', colorClass: 'bg-green-100 border-green-300 text-green-700', desc: '農林漁牧' },
+            { id: 'manufacturing', name: '加工製造', icon: 'factory', colorClass: 'bg-orange-100 border-orange-300 text-orange-700', desc: '食品工廠' },
+            { id: 'wholesale', name: '批發物流', icon: 'truck', colorClass: 'bg-blue-100 border-blue-300 text-blue-700', desc: '運輸倉儲' },
+            { id: 'retail', name: '零售通路', icon: 'store', colorClass: 'bg-purple-100 border-purple-300 text-purple-700', desc: '超市賣場' },
+            { id: 'service', name: '餐飲服務', icon: 'utensils', colorClass: 'bg-red-100 border-red-300 text-red-700', desc: '餐廳外送' },
+        ];
+
+        const GDP_STATS = [
+            { id: 'service', name: '餐飲服務', percent: 32, raw: '2.2%', colorClass: 'bg-red-500', icon: 'utensils' },
+            { id: 'production', name: '初級生產', percent: 22, raw: '1.5%', colorClass: 'bg-green-500', icon: 'sprout' },
+            { id: 'retail', name: '零售通路', percent: 20, raw: '1.4%', colorClass: 'bg-purple-500', icon: 'store' },
+            { id: 'manufacturing', name: '加工製造', percent: 14, raw: '1.0%', colorClass: 'bg-orange-500', icon: 'factory' },
+            { id: 'wholesale', name: '批發物流', percent: 12, raw: '0.8%', colorClass: 'bg-blue-500', icon: 'truck' },
+        ];
+
+        const ITEM_POOL = [
+            { id: 1, name: '稻農', category: 'production', icon: '🌾' },
+            { id: 2, name: '遠洋漁船', category: 'production', icon: '🚢' },
+            { id: 3, name: '養豬場', category: 'production', icon: '🐖' },
+            { id: 4, name: '鳳梨罐頭廠', category: 'manufacturing', icon: '🥫' },
+            { id: 5, name: '屠宰場', category: 'manufacturing', icon: '🥩' },
+            { id: 6, name: '麵粉加工廠', category: 'manufacturing', icon: '🏭' },
+            { id: 7, name: '果菜批發市場', category: 'wholesale', icon: '📦' },
+            { id: 8, name: '冷鏈物流車', category: 'wholesale', icon: '🚚' },
+            { id: 9, name: '水產貿易商', category: 'wholesale', icon: '📋' },
+            { id: 10, name: '便利商店', category: 'retail', icon: '🏪' },
+            { id: 11, name: '全聯超市', category: 'retail', icon: '🛒' },
+            { id: 12, name: '傳統市場攤販', category: 'retail', icon: '🥬' },
+            { id: 13, name: '手搖飲料店', category: 'service', icon: '🧋' },
+            { id: 14, name: '早餐店阿姨', category: 'service', icon: '🍳' },
+            { id: 15, name: '美食外送員', category: 'service', icon: '🛵' },
+            { id: 16, name: '酪農', category: 'production', icon: '🐄' },
+            { id: 17, name: '鮮乳加工廠', category: 'manufacturing', icon: '🥛' },
+            { id: 18, name: '百貨美食街', category: 'service', icon: '🍜' },
+        ];
+
+        // --- State Management ---
+        let state = {
+            screen: 'start', // start, game, end
+            score: 0,
+            timeLeft: 60,
+            items: [],
+            selectedItem: null,
+            timerInterval: null
+        };
+
+        const app = document.getElementById('app');
+
+        // --- Render Functions ---
+
+        function render() {
+            app.innerHTML = '';
+            if (state.screen === 'start') {
+                renderStartScreen();
+            } else if (state.screen === 'game') {
+                renderGameScreen();
+            } else if (state.screen === 'end') {
+                renderEndScreen();
+            }
+            lucide.createIcons();
+        }
+
+        function renderStartScreen() {
+            app.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-8 text-center h-full w-full">
+                    <div class="bg-green-100 p-6 rounded-full mb-6 animate-bounce-slow">
+                        <i data-lucide="rotate-ccw" class="w-12 h-12 text-green-600"></i>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">農食鏈歸位大挑戰</h1>
+                    <p class="text-gray-600 mb-8 max-w-md mx-auto">
+                        你是優秀的產業鏈經理嗎？<br/>
+                        將隨機出現的項目拖拉至正確的類別！
+                    </p>
+                    
+                    <div class="flex flex-col md:flex-row gap-4 justify-center w-full max-w-lg mb-8">
+                        <div class="flex items-center justify-center gap-3 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100 flex-1">
+                            <span class="bg-green-100 p-1 rounded">✅</span> 答對 +100 分
+                        </div>
+                        <div class="flex items-center justify-center gap-3 text-sm text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100 flex-1">
+                            <span class="bg-red-100 p-1 rounded">❌</span> 答錯 扣時間與分數
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="w-full max-w-xs bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl text-xl shadow-lg transition-transform transform active:scale-95 flex items-center justify-center gap-2">
+                        <i data-lucide="play" class="fill-current w-5 h-5"></i> 開始遊戲
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderGameScreen() {
+            const isLowTime = state.timeLeft < 10;
+            const timerColor = isLowTime ? 'text-red-500 animate-pulse' : 'text-gray-600';
+            const timerText = isLowTime ? 'text-red-500' : 'text-gray-800';
+
+            // Generate Categories Grid
+            // Mobile: grid-cols-2 (Vertical compact)
+            // Desktop (md): grid-cols-5 (Horizontal full width), all in one row
+            const categoriesHTML = CATEGORIES.map((cat, idx) => `
+                <div 
+                    onclick="handleCategoryClick('${cat.id}')"
+                    ondragover="handleDragOver(event)"
+                    ondrop="handleDrop(event, '${cat.id}')"
+                    class="relative p-2 md:p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center text-center gap-1 cursor-pointer 
+                        ${cat.colorClass} 
+                        ${state.selectedItem ? 'ring-2 ring-offset-1 ring-gray-300 opacity-100 hover:scale-105' : 'opacity-90'} 
+                        ${idx === 4 ? 'col-span-2 md:col-span-1' : ''} 
+                        h-full md:h-auto md:aspect-[3/4]
+                    "
+                >
+                    <i data-lucide="${cat.icon}" class="w-6 h-6 md:w-8 md:h-8 mb-1 opacity-80"></i>
+                    <span class="font-bold text-sm md:text-lg">${cat.name}</span>
+                    <span class="text-[10px] md:text-xs opacity-70">${cat.desc}</span>
+                    ${state.selectedItem ? '<div class="absolute inset-0 bg-white/20 animate-pulse rounded-xl pointer-events-none"></div>' : ''}
+                </div>
+            `).join('');
+
+            // Generate Items Dock
+            let dockContent = '';
+            if (state.items.length === 0) {
+                dockContent = '<div class="w-full text-center text-gray-400 italic py-4">全部完成！</div>';
+            } else {
+                dockContent = state.items.slice(0, 5).map(item => `
+                    <div 
+                        draggable="true"
+                        ondragstart="handleDragStart(event, ${item.id})"
+                        onclick="handleItemClick(${item.id})"
+                        class="flex-shrink-0 w-20 h-24 md:w-24 md:h-28 bg-white border-2 rounded-lg shadow-sm flex flex-col items-center justify-center gap-1 cursor-grab active:cursor-grabbing transition-all transform hover:-translate-y-1 ${state.selectedItem?.id === item.id ? 'border-green-500 ring-2 ring-green-200 scale-105 shadow-md' : 'border-gray-200'}"
+                    >
+                        <span class="text-3xl md:text-4xl">${item.icon}</span>
+                        <span class="text-xs md:text-sm font-bold text-gray-700 text-center leading-tight px-1 select-none">${item.name}</span>
+                    </div>
+                `).join('');
+            }
+
+            app.innerHTML = `
+                <div class="flex flex-col h-full bg-gray-50 overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-white p-3 md:p-4 shadow-sm flex justify-between items-center z-10 sticky top-0 flex-shrink-0">
+                        <div class="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                            <i data-lucide="timer" class="w-4 h-4 ${timerColor}"></i>
+                            <span class="font-mono font-bold ${timerText} text-lg">${state.timeLeft}s</span>
+                        </div>
+                        <div class="font-black text-2xl text-green-700 tracking-wider">
+                            ${state.score}
+                        </div>
+                    </div>
+
+                    <!-- Categories Area -->
+                    <!-- Flex-1 ensures it takes available space. Overflow-hidden on PC to prevent scroll if fitting perfectly. -->
+                    <div class="flex-1 p-2 md:p-6 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-4 content-center overflow-y-auto md:overflow-hidden">
+                        ${categoriesHTML}
+                    </div>
+
+                    <!-- Dock Area -->
+                    <!-- Fixed height on mobile to ensure compactness -->
+                    <div class="bg-white p-3 md:p-6 border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20 flex-shrink-0">
+                        <div class="text-xs md:text-sm text-center text-gray-400 mb-2">
+                            ${state.selectedItem ? '點擊上方類別框以放置' : '拖曳或點擊下方卡牌'}
+                        </div>
+                        <div class="flex gap-3 justify-center overflow-x-auto pb-2 min-h-[90px] md:min-h-[120px] items-center px-1 no-scrollbar">
+                            ${dockContent}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderEndScreen() {
+            // Generate GDP Chart
+            // Desktop: Grid layout for stats to save vertical space
+            const chartHTML = GDP_STATS.map(stat => `
+                <div class="mb-2 md:mb-0">
+                    <div class="flex justify-between text-xs md:text-sm mb-1">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="${stat.icon}" class="w-3.5 h-3.5 text-gray-500"></i>
+                            <span class="font-bold text-gray-700">${stat.name}</span>
+                        </div>
+                        <span class="font-mono text-gray-500">${stat.percent}%</span>
+                    </div>
+                    <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full ${stat.colorClass} transition-width" style="width: 0%" data-width="${stat.percent}%"></div>
+                    </div>
+                </div>
+            `).join('');
+
+            app.innerHTML = `
+                <div class="flex flex-col items-center justify-center p-6 text-center h-full w-full overflow-y-auto">
+                    <div class="flex-shrink-0 mt-2">
+                        <i data-lucide="trophy" class="w-16 h-16 md:w-20 md:h-20 text-yellow-400 mb-2 drop-shadow-md mx-auto"></i>
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-bold text-gray-800 mb-1">挑戰結束！</h2>
+                    <div class="text-4xl md:text-5xl font-black text-green-600 mb-4">${state.score} <span class="text-base text-gray-500 font-normal">分</span></div>
+                    
+                    <!-- GDP Chart Section -->
+                    <div class="w-full max-w-3xl bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 mb-4 text-left">
+                        <h3 class="font-bold text-gray-800 mb-2 flex items-center gap-2 text-sm md:text-base">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i>
+                            臺灣農食鏈 GDP 佔比揭密
+                        </h3>
+                        
+                        <!-- Responsive Grid for Chart Bars -->
+                        <div class="space-y-1 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-4 mb-4">
+                            ${chartHTML}
+                        </div>
+
+                        <div class="p-3 bg-amber-50 text-xs md:text-sm text-amber-900 rounded-lg leading-relaxed border-l-4 border-amber-300">
+                            <span class="font-bold">💡 產業小知識：</span> 
+                            雖然「餐飲服務」佔比最高，但沒有最前端的「初級生產」和中間的「加工製造」與「物流」，餐桌上的美食就不復存在。每一個環節都至關重要！
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="w-full max-w-xs bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2 mb-4">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 再玩一次
+                    </button>
+                </div>
+            `;
+
+            // Trigger Animation
+            setTimeout(() => {
+                const bars = document.querySelectorAll('[data-width]');
+                bars.forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-width');
+                });
+            }, 100);
+        }
+
+        // --- Game Logic ---
+
+        function startGame() {
+            // Shuffle and pick items
+            const shuffled = [...ITEM_POOL].sort(() => 0.5 - Math.random());
+            state.items = shuffled;
+            state.score = 0;
+            state.timeLeft = 60;
+            state.selectedItem = null;
+            state.screen = 'game';
+
+            render();
+
+            // Start Timer
+            if (state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                state.timeLeft--;
+                if (state.timeLeft <= 0) {
+                    endGame();
+                } else {
+                    // Update timer UI only (optimization)
+                    renderGameScreen();
+                    lucide.createIcons();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(state.timerInterval);
+            state.screen = 'end';
+            render();
+        }
+
+        // --- Interaction Handlers ---
+
+        function handleItemClick(itemId) {
+            const item = state.items.find(i => i.id === itemId);
+            if (state.selectedItem && state.selectedItem.id === item.id) {
+                state.selectedItem = null; // Toggle off
+            } else {
+                state.selectedItem = item; // Select
+            }
+            renderGameScreen();
+            lucide.createIcons();
+        }
+
+        function handleCategoryClick(categoryId) {
+            if (state.selectedItem) {
+                processMove(state.selectedItem, categoryId);
+            }
+        }
+
+        function handleDragStart(e, itemId) {
+            const item = state.items.find(i => i.id === itemId);
+            state.draggedItem = item;
+            state.selectedItem = item; // Also visually select it
+            // Required for Firefox
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", JSON.stringify(item));
+            
+            // Re-render to show selection highlight, but keep drag active
+            // Note: Full re-render might kill drag in vanilla JS if DOM is replaced immediately.
+            // So we manually highlight class instead of full render for drag start performance/stability.
+            const el = e.target;
+            el.classList.add('border-green-500', 'ring-2', 'ring-green-200');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Allow drop
+            e.dataTransfer.dropEffect = "move";
+        }
+
+        function handleDrop(e, categoryId) {
+            e.preventDefault();
+            if (state.draggedItem) {
+                processMove(state.draggedItem, categoryId);
+                state.draggedItem = null;
+            }
+        }
+
+        function processMove(item, targetCategoryId) {
+            const categoryName = CATEGORIES.find(c => c.id === targetCategoryId).name;
+            const isCorrect = item.category === targetCategoryId;
+
+            if (isCorrect) {
+                state.score += 100;
+                showToast('success', `正確！${item.name} 屬於 ${categoryName}`);
+                // Remove item
+                state.items = state.items.filter(i => i.id !== item.id);
+                state.selectedItem = null;
+
+                if (state.items.length === 0) {
+                    setTimeout(endGame, 500);
+                }
+            } else {
+                const newScore = Math.max(0, state.score - 30);
+                state.score = newScore;
+                state.timeLeft = Math.max(0, state.timeLeft - 5);
+                state.selectedItem = null;
+                showToast('error', `哎呀！${item.name} 不屬於這裡喔`);
+            }
+            
+            renderGameScreen();
+            lucide.createIcons();
+        }
+
+        // --- Utilities ---
+
+        function showToast(type, message) {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200';
+            
+            toast.className = `absolute top-16 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg text-sm font-bold z-50 transition-all transform animate-bounce border ${bgClass}`;
+            toast.innerText = message;
+
+            app.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', '-translate-y-4');
+                setTimeout(() => {
+                    if(toast.parentNode) toast.parentNode.removeChild(toast);
+                }, 300);
+            }, 1500);
+        }
+
+        // --- Initial Render ---
+        render();
+
+    </script>
+</body>
+</html>
