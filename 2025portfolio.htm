@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2025 台股盲測模擬器 (Compact)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* 自定義滑桿樣式 */
+        input[type=range] {
+            -webkit-appearance: none; /* Hides the slider so that custom slider can be made */
+            width: 100%; /* Specific width is required for Firefox. */
+            background: transparent; /* Otherwise white in Chrome */
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #1B4D3E;
+            cursor: pointer;
+            margin-top: -4px; /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #E0D6C2;
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4AF37; 
+            border-radius: 3px;
+        }
+        body {
+            font-family: 'Times New Roman', Times, serif; /* Old Money Serif */
+            background-color: #FDF5E6;
+            color: #2C3E50;
+            overflow: hidden; /* 防止整個頁面捲動 */
+        }
+        .sans-serif {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex items-center justify-center bg-[#FDF5E6]">
+    <div id="root" class="w-full h-full flex items-center justify-center"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons as SVG components to avoid dependencies
+        const IconBriefcase = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+        );
+        const IconTrendingUp = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+        );
+        const IconTrendingDown = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline></svg>
+        );
+        const IconPieChart = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
+        );
+        const IconRotateCcw = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+        );
+        const IconLock = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        );
+        const IconInfo = ({ size = 14, className }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        );
+
+        // 真實數據
+        const STOCK_DATA = [
+            { id: '2330', name: '台積電', startPrice: 1075, endPrice: 1550, desc: '晶片龍頭' },
+            { id: '2317', name: '鴻海', startPrice: 184.0, endPrice: 230.5, desc: 'AI伺服器' },
+            { id: '2308', name: '台達電', startPrice: 435.0, endPrice: 963.0, desc: '電源散熱' },
+            { id: '2454', name: '聯發科', startPrice: 1415, endPrice: 1430, desc: 'IC設計' },
+            { id: '2881', name: '富邦金', startPrice: 91.3, endPrice: 97.0, desc: '金控獲利' },
+            { id: '2882', name: '國泰金', startPrice: 68.3, endPrice: 76.2, desc: '壽險雙雄' },
+            { id: '2382', name: '廣達', startPrice: 285.5, endPrice: 272.0, desc: '伺服器' },
+            { id: '2412', name: '中華電', startPrice: 123.5, endPrice: 130.5, desc: '電信防禦' },
+            { id: '3711', name: '日月光', startPrice: 163.5, endPrice: 252.0, desc: '封測龍頭' },
+            { id: '2891', name: '中信金', startPrice: 39.1, endPrice: 50.2, desc: '消費金融' },
+        ];
+
+        const TOTAL_BUDGET = 1000000;
+
+        const TaiwanStockSimulator2025 = () => {
+            const [allocations, setAllocations] = useState(
+                STOCK_DATA.map(() => TOTAL_BUDGET / STOCK_DATA.length)
+            );
+            
+            const [finalValue, setFinalValue] = useState(0);
+            const [totalProfit, setTotalProfit] = useState(0);
+
+            const getReturnRate = (stock) => (stock.endPrice - stock.startPrice) / stock.startPrice;
+
+            useEffect(() => {
+                let currentFinal = 0;
+                allocations.forEach((amount, index) => {
+                    const stock = STOCK_DATA[index];
+                    const growthRate = getReturnRate(stock);
+                    currentFinal += amount * (1 + growthRate);
+                });
+                setFinalValue(currentFinal);
+                setTotalProfit(currentFinal - TOTAL_BUDGET);
+            }, [allocations]);
+
+            const handleSliderChange = (index, newValue) => {
+                if (isNaN(newValue)) return;
+                const safeNewValue = Math.max(0, Math.min(TOTAL_BUDGET, newValue));
+                const oldValue = allocations[index];
+                const diff = safeNewValue - oldValue;
+                
+                if (Math.abs(diff) < 1) return;
+
+                const otherIndices = allocations.map((_, i) => i).filter(i => i !== index);
+                const sumOthers = otherIndices.reduce((acc, i) => acc + allocations[i], 0);
+
+                let newAllocations = [...allocations];
+                newAllocations[index] = safeNewValue;
+
+                if (sumOthers <= 0) {
+                    if (diff < 0) {
+                        const distributeAmount = -diff / otherIndices.length;
+                        otherIndices.forEach(i => { newAllocations[i] += distributeAmount; });
+                    }
+                } else {
+                    const scalingFactor = (sumOthers - diff) / sumOthers;
+                    otherIndices.forEach(i => { newAllocations[i] = allocations[i] * scalingFactor; });
+                }
+
+                // Error correction logic
+                let currentSum = newAllocations.reduce((a, b) => a + b, 0);
+                let error = TOTAL_BUDGET - currentSum;
+                if (newAllocations[index] + error >= 0) {
+                    newAllocations[index] += error;
+                } else {
+                    newAllocations[index] = 0;
+                    currentSum = newAllocations.reduce((a, b) => a + b, 0);
+                    error = TOTAL_BUDGET - currentSum;
+                    const fallbackIndex = otherIndices[0];
+                    if (fallbackIndex !== undefined) newAllocations[fallbackIndex] += error;
+                }
+
+                setAllocations(newAllocations.map(v => Math.max(0, v)));
+            };
+
+            const handleReset = () => {
+                setAllocations(STOCK_DATA.map(() => TOTAL_BUDGET / STOCK_DATA.length));
+            };
+
+            const formatCurrency = (val) => new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(val);
+            const formatNumber = (val) => new Intl.NumberFormat('zh-TW').format(Math.round(val));
+            const formatPrice = (val) => new Intl.NumberFormat('zh-TW', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val);
+
+            return (
+                <div className="w-full max-w-[800px] max-h-[600px] h-full bg-[#FFFAF0] border-4 border-[#1B4D3E] shadow-2xl relative overflow-hidden flex flex-col box-border">
+                    {/* Top Decor */}
+                    <div className="h-1.5 w-full bg-[#1B4D3E] shrink-0"></div>
+                    <div className="h-0.5 w-full bg-[#D4AF37] mt-0.5 shrink-0"></div>
+
+                    {/* Compact Header */}
+                    <header className="bg-[#F5F5DC] px-3 py-2 border-b border-[#E0D6C2] shrink-0">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h1 className="text-xl font-bold tracking-wider text-[#1B4D3E] font-serif leading-none">
+                                    TWSE '25
+                                </h1>
+                                <p className="text-[#8B7355] italic text-[10px] tracking-widest uppercase mt-0.5">
+                                    Blind Asset Sim
+                                </p>
+                            </div>
+
+                            <div className="flex gap-2">
+                                {/* Initial */}
+                                <div className="bg-white/60 px-2 py-1 border border-[#D3D3D3] w-24">
+                                    <div className="flex items-center gap-1 text-[#8B7355] text-[9px] uppercase tracking-wider">
+                                        <IconBriefcase size={10} /> Initial
+                                    </div>
+                                    <div className="text-sm font-bold text-[#5D5D5D] font-mono leading-none mt-0.5">
+                                        {formatNumber(TOTAL_BUDGET)}
+                                    </div>
+                                </div>
+                                {/* Profit */}
+                                <div className="bg-white/60 px-2 py-1 border border-[#D3D3D3] w-24">
+                                     <div className="flex items-center gap-1 text-[#8B7355] text-[9px] uppercase tracking-wider">
+                                       {totalProfit >= 0 ? <IconTrendingUp size={10} /> : <IconTrendingDown size={10} />} P/L
+                                     </div>
+                                     <div className={`text-sm font-bold font-mono leading-none mt-0.5 ${totalProfit >= 0 ? 'text-[#1B4D3E]' : 'text-red-500'}`}>
+                                       {totalProfit > 0 ? '+' : ''}{formatNumber(totalProfit)}
+                                     </div>
+                                </div>
+                                {/* Final */}
+                                <div className="bg-[#1B4D3E] px-2 py-1 border border-[#D4AF37] text-white w-28 shadow">
+                                    <div className="flex items-center gap-1 text-[#D4AF37] text-[9px] uppercase tracking-wider">
+                                      <IconPieChart size={10} /> Year End
+                                    </div>
+                                    <div className="text-lg font-bold text-[#D4AF37] font-mono leading-none mt-0.5">
+                                      {formatCurrency(finalValue)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Main Content */}
+                    <main className="px-3 py-2 bg-[#FFFAF0] flex-1 flex flex-col min-h-0">
+                        <div className="flex justify-between items-center mb-1 shrink-0">
+                            <h2 className="text-sm font-bold text-[#2C1B18] border-b border-[#D4AF37] inline-block pb-0.5">
+                                資產配置矩陣
+                            </h2>
+                            <button onClick={handleReset} className="flex items-center gap-1 px-2 py-0.5 text-[10px] border border-[#8B7355] text-[#8B7355] hover:bg-[#1B4D3E] hover:text-[#D4AF37] transition-colors rounded-sm uppercase tracking-wider bg-white cursor-pointer">
+                                <IconRotateCcw size={10} /> 重置
+                            </button>
+                        </div>
+
+                        {/* Grid - 5 Columns, Compact Rows */}
+                        <div className="grid grid-cols-5 gap-2 flex-1 min-h-0">
+                            {STOCK_DATA.map((stock, index) => {
+                                return (
+                                    <div key={stock.id} className="relative bg-white border border-[#E0D6C2] p-1.5 hover:border-[#D4AF37] hover:shadow transition-all rounded-sm flex flex-col h-full overflow-hidden">
+                                        {/* Row 1: Header */}
+                                        <div className="flex justify-between items-start mb-1 shrink-0">
+                                            <div>
+                                                <span className="block text-[10px] font-bold text-[#1B4D3E] leading-none">{stock.id}</span>
+                                                <span className="block text-sm font-bold text-[#2C1B18] leading-tight truncate w-20" title={stock.name}>{stock.name}</span>
+                                            </div>
+                                            <div className="bg-gray-100 text-gray-400 p-0.5 rounded">
+                                                <IconLock size={10} />
+                                            </div>
+                                        </div>
+
+                                        {/* Row 2: Prices */}
+                                        <div className="flex justify-between text-[9px] text-gray-500 mb-1 pb-1 border-b border-dotted border-gray-200 shrink-0">
+                                            <div>
+                                                <div className="uppercase tracking-tighter opacity-70">Open</div>
+                                                <div className="font-mono text-[#5D5D5D]">${formatPrice(stock.startPrice)}</div>
+                                            </div>
+                                            <div className="text-right opacity-50">
+                                                 <div className="uppercase tracking-tighter opacity-70">Close</div>
+                                                 <div className="font-mono font-bold text-[#2C1B18]">???</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Description */}
+                                        <div className="text-[9px] text-[#8B7355] italic truncate mb-auto shrink-0 opacity-80">
+                                            {stock.desc}
+                                        </div>
+
+                                        {/* Controls */}
+                                        <div className="mt-1 pt-1 border-t border-dashed border-[#E0D6C2] shrink-0">
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max={TOTAL_BUDGET}
+                                                step="1000"
+                                                value={allocations[index] || 0}
+                                                onChange={(e) => handleSliderChange(index, Number(e.target.value))}
+                                                className="w-full h-1 block mb-1"
+                                            />
+                                            <div className="flex justify-between items-end">
+                                                <span className="text-[8px] text-[#8B7355] uppercase">Alloc.</span>
+                                                <span className="font-mono text-xs font-bold text-[#2C1B18]">
+                                                    ${formatNumber(allocations[index] || 0)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        
+                        <div className="mt-1 text-center shrink-0">
+                            <p className="text-[10px] text-[#8B7355] opacity-60 font-serif flex items-center justify-center gap-1">
+                                <IconInfo size={10} />
+                                拖動滑桿分配。年終績效已隱藏。
+                            </p>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TaiwanStockSimulator2025 />);
+    </script>
+</body>
+</html>
