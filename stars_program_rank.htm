@@ -1,0 +1,313 @@
+import React, { useState, useEffect } from 'react';
+import { Trophy, ArrowUp, ArrowDown, RefreshCcw, BookOpen, GraduationCap, Info, CheckCircle, XCircle, GripVertical } from 'lucide-react';
+
+// 遊戲關卡資料
+const LEVELS = [
+  {
+    id: 1,
+    title: "終極大亂鬥：全科系排序",
+    description: "這包含了頂大、地名國立、老牌私立與特色科系。請依照繁星錄取校排排名排序。",
+    data: [
+      { id: 'all-1', school: '國立臺灣大學', dept: '醫學系', percent: 1, tag: '前 1% (且須面試)' },
+      { id: 'all-2', school: '國立清華大學', dept: '資訊工程學系', percent: 1.5, tag: '約 前 1-2%' },
+      { id: 'all-3', school: '國立成功大學', dept: '電機工程學系', percent: 2, tag: '約 前 2-3%' },
+      { id: 'all-4', school: '國立政治大學', dept: '風險管理與保險學系', percent: 3, tag: '約 前 3%' },
+      { id: 'all-5', school: '東吳大學', dept: '法律學系', percent: 9, tag: '約 前 8-12%' },
+      { id: 'all-6', school: '國立中央大學', dept: '大氣科學學系', percent: 10, tag: '約 前 10%' },
+      { id: 'all-7', school: '中國醫藥大學', dept: '物理治療學系', percent: 13, tag: '約 前 13-15%' },
+      { id: 'all-8', school: '國立臺灣海洋大學', dept: '商船學系', percent: 15, tag: '約 前 15%' },
+      { id: 'all-9', school: '中原大學', dept: '室內設計學系', percent: 19, tag: '約 前 18-22%' },
+      { id: 'all-10', school: '國立高雄大學', dept: '土木與環境工程學系', percent: 20, tag: '約 前 20%' },
+      { id: 'all-11', school: '世新大學', dept: '廣播電視電影學系', percent: 25, tag: '約 前 25%' },
+      { id: 'all-12', school: '逢甲大學', dept: '土木工程學系', percent: 30, tag: '約 前 30%' },
+    ]
+  }
+];
+
+// 洗牌函數
+const shuffleArray = (array) => {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+};
+
+const StarPlanGame = () => {
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [items, setItems] = useState([]);
+  const [isChecked, setIsChecked] = useState(false);
+  const [score, setScore] = useState(0);
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [showIntro, setShowIntro] = useState(true);
+
+  // 初始化關卡
+  useEffect(() => {
+    loadLevel(0);
+  }, []);
+
+  const loadLevel = (index) => {
+    const levelData = LEVELS[index].data;
+    // 確保初始是亂序的，且不等於正確答案
+    let shuffled;
+    do {
+      shuffled = shuffleArray(levelData);
+    } while (JSON.stringify(shuffled) === JSON.stringify(levelData));
+    
+    setItems(shuffled);
+    setCurrentLevelIndex(index);
+    setIsChecked(false);
+  };
+
+  // 處理拖曳開始
+  const handleDragStart = (e, index) => {
+    setDraggedItem(items[index]);
+    e.dataTransfer.effectAllowed = "move";
+    // 設置拖曳時的 ghost image 透明度
+    e.target.style.opacity = '0.5';
+  };
+
+  // 處理拖曳結束
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedItem(null);
+  };
+
+  // 處理拖曳經過
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    const draggedOverItem = items[index];
+
+    // 如果拖曳的項目與經過的項目不同，則交換位置
+    if (draggedItem === draggedOverItem) return;
+
+    let itemsClone = [...items];
+    const draggedItemIndex = itemsClone.indexOf(draggedItem);
+    const draggedOverItemIndex = itemsClone.indexOf(draggedOverItem);
+
+    // 交換位置
+    itemsClone.splice(draggedItemIndex, 1);
+    itemsClone.splice(draggedOverItemIndex, 0, draggedItem);
+
+    setItems(itemsClone);
+  };
+
+  // 手機版/按鈕版移動邏輯
+  const moveItem = (index, direction) => {
+    if (isChecked) return;
+    const newItems = [...items];
+    if (direction === 'up' && index > 0) {
+      [newItems[index], newItems[index - 1]] = [newItems[index - 1], newItems[index]];
+    } else if (direction === 'down' && index < newItems.length - 1) {
+      [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+    }
+    setItems(newItems);
+  };
+
+  const checkAnswer = () => {
+    setIsChecked(true);
+    // 檢查順序是否正確 (percent 越小越難，應該排在上面)
+    const correctOrder = [...LEVELS[currentLevelIndex].data].sort((a, b) => a.percent - b.percent);
+    
+    // 計算正確的數量與是否全對
+    const isCorrect = JSON.stringify(items.map(i => i.id)) === JSON.stringify(correctOrder.map(i => i.id));
+    
+    // 簡單的計分：答對位置的數量
+    let correctCount = 0;
+    items.forEach((item, index) => {
+      if (item.id === correctOrder[index].id) {
+        correctCount++;
+      }
+    });
+
+    setScore(correctCount * 10); // 每個正確位置得10分
+    
+    if (isCorrect) {
+      // 全對額外獎勵
+      setScore(prev => prev + 50);
+    }
+  };
+
+  const restartGame = () => {
+    setScore(0);
+    loadLevel(0);
+  };
+
+  const getStatusColor = (item, index) => {
+    if (!isChecked) return "bg-white border-gray-200";
+    
+    const correctOrder = [...LEVELS[currentLevelIndex].data].sort((a, b) => a.percent - b.percent);
+    const correctItemAtIndex = correctOrder[index];
+    
+    if (item.id === correctItemAtIndex.id) {
+      return "bg-green-50 border-green-500 shadow-green-100";
+    }
+    return "bg-red-50 border-red-300 shadow-red-100";
+  };
+
+  if (showIntro) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 font-sans">
+        <div className="bg-white max-w-md w-full rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Trophy className="w-10 h-10 text-blue-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">繁星落點終極挑戰</h1>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            這是全台大學的繁星大亂鬥！<br/>
+            從頂大醫科到私立熱門科系，<br/>
+            試著將 12 個不同層級的科系依照<br/>
+            <span className="font-bold text-blue-600">「錄取難度由高到低」</span><br/>
+            正確排列！
+          </p>
+          <button 
+            onClick={() => setShowIntro(false)}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+          >
+            <BookOpen className="w-5 h-5" />
+            開始挑戰
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const currentLevel = LEVELS[currentLevelIndex];
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-gray-800">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="text-blue-600 w-6 h-6" />
+            <h1 className="font-bold text-lg">繁星挑戰</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-500">All-in-One Mode</span>
+            {isChecked && (
+              <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                <Trophy className="w-3 h-3" />
+                {score} 分
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Game Area */}
+      <main className="flex-1 max-w-2xl mx-auto w-full p-4 flex flex-col">
+        
+        {/* Instructions */}
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
+          <h2 className="text-xl font-bold text-blue-900 mb-2">{currentLevel.title}</h2>
+          <p className="text-blue-700 text-sm md:text-base">{currentLevel.description}</p>
+          <div className="mt-2 text-xs text-blue-500 flex items-center gap-1">
+            <Info className="w-3 h-3" />
+            提示：數字 1 是最難考的（校排%最小）
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 space-y-3 mb-6">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              draggable={!isChecked}
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+              className={`
+                relative p-4 rounded-xl border-2 transition-all duration-300
+                ${getStatusColor(item, index)}
+                ${!isChecked ? 'cursor-grab active:cursor-grabbing hover:border-blue-300 hover:shadow-md' : ''}
+                flex items-center gap-4 group select-none
+              `}
+            >
+              {/* Drag Handle / Index */}
+              <div className="text-gray-400 font-bold w-8 text-center flex-shrink-0 flex flex-col items-center gap-1">
+                {isChecked ? (
+                   items[index].id === [...LEVELS[currentLevelIndex].data].sort((a,b)=>a.percent-b.percent)[index].id ? 
+                   <CheckCircle className="w-6 h-6 text-green-500" /> : 
+                   <XCircle className="w-6 h-6 text-red-500" />
+                ) : (
+                  <>
+                    <span className="text-xl">{index + 1}</span>
+                    <GripVertical className="w-4 h-4 md:hidden opacity-50" />
+                  </>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2">
+                  <span className="font-bold text-lg text-gray-900">{item.dept}</span>
+                  <span className="text-sm text-gray-600 bg-gray-100 px-2 py-0.5 rounded w-fit">{item.school}</span>
+                </div>
+                
+                {/* Reveal Answer */}
+                {isChecked && (
+                  <div className="mt-2 text-sm font-bold animate-fade-in">
+                    <span className={item.id === [...LEVELS[currentLevelIndex].data].sort((a,b)=>a.percent-b.percent)[index].id ? "text-green-600" : "text-red-600"}>
+                      實際標準: {item.tag}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile/Button Controls */}
+              {!isChecked && (
+                <div className="flex flex-col gap-1">
+                  <button 
+                    onClick={() => moveItem(index, 'up')}
+                    disabled={index === 0}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-20 text-gray-500"
+                  >
+                    <ArrowUp className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => moveItem(index, 'down')}
+                    disabled={index === items.length - 1}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-20 text-gray-500"
+                  >
+                    <ArrowDown className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Action Button */}
+        <div className="sticky bottom-4">
+          {!isChecked ? (
+            <button
+              onClick={checkAnswer}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              提交答案
+            </button>
+          ) : (
+            <button
+              onClick={restartGame}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <RefreshCcw className="w-5 h-5" />
+              重新挑戰
+            </button>
+          )}
+        </div>
+
+      </main>
+      
+      {/* Footer */}
+      <footer className="bg-gray-50 text-gray-400 text-xs text-center py-4 px-4">
+        <p>資料來源參考歷年繁星錄取標準概況，僅供教育及遊戲用途，實際標準請依當年度簡章為準。</p>
+      </footer>
+    </div>
+  );
+};
+
+export default StarPlanGame;
