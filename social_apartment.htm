@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社宅走鋼索：公文模擬系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* 引入楷體與宋體 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        
+        .font-kai {
+            font-family: "BiauKai", "DFKai-SB", "KaiTi", "標楷體", serif;
+        }
+        .font-serif-tc {
+            font-family: "Noto Serif TC", "Songti TC", serif;
+        }
+        
+        /* 自定義捲軸 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+
+        /* 模擬公文紙張紋理 */
+        .paper-texture {
+            background-color: #fdfbf7;
+            background-image: linear-gradient(#e5e5e5 1px, transparent 1px), linear-gradient(90deg, #e5e5e5 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-blend-mode: multiply;
+        }
+
+        /* 印章動畫 */
+        @keyframes stamp-in {
+            0% { opacity: 0; transform: scale(3) rotate(15deg); }
+            100% { opacity: 0.8; transform: scale(1) rotate(-12deg); }
+        }
+        .stamp-animate {
+            animation: stamp-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-800 min-h-screen flex items-center justify-center p-0 md:p-4 overflow-hidden">
+
+    <div id="root" class="w-full h-full flex justify-center"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // 簡單的圖示組件 (僅用於右側回饋區，左側已移除)
+        const Icon = ({ type, className }) => {
+            if (type === 'TrendingUp') return <span className={className}>▲</span>;
+            if (type === 'TrendingDown') return <span className={className}>▼</span>;
+            if (type === 'Alert') return <span className={className}>!</span>;
+            return null;
+        };
+
+        const SocialHousingGame = () => {
+            // 遊戲狀態
+            const [currentLevel, setCurrentLevel] = useState(0);
+            const [health, setHealth] = useState({
+                residents: 4,
+                developers: 4,
+                landlords: 4,
+                youth: 4
+            });
+            const [gameState, setGameState] = useState('playing'); // playing, won, lost
+            const [feedback, setFeedback] = useState(null);
+            const [loserReason, setLoserReason] = useState('');
+            const [history, setHistory] = useState([]);
+
+            // 利害關係人定義 (移除 icon)
+            const stakeholders = [
+                { id: 'residents', name: '在地居民', title: '地方鄰里', desc: '憂房價治安' },
+                { id: 'developers', name: '建商財團', title: '營建公會', desc: '求利潤容積' },
+                { id: 'landlords', name: '多屋房東', title: '房東聯盟', desc: '避稅收租金' },
+                { id: 'youth', name: '青年NGO', title: '居住陣線', desc: '求低租正義' },
+            ];
+
+            // 關卡資料 (案由) - 與之前相同
+            const levels = [
+                {
+                    title: "壹、選址爭議案",
+                    description: "查首都圈精華地段有一國有土地，原規劃興建社會住宅，惟鄰近豪宅住戶強烈陳情抗議。擬請 鈞長裁示辦理方向。",
+                    options: [
+                        {
+                            text: "甲案：堅持於精華區興建 (蛋黃區)",
+                            impact: { residents: -1, developers: -1, landlords: 0, youth: +1 },
+                            reason: "青年團體表示肯定；惟在地居民強烈抗議拉低房價，建商亦不滿該地未公開標售。"
+                        },
+                        {
+                            text: "乙案：改至郊區重劃區興建 (蛋白區)",
+                            impact: { residents: +1, developers: +1, landlords: 0, youth: -1 },
+                            reason: "居民陳情平息，建商對重劃區題材表示歡迎；惟青年團體批評此舉為「流放窮人」。"
+                        },
+                        {
+                            text: "丙案：暫緩辦理，擱置爭議",
+                            impact: { residents: +1, developers: 0, landlords: +1, youth: -2 },
+                            reason: "居民與房東滿意現狀；惟青年團體對政府誠信感到失望，輿論譁然。"
+                        }
+                    ]
+                },
+                {
+                    title: "貳、容積獎勵捐贈案",
+                    description: "據市中心都市更新案申請人表示，欲爭取更高容積率。擬研議是否以「捐贈社會住宅」作為容積獎勵之對價。",
+                    options: [
+                        {
+                            text: "甲案：同意給予高額容積獎勵",
+                            impact: { residents: -1, developers: +2, landlords: 0, youth: 0 },
+                            reason: "建商獲利甚豐，社宅亦有著落；惟周邊居民抱怨建物過高影響日照權。"
+                        },
+                        {
+                            text: "乙案：礙難同意，由政府自行興建",
+                            impact: { residents: 0, developers: -2, landlords: 0, youth: 0 },
+                            reason: "建商表示無利可圖，揚言退出都更；社宅進度受阻。"
+                        },
+                        {
+                            text: "丙案：同意，惟需嚴格規範回饋比例",
+                            impact: { residents: 0, developers: -1, landlords: 0, youth: +1 },
+                            reason: "建商利潤遭壓縮，勉強接受；青年團體肯定政府把關。"
+                        }
+                    ]
+                },
+                {
+                    title: "參、租金定價標準案",
+                    description: "本市新建社會住宅將竣工，關於租金定價標準，目前市價行情約新台幣參萬元整。擬請 核示。",
+                    options: [
+                        {
+                            text: "甲案：依市價打八折 (貳萬肆千元)",
+                            impact: { residents: 0, developers: 0, landlords: 0, youth: -1 },
+                            reason: "財務自償率佳；惟青年團體陳抗表示「打折仍租不起」，質疑居住正義。"
+                        },
+                        {
+                            text: "乙案：依家戶收入分級 (最低陸千元)",
+                            impact: { residents: -1, developers: 0, landlords: -1, youth: +2 },
+                            reason: "青年團體高度讚揚；惟房東憂心租客流失，居民擔心低價引入複雜人口。"
+                        },
+                        {
+                            text: "丙案：採略高價策略 (精品社宅)",
+                            impact: { residents: +1, developers: 0, landlords: +1, youth: -2 },
+                            reason: "居民與房東表示安心；惟社宅淪為「抽獎豪宅」，遭輿論強烈批評。"
+                        }
+                    ]
+                },
+                {
+                    title: "肆、入住資格分配案",
+                    description: "據當地里長陳情，要求限制特定族群入住資格。擬研議分配比例。",
+                    options: [
+                        {
+                            text: "甲案：保留四成予弱勢及長者",
+                            impact: { residents: -2, developers: 0, landlords: 0, youth: +1 },
+                            reason: "社福團體支持；惟當地居民掛布條抗議，憂心社區高齡化與標籤化。"
+                        },
+                        {
+                            text: "乙案：限縮僅限年輕上班族入住",
+                            impact: { residents: +1, developers: 0, landlords: -1, youth: 0 },
+                            reason: "居民認同住戶素質；惟房東不滿優質租客遭政府搶奪。"
+                        },
+                        {
+                            text: "丙案：給予在地里民優先保留戶",
+                            impact: { residents: +2, developers: 0, landlords: 0, youth: -1 },
+                            reason: "地方樁腳全力支持；惟外地青年批評此舉為排外條款，違反公平性。"
+                        }
+                    ]
+                },
+                {
+                    title: "伍、營建缺工因應案",
+                    description: "受科技廠擴廠影響，營建勞工短缺，社宅工程頻傳流標。擬請 裁示因應對策。",
+                    options: [
+                        {
+                            text: "甲案：追加預算以高價搶工",
+                            impact: { residents: 0, developers: +1, landlords: 0, youth: -1 },
+                            reason: "建商投標意願提升；惟造價大增恐排擠其他預算，未來租金亦恐調漲。"
+                        },
+                        {
+                            text: "乙案：專案引進外籍移工",
+                            impact: { residents: -1, developers: +1, landlords: 0, youth: 0 },
+                            reason: "有效解決缺工；惟鄰近居民對大量移工進駐工地表示治安疑慮。"
+                        },
+                        {
+                            text: "丙案：暫緩發包，俟物價回穩",
+                            impact: { residents: 0, developers: -1, landlords: 0, youth: -1 },
+                            reason: "工程延宕，政見跳票，建商無案可做，青年持續空等，成效不彰。"
+                        }
+                    ]
+                },
+                {
+                    title: "陸、囤房稅修法案",
+                    description: "鑑於空屋率居高不下，立法院擬提案修正「囤房稅」，提高多屋族持有稅率。擬請 表態。",
+                    options: [
+                        {
+                            text: "甲案：全力支持，稅率加倍",
+                            impact: { residents: 0, developers: -1, landlords: -2, youth: +2 },
+                            reason: "青年團體支持度大增；惟房東與持有多戶餘屋之建商強烈反彈，揚言轉嫁租金。"
+                        },
+                        {
+                            text: "乙案：僅微幅調整，宣示意義為主",
+                            impact: { residents: 0, developers: 0, landlords: +1, youth: -1 },
+                            reason: "房東群體鬆一口氣；惟青年團體識破手腳，批評政府「打假球」。"
+                        },
+                        {
+                            text: "丙案：改推租金補貼替代加稅",
+                            impact: { residents: 0, developers: 0, landlords: +2, youth: -1 },
+                            reason: "房東最為支持（補貼入袋、稅負不增）；惟青年質疑公帑最終流入房東口袋。"
+                        }
+                    ]
+                },
+                {
+                    title: "柒、一樓店面招租案",
+                    description: "社宅一樓規劃有商業空間，關於進駐業種之篩選。擬請 裁示。",
+                    options: [
+                        {
+                            text: "甲案：設置托嬰中心與長照據點",
+                            impact: { residents: +2, developers: 0, landlords: 0, youth: +1 },
+                            reason: "有效化解鄰避效應，居民與年輕家庭皆表歡迎，施政有感。"
+                        },
+                        {
+                            text: "乙案：招租連鎖超商與咖啡廳",
+                            impact: { residents: +1, developers: 0, landlords: 0, youth: 0 },
+                            reason: "提升生活機能，租金收益穩定，各方接受度高，屬安全牌。"
+                        },
+                        {
+                            text: "丙案：提供社福機構辦公使用",
+                            impact: { residents: -1, developers: 0, landlords: 0, youth: +1 },
+                            reason: "社福團體需求獲滿足；惟居民認為外觀不夠氣派，憂心影響房價。"
+                        }
+                    ]
+                },
+                {
+                    title: "捌、選前政策宣示案",
+                    description: "大選將屆，目前民調膠著。幕僚建議提出積極社宅目標以爭取支持。擬請 核定。",
+                    options: [
+                        {
+                            text: "甲案：喊出「八年一百萬戶」目標",
+                            impact: { residents: -1, developers: +1, landlords: 0, youth: -1 },
+                            reason: "建商見商機竊喜；惟青年質疑數字灌水，居民憂心濫建，恐有反效果。"
+                        },
+                        {
+                            text: "乙案：誠實說明進度，穩健推動",
+                            impact: { residents: 0, developers: 0, landlords: 0, youth: +1 },
+                            reason: "雖無激情，惟理性選民肯定政府誠信，穩紮穩打。"
+                        },
+                        {
+                            text: "丙案：宣布暫停興建，全面改發現金",
+                            impact: { residents: +1, developers: -2, landlords: +2, youth: -2 },
+                            reason: "建商與青年團體崩潰；僅有房階級滿意。此舉風險極高，恐致政策崩盤。"
+                        }
+                    ]
+                }
+            ];
+
+            const handleChoice = (option) => {
+                const newHealth = { ...health };
+                let deadStakeholder = null;
+                
+                const record = {
+                    level: levels[currentLevel].title,
+                    choice: option.text,
+                    reason: option.reason,
+                };
+                
+                Object.keys(option.impact).forEach(key => {
+                    newHealth[key] += option.impact[key];
+                    if (newHealth[key] > 6) newHealth[key] = 6;
+                    if (newHealth[key] <= 0) deadStakeholder = key;
+                });
+
+                setHealth(newHealth);
+                setFeedback({
+                    optionText: option.text,
+                    reason: option.reason,
+                    impact: option.impact,
+                    record: record
+                });
+
+                if (deadStakeholder) {
+                    const loserName = stakeholders.find(s => s.id === deadStakeholder).name;
+                    setLoserReason(`經查【${loserName}】之忍耐值已耗盡，引發大規模陳抗，導致施政癱瘓，內閣總辭。`);
+                    setGameState('lost');
+                } else if (currentLevel + 1 >= levels.length) {
+                    setGameState('won');
+                }
+            };
+
+            const nextLevel = () => {
+                if (feedback && feedback.record) {
+                    setHistory([...history, feedback.record]);
+                }
+                setFeedback(null);
+                setCurrentLevel(prev => prev + 1);
+            };
+
+            const restartGame = () => {
+                setCurrentLevel(0);
+                setHealth({ residents: 4, developers: 4, landlords: 4, youth: 4 });
+                setGameState('playing');
+                setFeedback(null);
+                setLoserReason('');
+                setHistory([]);
+            };
+
+            const generateAdvice = () => {
+                if (gameState === 'lost') {
+                    return { title: "施政檢討報告", content: `鈞長 於執政期間未能有效調和鼎鼐，致使${loserReason.split('，')[0]}。建議未來施政應更重溝通，避免過度偏廢特定群體利益。` };
+                }
+                
+                // 簡易判斷
+                let title = "【中庸平衡型政府】";
+                let content = "鈞長 施政圓融，能在各方角力中求取平衡，無特定群體激烈反彈，實屬不易。";
+
+                if (health.developers >= 5 && health.residents >= 4) {
+                    title = "【經濟掛帥型政府】";
+                    content = "鈞長 施政高度重視經濟發展與房市穩定，深獲建商與資產階級信賴。惟需注意青年世代之相對剝奪感。";
+                } else if (health.youth >= 5 && health.residents <= 2) {
+                    title = "【激進改革型政府】";
+                    content = "鈞長 雖落實居住正義不遺餘力，深獲年輕族群愛戴，惟對既有利益結構衝擊過大。";
+                } else if (health.landlords >= 5) {
+                    title = "【維護現狀型政府】";
+                    content = "鈞長 施政以不擾民為原則，房東與有產階級最為滿意。惟長期而言，居住問題並未獲得結構性解決。";
+                }
+
+                return { title, content };
+            };
+
+            // 渲染公文印章
+            const RenderSeal = ({ text, rotate = -12 }) => (
+                <div className="absolute opacity-80 pointer-events-none border-4 border-red-700 text-red-700 font-bold flex items-center justify-center text-center p-2 rounded-sm stamp-animate"
+                    style={{ 
+                        width: '120px', 
+                        height: '120px', 
+                        right: '40px',
+                        bottom: '40px',
+                    }}>
+                    <div className="border border-red-700 w-full h-full flex items-center justify-center p-2 text-lg leading-tight font-kai">
+                        {text}
+                    </div>
+                </div>
+            );
+
+            // 左側狀態欄 (簽核表形式)
+            const Sidebar = () => (
+                <div className="md:w-64 w-full bg-white border-b md:border-b-0 md:border-r-2 border-gray-800 flex flex-col shrink-0 z-10">
+                    <div className="bg-gray-200 border-b-2 border-gray-800 p-2 text-center">
+                        <h3 className="font-kai text-xl font-bold text-black tracking-widest">會辦單位</h3>
+                        <p className="font-serif-tc text-xs text-gray-600 mt-1">請 惠示卓見</p>
+                    </div>
+                    
+                    <div className="flex-1 overflow-auto md:block flex bg-white">
+                        {stakeholders.map((s, idx) => (
+                            <div key={s.id} className={`flex-1 md:flex-none border-r md:border-r-0 md:border-b border-gray-400 p-3 relative ${idx % 2 === 0 ? 'bg-white' : 'bg-stone-50'}`}>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="font-kai font-bold text-lg text-black">{s.title}</span>
+                                    {/* 警告狀態 */}
+                                    {health[s.id] <= 1 && <span className="text-red-600 font-bold animate-pulse">!急件!</span>}
+                                </div>
+                                <div className="text-xs font-serif-tc text-gray-500 mb-2 border-b border-dashed border-gray-300 pb-1">
+                                    {s.name}
+                                </div>
+                                
+                                {/* 狀態勾選框模擬 */}
+                                <div className="flex items-center gap-1">
+                                    <span className="text-xs font-serif-tc text-gray-600 mr-1">滿意度:</span>
+                                    <div className="flex border border-gray-800 bg-white">
+                                        {Array.from({length: 6}).map((_, i) => (
+                                            <div key={i} className={`w-3 h-4 border-r border-gray-400 last:border-r-0 ${i < health[s.id] ? 'bg-black' : 'bg-transparent'}`}></div>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-2 text-[10px] text-gray-400 text-right w-full">
+                                    {/* 模擬簽名處 */}
+                                    (簽核)
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    {/* 底部說明 */}
+                    <div className="hidden md:block p-3 text-xs font-serif-tc text-gray-500 bg-gray-100 border-t border-gray-400">
+                        註：各單位滿意度低於一格時，將引發重大陳抗。
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="w-full md:max-w-[1000px] h-[100vh] md:h-[90vh] bg-white relative shadow-[0_0_30px_rgba(0,0,0,0.5)] flex flex-col md:flex-row overflow-hidden border-4 border-gray-300">
+                    
+                    <Sidebar />
+
+                    {/* 主要公文區 */}
+                    <div className="flex-1 relative h-full overflow-hidden flex flex-col bg-[#fdfbf7]">
+                        
+                        {/* 裝訂線 */}
+                        <div className="absolute left-0 top-0 bottom-0 w-10 border-r-2 border-double border-gray-400 flex flex-col justify-center items-center text-gray-400 text-xs gap-32 select-none z-0">
+                            <span className="rotate-[-90deg] font-kai">裝</span>
+                            <span className="rotate-[-90deg] font-kai">訂</span>
+                            <span className="rotate-[-90deg] font-kai">線</span>
+                        </div>
+
+                        {/* 內容捲動區 */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pl-14 md:pl-20 relative z-10">
+                            
+                            {/* 檔頭 */}
+                            <div className="text-center mb-8 pb-4 border-b-4 border-double border-red-800">
+                                <h1 className="text-4xl text-red-700 font-bold mb-3 tracking-[0.5em] font-kai">
+                                    行 政 院  函
+                                </h1>
+                                <div className="flex justify-between text-sm text-black font-serif-tc">
+                                    <div className="text-left space-y-1">
+                                        <p>發文日期：中華民國115年1月1日</p>
+                                        <p>發文字號：院臺建字第114001號</p>
+                                    </div>
+                                    <div className="text-right space-y-1">
+                                        <p>檔　　號：</p>
+                                        <p>保存年限：永久</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 遊戲區 */}
+                            {gameState === 'playing' && !feedback && (
+                                <div className="animate-[fadeIn_0.5s_ease-out]">
+                                    <div className="flex mb-6">
+                                        <span className="font-kai text-2xl font-bold w-20 shrink-0">主旨：</span>
+                                        <div className="text-xl font-serif-tc leading-loose text-black border-b border-gray-300 pb-1 w-full text-justify">
+                                            {levels[currentLevel].title}。
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex mb-8">
+                                        <span className="font-kai text-2xl font-bold w-20 shrink-0">說明：</span>
+                                        <div className="text-xl font-serif-tc leading-loose text-black w-full text-justify indent-8">
+                                            {levels[currentLevel].description}
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4">
+                                        <span className="font-kai text-2xl font-bold mb-4 block border-b-2 border-black inline-block px-1">擬辦：</span>
+                                        <div className="space-y-5 mt-2">
+                                            {levels[currentLevel].options.map((opt, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleChoice(opt)}
+                                                    className="w-full text-left p-4 border border-gray-400 hover:bg-red-50 hover:border-red-600 transition-all flex items-start gap-4 bg-white shadow-sm group"
+                                                >
+                                                    <div className="font-serif-tc font-bold text-lg pt-1 group-hover:text-red-700">
+                                                        {['甲', '乙', '丙'][idx]}、
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-black text-xl font-kai mb-2 group-hover:text-red-900">
+                                                            {opt.text.split('：')[1]}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500 font-serif-tc">
+                                                            (說明：{opt.reason.substring(0, 15)}...)
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 批示結果 */}
+                            {gameState === 'playing' && feedback && (
+                                <div className="h-full flex flex-col animate-[zoomIn_0.3s_ease-out]">
+                                    <div className="border-4 border-red-800 p-8 bg-white relative shadow-lg flex-1">
+                                        <h2 className="text-3xl font-bold text-red-700 mb-6 text-center font-kai tracking-widest border-b border-red-200 pb-4">
+                                            【 奉 核 】
+                                        </h2>
+                                        
+                                        <div className="mb-6 font-serif-tc text-xl leading-relaxed text-black">
+                                            <span className="font-bold font-kai text-gray-600">核定事項：</span><br/>
+                                            {feedback.optionText}
+                                        </div>
+                                        
+                                        <div className="mb-8 bg-gray-100 p-5 border-l-8 border-gray-600 font-serif-tc text-gray-800 text-lg italic">
+                                            {feedback.reason}
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-x-8 gap-y-4 mb-8">
+                                            {stakeholders.map(s => {
+                                                const impact = feedback.impact[s.id];
+                                                if(impact === 0) return null;
+                                                return (
+                                                    <div key={s.id} className="flex justify-between border-b border-gray-300 pb-2 font-serif-tc">
+                                                        <span>{s.title}</span>
+                                                        {impact > 0 ? (
+                                                            <span className="text-red-600 font-bold">▲ 滿意</span>
+                                                        ) : (
+                                                            <span className="text-green-700 font-bold">▼ 不滿</span>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+
+                                        <RenderSeal text="如擬辦理" />
+
+                                        <div className="mt-12 text-center">
+                                            <button 
+                                                onClick={nextLevel}
+                                                className="bg-black text-white px-10 py-3 font-bold text-xl hover:bg-gray-800 shadow-lg tracking-widest font-kai"
+                                            >
+                                                續辦下案
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 結案報告 */}
+                            {(gameState === 'won' || gameState === 'lost') && (() => {
+                                const advice = generateAdvice();
+                                return (
+                                    <div className="animate-[fadeIn_0.8s]">
+                                        <div className="text-center mb-8">
+                                            <h2 className="text-3xl font-bold text-black border-b-4 border-double border-black pb-2 inline-block font-kai">
+                                                {advice.title}
+                                            </h2>
+                                        </div>
+
+                                        <div className="mb-8 font-serif-tc text-xl leading-loose text-justify px-2 text-black indent-10">
+                                            {advice.content}
+                                        </div>
+
+                                        <h3 className="text-xl font-bold mb-4 block bg-black text-white px-3 py-2 font-kai inline-block">決策歷程紀錄</h3>
+                                        
+                                        <table className="w-full border-collapse border border-black mb-10 font-serif-tc text-sm">
+                                            <thead className="bg-gray-200">
+                                                <tr>
+                                                    <th className="border border-black p-2 w-1/4">案件</th>
+                                                    <th className="border border-black p-2 w-1/4">裁示</th>
+                                                    <th className="border border-black p-2">影響說明</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {[...history, feedback?.record].filter(Boolean).map((rec, idx) => (
+                                                    <tr key={idx} className="border border-black">
+                                                        <td className="border border-black p-2">{rec.level.split('、')[1] || rec.level}</td>
+                                                        <td className="border border-black p-2 text-red-900 font-bold">{rec.choice.split('：')[1]}</td>
+                                                        <td className="border border-black p-2 text-gray-800">{rec.reason}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="text-center mt-8 pb-10">
+                                            <button 
+                                                onClick={restartGame}
+                                                className="border-2 border-black text-black px-8 py-2 font-bold hover:bg-black hover:text-white transition-colors font-kai text-lg"
+                                            >
+                                                重新分案
+                                            </button>
+                                        </div>
+
+                                        {gameState === 'won' && <RenderSeal text="行政院印" rotate={0} />}
+                                        {gameState === 'lost' && <RenderSeal text="總辭負責" rotate={15} />}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* 頁碼 */}
+                        <div className="h-10 border-t border-gray-300 text-center flex items-center justify-center text-sm font-serif-tc text-black bg-white shrink-0 relative z-20">
+                            第 {gameState === 'playing' ? currentLevel + 1 : 'End'} 頁，共 {levels.length} 頁
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SocialHousingGame />);
+    </script>
+</body>
+</html>
