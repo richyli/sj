@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026：理想生活設計所 | Life Design Lab</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Google Fonts (Noto Serif JP for Japanese vibe) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        h1, h2, h3, .font-serif {
+            font-family: 'Noto Serif JP', serif;
+        }
+        /* Custom scrollbar hide */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // -----------------------------------------------------------------------------
+        // Icons (Replaced Lucide-react with inline SVGs for standalone HTML)
+        // -----------------------------------------------------------------------------
+        
+        const IconBase = ({ children, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const ArrowRight = ({ className }) => <IconBase className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></IconBase>;
+        const CheckCircle2 = ({ className }) => <IconBase className={className}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const RefreshCcw = ({ className }) => <IconBase className={className}><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></IconBase>;
+        const Star = ({ className }) => <IconBase className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></IconBase>;
+        const BookOpen = ({ className }) => <IconBase className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>;
+        const ChevronRight = ({ className }) => <IconBase className={className}><path d="m9 18 6-6-6-6"/></IconBase>;
+        const Sparkles = ({ className }) => <IconBase className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></IconBase>;
+        const XCircle = ({ className }) => <IconBase className={className}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></IconBase>;
+        const Info = ({ className }) => <IconBase className={className}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></IconBase>;
+        const Coffee = ({ className }) => <IconBase className={className}><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></IconBase>;
+        const PenTool = ({ className }) => <IconBase className={className}><path d="m12 19 7-7 3 3-7 7-3-3z"/><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="m2 2 7.586 7.586"/><circle cx="11" cy="11" r="2"/></IconBase>;
+        const Layout = ({ className }) => <IconBase className={className}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" x2="21" y1="9" y2="9"/><line x1="9" x2="9" y1="21" y2="9"/></IconBase>;
+
+        // -----------------------------------------------------------------------------
+        // Data
+        // -----------------------------------------------------------------------------
+
+        const questions = [
+          {
+            id: 1,
+            category: '身体管理',
+            goal: '今年我想瘦 10 公斤',
+            description: '面對體重計上的數字，你決定採取什麼行動？',
+            options: [
+              {
+                id: 'Traditional',
+                title: '意志力燃燒法',
+                text: '立刻報名健身房年費會員，發誓每週去練 5 天，並且晚餐只吃沙拉。',
+                analysis: {
+                  verdict: '高機率失敗',
+                  pros: '決心令人佩服，短期內可能見效。',
+                  cons: '依賴高強度的意志力。一旦忙碌或心情不好，容易產生「破罐破摔」的心理，二月就會放棄。',
+                  quote: '失敗的計畫通常源於過度依賴「動機」。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '原子習慣法',
+                text: '先把健身服放在床頭，並告訴自己：「我是個運動員」。',
+                analysis: {
+                  verdict: '長期穩定',
+                  pros: '這是運用「環境設計」（讓提示顯而易見）與「身分認同」。不專注於「瘦幾公斤」，而是專注於「成為什麼樣的人」。',
+                  cons: '效果不會立刻顯現，需要耐心等待複利效應。',
+                  quote: '目標是確定方向，系統才是進步的關鍵。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '小習慣設計法',
+                text: '設定規則：每次上完廁所沖水後，做 2 下深蹲，然後給自己比個讚。',
+                analysis: {
+                  verdict: '最易執行',
+                  pros: '運用行為公式 B=MAP。不需要意志力，透過「錨點」（沖水）觸發「微行動」（深蹲），並用「慶祝」（比讚）刺激大腦多巴胺。',
+                  cons: '看起來太微不足道，容易被輕視覺得「這哪有用」。',
+                  quote: '人們改變是因為感覺美好，而不是感覺糟糕。'
+                }
+              }
+            ]
+          },
+          {
+            id: 2,
+            category: '読書',
+            goal: '我想養成閱讀習慣',
+            description: '書架上買了一堆書都沒看，今年該怎麼辦？',
+            options: [
+              {
+                id: 'JamesClear',
+                title: '兩分鐘法則',
+                text: '每天晚上睡前，只讀「一頁」書。不求多，但絕不中斷。',
+                analysis: {
+                  verdict: '培養持續性',
+                  pros: '運用「兩分鐘法則」。讓習慣容易到不好意思不做。只要開始了，通常就會繼續讀下去。',
+                  cons: '對於急著想看完一本書的人來說，進度顯得緩慢。',
+                  quote: '習慣的養成在於頻率，而非強度。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '宏大願景法',
+                text: '列出「年度 50 本書單」，規定自己每天必須讀完一個章節。',
+                analysis: {
+                  verdict: '容易倦怠',
+                  pros: '目標明確，如果能達成會非常有成就感。',
+                  cons: '一旦有一天沒達成，進度落後就會產生壓力，最後乾脆放棄整個計畫。',
+                  quote: '不要讓目標成為你快樂的阻礙。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '珍珠養殖法',
+                text: '當我早上泡好咖啡坐下後，我會打開書本，然後深呼吸感到滿足。',
+                analysis: {
+                  verdict: '無痛植入',
+                  pros: '這是「小習慣配方」。重點不在「讀多少」，而在於「打開書」這個動作的自動化。將新習慣嫁接在舊習慣（喝咖啡）上。',
+                  cons: '需要精準找到生活中的「錨點」行為。',
+                  quote: '把行為縮小，直到你找不到藉口不做。'
+                }
+              }
+            ]
+          },
+          {
+            id: 3,
+            category: '仕事・研究',
+            goal: '撰寫學位論文/專案報告',
+            description: '進度停滯不前，看到 Word 游標在閃就焦慮？',
+            options: [
+              {
+                id: 'Traditional',
+                title: '閉關修煉法',
+                text: '我要閉關一個月，每天從早到晚寫 10 小時，不寫完不出門。',
+                analysis: {
+                  verdict: '高壓易崩潰',
+                  pros: '若能執行，產出量極大。',
+                  cons: '典型的「將任務視為巨獸」。高壓會導致嚴重的拖延症與自我懷疑，通常撐不過三天就會開始逃避。',
+                  quote: '間歇性的高強度努力，往往不如持續性的低強度行動。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '微步啟動法',
+                text: '當我打開電腦坐下後，我會寫下「一句話」（或是整理一個參考文獻），然後告訴自己「有進度了」。',
+                analysis: {
+                  verdict: '突破寫作障礙',
+                  pros: '將巨大的任務拆解成「微行動」。只要寫一句話就算贏，這能有效降低對任務的恐懼感，啟動大腦的作業模式。',
+                  cons: '會覺得進度太慢，需要克服「這樣寫得完嗎」的焦慮。',
+                  quote: '從小處著手，讓習慣自然生長。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '環境區隔法',
+                text: '把書桌整理乾淨，手機拿到另一個房間。規定每天早上 9 點到 11 點是「神聖寫作時間」。',
+                analysis: {
+                  verdict: '建立專業節奏',
+                  pros: '利用「環境設計」移除干擾，並建立「時間」作為提示。不論有沒有靈感，時間到就坐下，這是在培養專業工作者的身分。',
+                  cons: '需要配合規律的作息才能執行。',
+                  quote: '你不需要成為一個自律的人，你只需要打造一個自律的環境。'
+                }
+              }
+            ]
+          },
+          {
+            id: 4,
+            category: '執筆',
+            goal: '撰寫期刊/專業文章',
+            description: '被退稿或是靈感枯竭，動力全失，不想面對？',
+            options: [
+              {
+                id: 'JamesClear',
+                title: '標準化產出法',
+                text: '不管靈感有無，每天「標準化」產出 200 字（或是做一張圖）。重點是持續出現在電腦前。',
+                analysis: {
+                  verdict: '累積複利',
+                  pros: '這是「標準化先於最佳化」。重點是保持手感與思考的熱度，避免長時間中斷後需要巨大的啟動能量。',
+                  cons: '需要接受初稿可能很爛的事實。',
+                  quote: '標準化之後，才能最佳化。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '死線衝刺法',
+                text: '設定嚴格死線，規定這週一定要把初稿寫完，否則不睡覺。',
+                analysis: {
+                  verdict: '容易倦怠 (Burnout)',
+                  pros: '壓力確實能產生短期動力。',
+                  cons: '長期會損害身心健康與熱情。這是在透支未來的精力，且在疲勞狀態下寫出的內容品質通常不佳。',
+                  quote: '依靠意志力抵抗疲勞，是不可持續的策略。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '正向回饋法',
+                text: '當我讀完一篇相關資料，立刻把「一個重點」加到筆記軟體裡，然後吃一顆喜歡的巧克力。',
+                analysis: {
+                  verdict: '建立愉悅感',
+                  pros: '將枯燥的資料收集與「獎勵」連結。透過「慶祝」讓大腦期待下一次工作的時刻。',
+                  cons: '需注意獎勵的選擇（如糖分攝取）。',
+                  quote: '帶著勝利的感覺進行工作。'
+                }
+              }
+            ]
+          },
+          {
+            id: 5,
+            category: '貯金',
+            goal: '我想存下一筆錢',
+            description: '每個月底總是月光族，如何打破循環？',
+            options: [
+              {
+                id: 'BJFogg',
+                title: '微型行動法',
+                text: '當我打開網銀App查看餘額後，立刻轉帳 $50 到儲蓄帳戶，並對自己說「富翁！」。',
+                analysis: {
+                  verdict: '積少成多',
+                  pros: '降低存錢的心理門檻，建立「我在存錢」的自我效能感。這是利用「慶祝」來強化身分。',
+                  cons: '存錢速度較慢，需要時間累積。',
+                  quote: '簡單的事情容易重複，重複的事情才能持久。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '嚴格預算法',
+                text: '發誓今年不喝手搖飲、不買新衣服，立志存下年薪的 50%。',
+                analysis: {
+                  verdict: '痛苦指數高',
+                  pros: '若能執行，儲蓄率極高。',
+                  cons: '剝奪感太重。過度壓抑慾望通常會導致報復性消費。',
+                  quote: '依靠意志力抵抗誘惑，通常是短期的策略。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '系統自動化',
+                text: '設定每個月發薪日「自動轉帳」20% 到另一個戶頭。讓存錢不需要思考。',
+                analysis: {
+                  verdict: '最穩健',
+                  pros: '打造「系統」。透過環境設計（自動化），讓壞習慣（亂花錢）變得困難。',
+                  cons: '需要一次性的設定動作，且需要先計算好現金流。',
+                  quote: '你不需要成為一個自律的人，你只需要打造一個自律的環境。'
+                }
+              }
+            ]
+          },
+          {
+            id: 6,
+            category: '朝時間',
+            goal: '我想早起不賴床',
+            description: '每天早上都在與鬧鐘搏鬥，怎麼贏？',
+            options: [
+              {
+                id: 'Traditional',
+                title: '鋼鐵意志法',
+                text: '設 10 個鬧鐘，把鈴聲調到最大，告訴自己「只有懶惰的人才賴床」。',
+                analysis: {
+                  verdict: '情緒內耗',
+                  pros: '如果你被嚇醒算是醒的話，那確實有效。',
+                  cons: '充滿負面情緒的早晨。如果賴床了會產生自我厭惡。',
+                  quote: '自我批評通常無助於行為改變。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '環境設計法',
+                text: '把鬧鐘（或手機）放在房間的另一頭，強迫自己必須「起床」才能關掉它。',
+                analysis: {
+                  verdict: '物理強制',
+                  pros: '增加執行壞習慣（賴床）的阻力。一旦站起來，清醒的機率就大增。',
+                  cons: '冬天執行起來特別痛苦，需要配合早睡。',
+                  quote: '讓好習慣變得容易，讓壞習慣變得困難。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '快樂啟動法',
+                text: '當鬧鐘響起，雙腳踩到地板時，說一聲「今天是美好的一天！」。',
+                analysis: {
+                  verdict: '情緒正向',
+                  pros: '利用情緒來固化習慣。透過正向語言欺騙大腦，減少起床的痛苦感。這就是「慶祝」的力量。',
+                  cons: '剛開始會覺得自己很像傻瓜，需要克服尷尬感。',
+                  quote: '帶著勝利的感覺開啟一天。'
+                }
+              }
+            ]
+          },
+          {
+            id: 7,
+            category: '学習',
+            goal: '我想學好英文/第二外語',
+            description: '多年的啞巴外語，今年想突破。',
+            options: [
+              {
+                id: 'JamesClear',
+                title: '習慣堆疊法',
+                text: '利用通勤時間。規定：當我「坐上捷運/公車」後，就戴上耳機聽 10 分鐘 Podcast。',
+                analysis: {
+                  verdict: '融入生活',
+                  pros: '利用「習慣堆疊」 (Habit Stacking)。不需要額外找時間，而是把學習嵌入既有流程。',
+                  cons: '需要挑選合適難度的教材，否則容易在通勤時睡著。',
+                  quote: '特定的時間和地點，是習慣養成的關鍵提示。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '一字突破法',
+                text: '當我早上發動車子/打開電腦時，唸出「一個」新的單字，並覺得自己很國際化。',
+                analysis: {
+                  verdict: '降低恐懼',
+                  pros: '打破「學習很累」的心理障礙。從一個字開始，很容易延伸成一句話。',
+                  cons: '進度較慢，適合作為啟動引擎，後續需增加強度。',
+                  quote: '大改變源於微小的起點。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '密集特訓法',
+                text: '買一套昂貴的文法書，規定每天晚上讀一小時，背 50 個單字。',
+                analysis: {
+                  verdict: '易放棄',
+                  pros: '短期內單字量暴增。',
+                  cons: '典型的「甚至還沒開始就覺得累」。這種強度通常維持不了一週。',
+                  quote: '最好是每天做一點點，而不是某天做很多。'
+                }
+              }
+            ]
+          },
+          {
+            id: 8,
+            category: '食事',
+            goal: '我想戒糖/吃健康',
+            description: '下午茶時間總是忍不住點手搖飲配雞排？',
+            options: [
+              {
+                id: 'Traditional',
+                title: '全面禁止法',
+                text: '從今天開始，禁止吃任何甜食、炸物和澱粉。違者罰款。',
+                analysis: {
+                  verdict: '反彈風險大',
+                  pros: '界線明確。',
+                  cons: '禁令會增加渴望。通常忍了三天後，會產生報復性暴食。',
+                  quote: '壓抑慾望不如引導慾望。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '環境隱藏法',
+                text: '把家裡的零食收到最高的櫃子裡，桌上只放蘋果和水。',
+                analysis: {
+                  verdict: '無痛減量',
+                  pros: '眼不見為淨（讓提示隱形）。減少意志力與誘惑對抗的消耗。',
+                  cons: '無法控制外在環境（如辦公室同事請客）。',
+                  quote: '環境設計是自律的秘密武器。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '加法策略',
+                text: '當我把飯菜端上桌，先吃「一口」蔬菜，告訴自己「我在滋養身體」。',
+                analysis: {
+                  verdict: '建立偏好',
+                  pros: '不是限制（不能吃什麼），而是增加（先做什麼）。先吃蔬菜會自然減少吃垃圾食物的空間。',
+                  cons: '對於極度挑食者可能需要調整微行動內容。',
+                  quote: '專注於你能做的，而不是你不能做的。'
+                }
+              }
+            ]
+          },
+          {
+            id: 9,
+            category: '瞑想',
+            goal: '我想減少焦慮/冥想',
+            description: '生活壓力大，想嘗試正念冥想卻坐不住？',
+            options: [
+              {
+                id: 'BJFogg',
+                title: '三秒冥想法',
+                text: '當我把頭躺在枕頭上時，做「三次」深呼吸，感謝今天過完了。',
+                analysis: {
+                  verdict: '立刻放鬆',
+                  pros: '極度簡單，且有助於睡眠。不需要專業的冥想墊或音樂。這是一個絕佳的睡前小習慣。',
+                  cons: '時間較短，無法達到深層冥想的境界。',
+                  quote: '做得糟糕也比完全不做強。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '身分認同法',
+                text: '每天早上花 2 分鐘閉目養神。告訴自己：「我是一個重視心靈平靜的人。」',
+                analysis: {
+                  verdict: '改變內在',
+                  pros: '從「做冥想」轉向「我是冥想者」。這會讓你覺得冥想是符合你性格的事。',
+                  cons: '需要克服初期的自我懷疑。',
+                  quote: '每一次的行動，都是對你想成為的人投下一票。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '苦行僧法',
+                text: '規定每天清晨 5 點起床，盤腿靜坐 30 分鐘，雜念一來就責備自己。',
+                analysis: {
+                  verdict: '增加焦慮',
+                  pros: '儀式感強烈。',
+                  cons: '把放鬆變成了另一項「任務」。對於初學者來說，30 分鐘像一世紀那麼長。',
+                  quote: '完美主義是習慣養成的敵人。'
+                }
+              }
+            ]
+          },
+          {
+            id: 10,
+            category: 'デジタル',
+            goal: '我想減少滑手機',
+            description: '一不小心就滑了兩小時 IG/Tiktok？',
+            options: [
+              {
+                id: 'JamesClear',
+                title: '物理隔離法',
+                text: '買一個傳統鬧鐘。把手機充電器移出臥室，睡覺時手機不進房。',
+                analysis: {
+                  verdict: '根治睡前滑',
+                  pros: '徹底切斷壞習慣的連結。如果你拿不到手機，就不需要抗拒它。讓壞習慣變得「困難」。',
+                  cons: '對於習慣睡前滑手機助眠的人，初期會很難熬。',
+                  quote: '想要戒除壞習慣，就讓它變得困難 (Make it difficult)。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '刪除帳號法',
+                text: '把所有社群軟體都刪掉，或是把手機螢幕設成黑白模式。',
+                analysis: {
+                  verdict: '容易復發',
+                  pros: '釜底抽薪。',
+                  cons: '社群軟體通常有成癮性，幾天後你可能就會因為「怕錯過訊息」而偷偷裝回來。',
+                  quote: '過度激進的手段往往無法持久。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '歸位儀式法',
+                text: '當我回到家進門，把手機放在玄關的盒子裡，享受「自由了」的感覺。',
+                analysis: {
+                  verdict: '創造邊界',
+                  pros: '在「回家」和「放鬆」之間建立新的連結。不是不滑，而是不在特定時間滑。',
+                  cons: '需要家人的配合，以免被緊急聯繫打斷。',
+                  quote: '設計你的環境，讓它為你服務。'
+                }
+              }
+            ]
+          },
+          {
+            id: 11,
+            category: '日記',
+            goal: '我想寫日記',
+            description: '買了漂亮的本子，只寫了 1/1 這一頁？',
+            options: [
+              {
+                id: 'Traditional',
+                title: '作文比賽法',
+                text: '規定每天晚上要寫滿一頁 A4 紙，記錄整天的心得與反省。',
+                analysis: {
+                  verdict: '壓力山大',
+                  pros: '紀錄詳盡。',
+                  cons: '把寫日記變成了「加班」。一旦有一天太累沒寫，後面就都不想寫了。',
+                  quote: '不要把習慣變成負擔。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '一句話日記',
+                text: '當我打開電腦/筆記本，寫下「今天的日期」，對自己笑一下。',
+                analysis: {
+                  verdict: '極易啟動',
+                  pros: '只要寫下日期，你就已經贏了。通常寫了日期，你就會順手寫下一句話。',
+                  cons: '內容可能較為流水帳。',
+                  quote: '從小處著手，讓習慣自然生長。'
+                }
+              },
+              {
+                id: 'JamesClear',
+                title: '感恩堆疊法',
+                text: '把日記本放在枕頭上。規定：每天上床後，寫下「一件」今天發生的好事。',
+                analysis: {
+                  verdict: '正向聚焦',
+                  pros: '結合環境提示與兩分鐘法則。聚焦於正向事物能改善睡眠品質。',
+                  cons: '需要準備實體筆記本和筆在床邊。',
+                  quote: '標準化之後，才能最佳化。'
+                }
+              }
+            ]
+          },
+          {
+            id: 12,
+            category: '整頓',
+            goal: '我想保持房間整潔',
+            description: '房間總是亂糟糟，大掃除完三天又亂了。',
+            options: [
+              {
+                id: 'JamesClear',
+                title: '一觸即定法',
+                text: '實行「一觸原則」：任何物品只要拿在手上，使用完畢後「立刻」放回原位，絕不暫放。',
+                analysis: {
+                  verdict: '預防勝於治療',
+                  pros: '從源頭解決亂源。這是身分認同：「我是一個整潔的人」。',
+                  cons: '需要高度的當下覺察力。',
+                  quote: '每一個行動都是你對未來生活的投票。'
+                }
+              },
+              {
+                id: 'BJFogg',
+                title: '微掃除法',
+                text: '當我刷完牙後，順手把洗手台擦一下，看著亮亮的水龍頭覺得開心。',
+                analysis: {
+                  verdict: '無壓力維持',
+                  pros: '把家事拆解成無數個小習慣。不求一次掃完，但求保持局部整潔。',
+                  cons: '對於已經堆積如山的髒亂，效果有限。',
+                  quote: '小成功會引領大成功。'
+                }
+              },
+              {
+                id: 'Traditional',
+                title: '週末大掃除法',
+                text: '每週末花半天時間，把整個家翻過來徹底打掃一遍。',
+                analysis: {
+                  verdict: '痛苦循環',
+                  pros: '掃完當下很乾淨。',
+                  cons: '因為過程太痛苦，你會下意識排斥打掃。週間會放任它亂，想著「反正週末會掃」。',
+                  quote: '間歇性的高強度努力，不如持續性的低強度行動。'
+                }
+              }
+            ]
+          }
+        ];
+
+        // -----------------------------------------------------------------------------
+        // Main Component
+        // -----------------------------------------------------------------------------
+
+        function LifeDesignLab() {
+          const [currentStep, setCurrentStep] = useState(0); // 0: Intro, 1-12: Questions, 13: Summary
+          const [selectedOption, setSelectedOption] = useState(null);
+          const [showFeedback, setShowFeedback] = useState(false);
+          const [scores, setScores] = useState({ Traditional: 0, JamesClear: 0, BJFogg: 0 });
+          const [history, setHistory] = useState([]);
+
+          const handleStart = () => {
+            setCurrentStep(1);
+          };
+
+          const handleOptionSelect = (option) => {
+            setSelectedOption(option);
+            setShowFeedback(true);
+            setScores(prev => ({ ...prev, [option.id]: prev[option.id] + 1 }));
+            setHistory([...history, option.id]);
+          };
+
+          const handleNext = () => {
+            setShowFeedback(false);
+            setSelectedOption(null);
+            if (currentStep < questions.length) {
+              setCurrentStep(prev => prev + 1);
+            } else {
+              setCurrentStep(questions.length + 1); // Summary
+            }
+          };
+
+          const handleRestart = () => {
+            setCurrentStep(0);
+            setScores({ Traditional: 0, JamesClear: 0, BJFogg: 0 });
+            setHistory([]);
+            setSelectedOption(null);
+            setShowFeedback(false);
+          };
+
+          // --- Render Functions ---
+
+          const renderIntro = () => (
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[#FDFBF7] text-[#1A2F4B] p-6 font-sans bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]">
+              <div className="max-w-md w-full border border-[#1A2F4B] p-10 bg-white shadow-[12px_12px_0px_0px_rgba(26,47,75,0.15)] relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-[#E8E8E3] text-[#1A2F4B] text-[10px] font-bold px-4 py-2 tracking-widest uppercase">
+                  2026 生活特輯
+                </div>
+                
+                <div className="mb-8 text-center mt-4">
+                  <div className="flex justify-center mb-4">
+                    <Layout className="w-8 h-8 text-[#1A2F4B] opacity-80" />
+                  </div>
+                  <h2 className="text-xs tracking-[0.2em] uppercase mb-3 font-bold text-gray-400">年間目標ハンドブック</h2>
+                  <h1 className="text-4xl font-serif font-bold leading-tight mb-6 tracking-tight text-[#1A2F4B]">
+                    年度願望<br /><span className="text-[#FF5733] italic">生活手帳</span>
+                  </h1>
+                  <div className="w-8 h-[2px] bg-[#1A2F4B] mx-auto mb-6 opacity-20"></div>
+                  <p className="text-sm text-gray-600 leading-loose text-justify mb-6 font-medium tracking-wide">
+                    新的一年，我們習慣許下宏大願望。<br/>
+                    但真正的改變，往往藏在微不足道的日常褶皺裡。<br/><br/>
+                    這不是一份關於「成功」的試卷，<br/>
+                    而是一次關於「生活質感」的素描。<br/><br/>
+                    你是嚴謹的苦行者？還是靈活的設計師？<br/>
+                    讓我們一起翻開這本手帳，重新編輯你的 2026。
+                  </p>
+                </div>
+                
+                <button 
+                  onClick={handleStart}
+                  className="w-full bg-[#1A2F4B] text-white py-4 hover:bg-[#FF5733] transition-colors duration-300 flex items-center justify-center gap-3 group text-sm font-bold tracking-widest uppercase"
+                >
+                  編集を始める <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </button>
+
+                <div className="mt-6 flex justify-between text-[9px] text-gray-300 font-mono uppercase tracking-widest border-t border-gray-100 pt-4">
+                  <span>Life Design Lab</span>
+                  <span>Tokyo / Taipei</span>
+                  <span>Est. 2026</span>
+                </div>
+              </div>
+            </div>
+          );
+
+          const renderQuestion = () => {
+            const question = questions[currentStep - 1];
+            
+            return (
+              <div className="min-h-screen bg-[#FDFBF7] text-[#1A2F4B] p-4 md:p-8 font-sans flex flex-col items-center bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]">
+                {/* Header Strip */}
+                <div className="w-full max-w-2xl mb-12 flex justify-between items-end border-b border-[#1A2F4B] pb-2">
+                  <span className="font-serif italic text-2xl text-[#FF5733]">0{currentStep}</span>
+                  <span className="text-[10px] tracking-[0.2em] uppercase text-gray-400">質問 {currentStep} / {questions.length}</span>
+                </div>
+
+                {/* Card */}
+                <div className="max-w-2xl w-full bg-white border border-[#1A2F4B] shadow-[8px_8px_0px_0px_rgba(26,47,75,0.1)] p-8 md:p-12 relative">
+                   <div className="absolute top-0 left-0 bg-[#F0F0F0] text-[#1A2F4B] px-4 py-1 text-[10px] font-bold tracking-widest border-r border-b border-[#1A2F4B]">
+                     {question.category}
+                   </div>
+                   
+                   <h2 className="text-2xl md:text-3xl font-serif font-bold mb-4 mt-4 leading-normal">{question.goal}</h2>
+                   <p className="text-gray-500 font-medium mb-10 text-sm md:text-base leading-relaxed tracking-wide border-l-2 border-[#FF5733] pl-4">
+                     {question.description}
+                   </p>
+
+                   <div className="space-y-5">
+                     {question.options.map((option, index) => (
+                       <button
+                         key={index}
+                         onClick={() => handleOptionSelect(option)}
+                         className="w-full text-left p-6 border border-gray-200 hover:border-[#1A2F4B] hover:bg-[#FFFAF0] transition-all duration-300 group relative bg-white flex items-baseline gap-5"
+                       >
+                         <span className="font-serif italic text-gray-300 text-xl group-hover:text-[#1A2F4B] transition-colors">
+                           {['A', 'B', 'C'][index]}.
+                         </span>
+                         <p className="text-base text-gray-700 group-hover:text-[#1A2F4B] leading-relaxed font-medium">
+                           {option.text}
+                         </p>
+                       </button>
+                     ))}
+                   </div>
+                </div>
+              </div>
+            );
+          };
+
+          const renderFeedback = () => {
+            if (!selectedOption) return null;
+
+            let themeColor = 'bg-gray-50';
+            let icon = <Info className="w-6 h-6" />;
+            let methodLabel = '';
+
+            if (selectedOption.id === 'Traditional') {
+              themeColor = 'bg-[#FFF5F5] text-red-900';
+              icon = <XCircle className="w-6 h-6 text-red-800" />;
+              methodLabel = '昭和魂・硬派實踐者';
+            } else if (selectedOption.id === 'JamesClear') {
+              themeColor = 'bg-[#F0F7FF] text-blue-900';
+              icon = <Star className="w-6 h-6 text-blue-800" />;
+              methodLabel = '原子習慣・系統建築家';
+            } else {
+              themeColor = 'bg-[#F0FFF4] text-green-900';
+              icon = <Sparkles className="w-6 h-6 text-green-800" />;
+              methodLabel = '微步哲學・生活黑客';
+            }
+
+            return (
+              <div className="fixed inset-0 bg-[#FDFBF7]/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+                <div className="bg-white max-w-lg w-full border border-[#1A2F4B] shadow-2xl p-0 overflow-hidden">
+                  {/* Header */}
+                  <div className={`p-6 border-b border-[#1A2F4B] flex items-center gap-4 ${themeColor}`}>
+                    {icon}
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">分析結果</p>
+                      <h3 className="text-lg font-bold font-serif">{selectedOption.title}</h3>
+                      <p className="text-xs mt-1 opacity-80 font-medium tracking-wide">{methodLabel}</p>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-8 space-y-8">
+                    <div className="flex items-start gap-4">
+                      <div className="mt-1"><CheckCircle2 className="w-4 h-4 text-[#FF5733]"/></div>
+                      <div>
+                        <h4 className="font-bold text-[10px] text-gray-400 uppercase tracking-widest mb-1">判定 (Verdict)</h4>
+                        <p className="font-serif text-xl font-bold">{selectedOption.analysis.verdict}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6">
+                       <div className="">
+                          <h4 className="font-bold text-[10px] text-gray-400 uppercase tracking-widest mb-2">視点 (Perspective)</h4>
+                          <p className="text-sm text-gray-600 leading-7 text-justify">
+                            {selectedOption.analysis.pros} <br/><br/>
+                            <span className="text-gray-400 text-xs">{selectedOption.analysis.cons}</span>
+                          </p>
+                       </div>
+                    </div>
+
+                    <div className="relative pt-6 border-t border-dashed border-gray-200">
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-gray-300">
+                        <Coffee className="w-4 h-4" />
+                      </span>
+                      <p className="text-center italic text-gray-500 font-serif text-lg">
+                        "{selectedOption.analysis.quote}"
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="p-0">
+                    <button 
+                      onClick={handleNext}
+                      className="w-full bg-[#1A2F4B] hover:bg-[#FF5733] text-white py-4 font-bold transition-colors flex items-center justify-center gap-2 text-xs tracking-widest uppercase"
+                    >
+                      次へ (Next Page) <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          const renderSummary = () => {
+            const maxScore = Math.max(scores.Traditional, scores.JamesClear, scores.BJFogg);
+            let resultType = '';
+            let subTitle = '';
+            let description = '';
+            let advice = [];
+
+            if (maxScore === scores.Traditional && maxScore > 3) {
+              resultType = "昭和魂的熱血實踐家";
+              subTitle = "ストイックな実践者";
+              description = "你相信「根性論」，擁有令人敬佩的決心。對你而言，生活就是一場需要全力以赴的修煉。但有時過於緊繃的琴弦，反而彈奏不出優雅的樂章。";
+              advice = [
+                "試著接受「不完美」。比起偶爾的滿分，持續的六十分更具力量。",
+                "將「意志力」視為珍貴的燃料，不要在瑣事上消耗殆盡。",
+                "給自己一杯咖啡的休息時間，那不是偷懶，是為了走更長遠的路。"
+              ];
+            } else if (maxScore === scores.JamesClear) {
+              resultType = "透明感的生活編集長";
+              subTitle = "生活の編集者";
+              description = "你擅長整理與歸納。對你來說，理想的生活不是「追求」來的，而是透過精心設計的環境與流程「編輯」出來的。你懂得讓生活自動運轉的藝術。";
+              advice = [
+                "繼續優化你的生活動線，讓「想做的事」隨手可得。",
+                "善用「習慣堆疊」：在早晨的咖啡香氣中，嵌入閱讀的儀式。",
+                "保持這份從容，你是自己生活的最佳策展人。"
+              ];
+            } else if (maxScore === scores.BJFogg) {
+              resultType = "柔軟的微步哲學家";
+              subTitle = "微小な哲学者";
+              description = "你是生活中的駭客，懂得用最輕盈的腳步跨越障礙。你深知「大」往往伴隨著恐懼，而「小」則蘊含著無限的生機與愉悅。";
+              advice = [
+                "當生活卡關時，問自己：「我可以做哪件小事，簡單到不可能失敗？」",
+                "別忘了「慶祝」！即使只是微小的進步，也值得在心裡放一場煙火。",
+                "保持這份玩心，將生活視為一場輕快的實驗。"
+              ];
+            } else {
+              resultType = "都會風的平衡策展人";
+              subTitle = "バランスのキュレーター";
+              description = "你不拘泥於單一形式，如同熟練的爵士樂手，懂得在紀律與彈性之間即興演奏。你擁有極佳的適應力，能根據當下的節奏調整步伐。";
+              advice = [
+                "在不同的生活切片中使用不同策略。",
+                "需要創意時，運用微步哲學降低門檻；需要產出時，運用環境設計維持專注。",
+                "偶爾的衝刺也無妨，只要記得在那之後，留給自己一段留白的時光。"
+              ];
+            }
+
+            return (
+              <div className="min-h-screen bg-[#FDFBF7] p-6 flex items-center justify-center font-sans bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]">
+                <div className="bg-white max-w-3xl w-full border border-[#1A2F4B] shadow-[12px_12px_0px_0px_rgba(26,47,75,0.1)] relative">
+                  
+                  <div className="p-10 md:p-16">
+                    <div className="text-center mb-12">
+                      <div className="inline-block border-b-2 border-[#FF5733] pb-1 mb-4">
+                        <h2 className="text-[#1A2F4B] font-bold tracking-[0.2em] text-[10px] uppercase">生活診断結果</h2>
+                      </div>
+                      <h1 className="text-3xl md:text-5xl font-serif font-bold text-[#1A2F4B] mb-2">{resultType}</h1>
+                      <p className="text-sm font-serif italic text-gray-400 mb-8">{subTitle}</p>
+                      
+                      <div className="w-12 h-[1px] bg-gray-300 mx-auto mb-8"></div>
+                      
+                      <p className="text-base text-gray-600 leading-loose max-w-xl mx-auto font-medium text-justify">
+                        {description}
+                      </p>
+                    </div>
+
+                    <div className="bg-[#F9F9F7] p-8 md:p-10 border border-gray-100 relative">
+                      <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 py-1 border border-gray-100">
+                        <PenTool className="w-4 h-4 text-[#FF5733]"/>
+                      </span>
+                      <h3 className="text-center font-bold text-[#1A2F4B] mb-8 uppercase text-xs tracking-widest">
+                        2026年の生活提案
+                      </h3>
+                      <ul className="space-y-6">
+                        {advice.map((item, i) => (
+                          <li key={i} className="flex items-start gap-4 text-gray-700">
+                            <span className="text-[#FF5733] font-serif italic text-lg opacity-60">0{i+1}.</span>
+                            <span className="text-sm md:text-base leading-relaxed font-medium">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="flex justify-center mt-12">
+                      <button 
+                        onClick={handleRestart}
+                        className="group relative px-8 py-3 bg-transparent overflow-hidden"
+                      >
+                        <span className="relative z-10 text-[#1A2F4B] group-hover:text-[#FF5733] transition-colors font-bold tracking-widest text-xs flex items-center gap-2">
+                           <RefreshCcw className="w-3 h-3" /> 編集を始める
+                        </span>
+                        <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[#1A2F4B] group-hover:bg-[#FF5733] transition-colors"></div>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Decorative Corner */}
+                  <div className="absolute bottom-4 right-6 text-[9px] text-gray-300 font-mono tracking-widest uppercase">
+                    Issue. 01 / 生活設計室
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="antialiased text-[#1A2F4B]">
+              {currentStep === 0 && renderIntro()}
+              {currentStep > 0 && currentStep <= questions.length && renderQuestion()}
+              {showFeedback && renderFeedback()}
+              {currentStep === questions.length + 1 && renderSummary()}
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LifeDesignLab />);
+    </script>
+</body>
+</html>
