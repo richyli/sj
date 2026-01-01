@@ -1,0 +1,427 @@
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, Vote, RefreshCw } from 'lucide-react';
+
+const PTSBoardSimulator = () => {
+  // Game State
+  const [gameState, setGameState] = useState('intro'); // intro, playing, result, summary
+  const [round, setRound] = useState(1);
+  const [passedCount, setPassedCount] = useState(0); 
+  const [history, setHistory] = useState([]); 
+  const [roundPairs, setRoundPairs] = useState([]); // Array of 14 pairs
+  const [roundResult, setRoundResult] = useState(null);
+
+  // Constants
+  const TOTAL_ROUNDS = 14;
+  const TARGET_PASSED = 10; 
+
+  // --- Data Generators ---
+
+  const firstNames = ['陳', '林', '黃', '張', '李', '王', '吳', '劉', '蔡', '楊', '許', '鄭', '謝', '洪', '郭', '邱', '曾', '廖', '賴', '徐'];
+  const lastNames = ['安', '平', '華', '文', '強', '美', '儀', '山', '明', '宏', '哲', '瑋', '婷', '君', '傑', '豪', '薇', '寧', '軒', '凱', '信', '義', '和', '平'];
+
+  const professions = [
+    { title: '新聞傳播學者', icon: '🎓', experiences: ['國立大學新聞系教授，專長媒體倫理', '私立大學傳播學院院長，著作等身', '資深媒體觀察家，常發表評論'] },
+    { title: '資深電視製作人', icon: '📺', experiences: ['曾獲三座金鐘獎，製作過多部膾炙人口劇集', '商業電視台節目部總監，擅長綜藝與戲劇', '獨立製作人，專注於高品質實境節目'] },
+    { title: '紀錄片導演', icon: '🎥', experiences: ['國際影展常勝軍，長期關注生態議題', '專注於社會運動紀錄，風格犀利', '資深人文紀實導演，作品具深厚文學性'] },
+    { title: '藝文界人士', icon: '🎨', experiences: ['國家級表演藝術團體總監', '知名策展人，具備國際藝術網絡', '當代藝術家，曾代表台灣參加雙年展'] },
+    { title: '科技/數位專家', icon: '💻', experiences: ['新創公司創辦人，專長大數據分析', '資深軟體工程師，推動數位轉型', '網路媒體平台創辦人，熟悉新媒體生態'] },
+    { title: 'NGO/公民代表', icon: '⚖️', experiences: ['人權律師，長期扶助弱勢', '環境保護團體執行長，推動永續發展', '教育基金會董事，關注兒少權益'] },
+    { title: '媒體經營管理者', icon: '💼', experiences: ['前報社總編輯，擁有30年報業資歷', '跨國媒體集團亞太區總裁', '公營媒體前任高階主管'] },
+    { title: '知名企業家', icon: '🏢', experiences: ['跨國科技集團創辦人，具全球視野', '傳統產業轉型推手，深耕本土文化', '上市櫃公司董事長，熟稔財務治理'] },
+  ];
+
+  // Stance definitions (Metadata only, probabilities are now dynamic)
+  const stances = [
+    { type: 'green', label: '偏綠 (本土立場)', color: 'text-green-700', bg: 'bg-green-100', border: 'border-green-300' },
+    { type: 'neutral', label: '中性 (專業優先)', color: 'text-gray-700', bg: 'bg-gray-100', border: 'border-gray-300' },
+    { type: 'blue', label: '偏藍 (泛藍背景)', color: 'text-blue-700', bg: 'bg-blue-100', border: 'border-blue-300' },
+    { type: 'kmt_rec', label: '藍營推薦人選', color: 'text-indigo-800', bg: 'bg-indigo-100', border: 'border-indigo-300' },
+  ];
+
+  // Random Name Generator
+  const generateName = () => {
+    return firstNames[Math.floor(Math.random() * firstNames.length)] + lastNames[Math.floor(Math.random() * lastNames.length)];
+  };
+
+  // Generate 14 Pairs of Candidates
+  const generateGameData = () => {
+    const pairs = [];
+    const usedNames = new Set();
+    
+    // Pools for generation logic
+    const bluePool = stances.filter(s => s.type === 'blue' || s.type === 'kmt_rec');
+    const otherPool = stances.filter(s => s.type === 'green' || s.type === 'neutral');
+
+    for (let i = 0; i < TOTAL_ROUNDS; i++) {
+        const prof = professions[Math.floor(Math.random() * professions.length)];
+        
+        let stance1 = bluePool[Math.floor(Math.random() * bluePool.length)];
+        let stance2 = otherPool[Math.floor(Math.random() * otherPool.length)];
+
+        // --- Determine Passability Scenario for this Round ---
+        // At least one candidate is passable (prob >= 0.7).
+        // Description hints are traits, NOT outcome predictions.
+        
+        const roll = Math.random();
+        let prob1, prob2; // prob1 is Blue-side, prob2 is Other-side
+        let trait1 = "", trait2 = ""; // Character traits
+
+        if (roll < 0.5) {
+            // Scenario A: Blue Safe (High Seniority/Respect), Green Risky (Radical/Active)
+            prob1 = 0.85; 
+            prob2 = 0.1;
+            trait1 = "曾任公會理事長，處事圓融，人脈廣闊。";
+            trait2 = "長期投入社會運動，主張鮮明，性格強烈。";
+        } else if (roll < 0.8) {
+            // Scenario B: Blue Flawed (Controversial), Green/Neutral Safe (Low-key/Professional)
+            prob1 = 0.2;
+            prob2 = 0.85;
+            trait1 = "頻繁投書媒體針貶時政，言詞犀利，作風強勢。";
+            trait2 = "專注本業發展，鮮少公開評論政治，形象溫和。";
+        } else {
+            // Scenario C: Both Safe (High Prestige)
+            prob1 = 0.8;
+            prob2 = 0.8;
+            trait1 = "業界輩分極高，備受敬重，素有清望。";
+            trait2 = "長期耕耘公益與專業領域，社會形象良好。";
+        }
+
+        // Helper to create candidate object
+        const createCand = (st, prob, trait) => {
+            let name = generateName();
+            while(usedNames.has(name)) name = generateName();
+            usedNames.add(name);
+
+            const expBase = prof.experiences[Math.floor(Math.random() * prof.experiences.length)];
+            // Years: 15 to 30
+            const years = Math.floor(Math.random() * 16) + 15; 
+            const desc = `${expBase}，資歷約 ${years} 年。`;
+            
+            // Base political description based on stance
+            let polDescBase = "";
+            if (st.type === 'green') polDescBase = "與執政黨關係密切。";
+            else if (st.type === 'neutral') polDescBase = "強調媒體公共性。";
+            else if (st.type === 'blue') polDescBase = "被視為泛藍人選。";
+            else if (st.type === 'kmt_rec') polDescBase = "【國民黨團推薦】。";
+
+            return {
+                name,
+                title: prof.title,
+                icon: prof.icon,
+                stance: { ...st },
+                prob: prob,
+                description: desc,
+                polDescription: polDescBase + trait, 
+                years: years
+            };
+        };
+
+        // Randomize who appears left or right
+        if (Math.random() > 0.5) {
+            pairs.push([createCand(stance1, prob1, trait1), createCand(stance2, prob2, trait2)]);
+        } else {
+            pairs.push([createCand(stance2, prob2, trait2), createCand(stance1, prob1, trait1)]);
+        }
+    }
+
+    return pairs;
+  };
+
+  // --- Game Actions ---
+
+  const startGame = () => {
+    setRoundPairs(generateGameData());
+    setGameState('playing');
+    setRound(1);
+    setPassedCount(0);
+    setHistory([]);
+    setRoundResult(null);
+  };
+
+  const handleVote = (candidate) => {
+    let prob = candidate.prob;
+    
+    // Slight RNG variation
+    const roll = Math.random();
+    const isPass = roll < prob;
+    
+    let votes = 0;
+    let reason = "";
+
+    if (isPass) {
+        // Pass Logic
+        votes = Math.floor(Math.random() * 5) + 10; 
+        if (votes > 15) votes = 15;
+        
+        if (candidate.prob > 0.7) reason = "條件優異，順利獲得跨黨派委員支持。";
+        else reason = "驚險過關，部分委員含淚投票。";
+
+    } else {
+        // Fail Logic
+        if (candidate.prob < 0.3) {
+            // Expected fail
+            if (candidate.stance.type === 'green') reason = "政治色彩過重，遭在野黨集體封殺。";
+            else if (candidate.stance.type === 'blue' || candidate.stance.type === 'kmt_rec') reason = "個人爭議過大，遭執政黨與部分委員否決。";
+            else reason = "資歷或代表性受到質疑，未能過關。";
+            votes = Math.floor(Math.random() * 4) + 6; // 6-9 votes
+        } else {
+            // Bad luck fail (High prob but failed)
+            reason = "意外落馬！投票過程發生突發狀況。";
+            votes = 9;
+        }
+    }
+
+    const result = {
+        candidate,
+        isPass,
+        votes,
+        reason
+    };
+
+    setRoundResult(result);
+    if (isPass) setPassedCount(p => p + 1);
+    setHistory(prev => [...prev, { round, ...result }]);
+  };
+
+  const nextRound = () => {
+    if (round >= TOTAL_ROUNDS) {
+        setGameState('summary');
+    } else {
+        setRound(r => r + 1);
+        setRoundResult(null);
+    }
+  };
+
+  // --- UI Components ---
+
+  const TableHeader = () => {
+    return (
+        <div className="bg-white/90 backdrop-blur-sm p-4 rounded-b-xl shadow-md border-t-0 border-x border-b border-amber-900/20 mb-6 mx-auto max-w-xl">
+             <div className="flex justify-between items-end mb-2">
+                 <div>
+                    <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">Round</span>
+                    <span className="text-2xl font-serif font-bold text-slate-800">{round} <span className="text-sm text-slate-400">/ {TOTAL_ROUNDS}</span></span>
+                 </div>
+                 <div className="text-right">
+                    <span className="text-xs font-bold text-amber-800 uppercase tracking-wider block">Status</span>
+                    <span className={`text-2xl font-serif font-bold ${passedCount >= 10 ? 'text-green-600' : 'text-slate-700'}`}>
+                        {passedCount} <span className="text-sm text-slate-400">/ 10 席</span>
+                    </span>
+                 </div>
+             </div>
+             <div className="flex gap-1 justify-center">
+                {Array.from({length: TOTAL_ROUNDS}).map((_, i) => {
+                    const hItem = history.find(h => h.round === i + 1);
+                    let colorClass = 'bg-slate-200';
+                    if (i + 1 === round) colorClass = 'bg-amber-400 ring-2 ring-amber-200 scale-110';
+                    if (hItem) {
+                        colorClass = hItem.isPass ? 'bg-green-500' : 'bg-red-400';
+                    }
+                    return <div key={i} className={`w-3 h-3 rounded-full transition-all ${colorClass}`} />
+                })}
+             </div>
+        </div>
+    );
+  };
+
+  const CandidateCard = ({ candidate, onClick }) => {
+    return (
+      <button 
+        onClick={onClick}
+        className="group relative w-full aspect-[1.7/1] bg-white rounded shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden text-left flex flex-col"
+        style={{ fontFamily: '"KaiTi", "BiaoKai", "DFKai-SB", serif' }} 
+      >
+        <div className={`h-2 w-full ${candidate.stance.bg.replace('bg-', 'bg-')}`} style={{backgroundColor: candidate.stance.type === 'green' ? '#166534' : candidate.stance.type === 'blue' ? '#1e40af' : candidate.stance.type === 'kmt_rec' ? '#3730a3' : '#525252'}}></div>
+
+        <div className="p-5 flex-1 flex flex-col relative">
+            {/* Top Row: Title Left, Stance Right */}
+            <div className="flex justify-between items-start mb-2">
+                <div className="text-amber-900/80 font-bold text-sm tracking-widest border-b border-amber-900/20 pb-1">
+                    {candidate.title}
+                </div>
+                <div className={`text-xs px-2 py-1 rounded border font-bold shadow-sm ${candidate.stance.color} ${candidate.stance.border} bg-white z-10`}>
+                    {candidate.stance.label}
+                </div>
+            </div>
+
+            {/* Center: Name & Icon */}
+            <div className="flex-1 flex flex-col justify-center items-center py-1">
+                <div className="text-5xl opacity-10 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    {candidate.icon}
+                </div>
+                <div className="text-4xl font-bold text-slate-900 tracking-[0.2em] ml-2 mb-1 z-10 relative">
+                    {candidate.name}
+                </div>
+            </div>
+
+            {/* Bottom Right: Description */}
+            <div className="mt-auto text-right">
+                <div className="text-sm text-slate-600 font-sans leading-snug max-w-[95%] ml-auto">
+                    <p className="mb-1">{candidate.description}</p>
+                    <p className={`${candidate.stance.color} font-bold`}>{candidate.polDescription}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/5 pointer-events-none transition-colors" />
+      </button>
+    );
+  };
+
+  return (
+    <div className="min-h-screen font-sans bg-[#d4c5b0] text-slate-800 selection:bg-amber-200">
+      <div className="fixed inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.8\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.5\'/%3E%3C/svg%3E")' }}></div>
+
+      <div className="relative max-w-3xl mx-auto px-4 py-6 min-h-screen flex flex-col">
+        
+        {/* Game Area */}
+        {gameState === 'playing' && (
+            <div className="flex-1 flex flex-col">
+                <TableHeader />
+                
+                {!roundResult ? (
+                    <div className="flex-1 flex flex-col justify-center animate-fade-in">
+                        <div className="text-center mb-6">
+                            <h2 className="text-xl font-bold text-amber-900 drop-shadow-sm font-serif">請選擇本輪提名人選</h2>
+                            <p className="text-amber-800/70 text-sm">每個類別至少有一位可審查通過，請依智慧選擇</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-2">
+                            {roundPairs[round-1].map((c, idx) => (
+                                <div key={idx} className="transform hover:scale-105 transition-transform duration-300">
+                                    <CandidateCard candidate={c} onClick={() => handleVote(c)} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex-1 flex flex-col justify-center items-center animate-fade-in">
+                        <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full text-center border-4 border-double border-amber-900/20 relative overflow-hidden">
+                             <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-9xl font-black opacity-10 rotate-[-15deg] pointer-events-none ${roundResult.isPass ? 'text-green-600' : 'text-red-600'}`}>
+                                {roundResult.isPass ? 'PASS' : 'FAIL'}
+                             </div>
+
+                             <div className="mb-4 flex justify-center">
+                                {roundResult.isPass ? 
+                                    <CheckCircle className="w-20 h-20 text-green-600 drop-shadow-md" /> : 
+                                    <XCircle className="w-20 h-20 text-red-600 drop-shadow-md" />
+                                }
+                             </div>
+                             
+                             <h3 className="text-2xl font-bold font-serif mb-2">
+                                {roundResult.isPass ? '提名通過' : '提名駁回'}
+                             </h3>
+                             <p className="text-slate-500 mb-2 font-serif text-lg">
+                                {roundResult.candidate.name} {roundResult.candidate.title}
+                             </p>
+                             
+                             {/* Reason Display */}
+                             <div className="mb-6 px-4 py-2 bg-amber-50 rounded border border-amber-100 text-amber-900 font-bold">
+                                「{roundResult.reason}」
+                             </div>
+
+                             <div className="bg-slate-100 p-4 rounded-md mb-6 inner-shadow">
+                                <div className="flex justify-between items-center mb-2 text-sm font-bold text-slate-600">
+                                    <span>同意票數</span>
+                                    <span>{roundResult.votes} / 15</span>
+                                </div>
+                                <div className="w-full bg-slate-300 h-3 rounded-full overflow-hidden">
+                                    <div 
+                                        className={`h-full ${roundResult.isPass ? 'bg-green-500' : 'bg-red-500'}`} 
+                                        style={{width: `${(roundResult.votes/15)*100}%`}}
+                                    ></div>
+                                </div>
+                             </div>
+
+                             <button 
+                                onClick={nextRound}
+                                className="w-full bg-slate-800 hover:bg-slate-900 text-amber-50 font-bold py-3 rounded shadow-lg transition-colors font-serif tracking-widest"
+                             >
+                                {round >= TOTAL_ROUNDS ? '查看最終結果' : '下一輪提名'}
+                             </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
+
+        {/* Intro Screen */}
+        {gameState === 'intro' && (
+             <div className="flex-1 flex items-center justify-center p-4">
+                <div className="bg-white p-8 rounded-lg shadow-2xl border-t-8 border-amber-800 max-w-lg w-full">
+                    <h1 className="text-4xl font-black text-center mb-2 text-slate-800 font-serif tracking-widest">公視董事會</h1>
+                    <h2 className="text-xl text-center mb-8 text-amber-700 font-serif">提名模擬戰</h2>
+                    
+                    <div className="space-y-6 text-slate-600 font-sans leading-relaxed">
+                        <p>
+                            <strong>任務目標：</strong>
+                            本次提名名單廣納百川，涵蓋學術、藝文、媒體、企業與科技界。董事會共15席，扣除員工董事，你必須在 <span className="text-red-600 font-bold">14輪</span> 提名中，成功通過至少 <span className="text-green-600 font-bold">10位</span> 董事。
+                        </p>
+                        <div>
+                            <strong>遊戲規則：</strong>
+                            <ul className="list-disc pl-5 space-y-2 mt-2">
+                                <li>每一輪將出現兩位「相同專業領域」的候選人。</li>
+                                <li>政黨、資歷並非絕對的否決因素。</li>
+                                <li><span className="text-blue-600 font-bold">注意：</span>每個類別中，<strong>至少有一位</strong>候選人是可以審查通過的（也可能兩位都能過）。</li>
+                                <li>請詳讀候選人描述，靠<strong>智慧</strong>判斷誰的人和較佳、行事風格較穩健，挑選出過關機率最高的人選。</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={startGame}
+                        className="mt-8 w-full bg-amber-700 hover:bg-amber-800 text-white text-xl font-bold py-4 rounded shadow-lg transition-transform hover:scale-[1.02] flex items-center justify-center font-serif"
+                    >
+                        <Vote className="mr-2" /> 開始提名
+                    </button>
+                </div>
+             </div>
+        )}
+
+        {/* Summary Screen */}
+        {gameState === 'summary' && (
+             <div className="flex-1 flex items-center justify-center p-4">
+                <div className="bg-white p-8 rounded-lg shadow-2xl border-t-8 border-slate-800 max-w-lg w-full text-center">
+                    <h2 className="text-3xl font-bold font-serif mb-6 text-slate-800">最終審查結果</h2>
+                    
+                    <div className="py-8">
+                        <div className="text-6xl font-black mb-2 font-serif" style={{color: passedCount >= TARGET_PASSED ? '#16a34a' : '#dc2626'}}>
+                            {passedCount} <span className="text-2xl text-slate-400 font-normal">/ 10</span>
+                        </div>
+                        <div className="text-slate-500 font-bold tracking-widest uppercase">
+                            {passedCount >= TARGET_PASSED ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED'}
+                        </div>
+                    </div>
+
+                    <p className="text-lg mb-8 text-slate-700 font-serif">
+                        {passedCount >= TARGET_PASSED 
+                            ? "恭喜！您憑藉著精準的政治判斷與智慧，成功組成了新的公視董事會。" 
+                            : "很遺憾，因通過人數不足，董事會無法組成，將無限期延後..."}
+                    </p>
+
+                    <div className="text-left bg-slate-50 p-4 rounded mb-6 max-h-48 overflow-y-auto text-sm border border-slate-200">
+                         {history.map((h, i) => (
+                             <div key={i} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
+                                <span className="text-slate-500">R{h.round} {h.candidate.name}</span>
+                                <span className={h.isPass ? 'text-green-600 font-bold' : 'text-red-400'}>
+                                    {h.isPass ? '通過' : '駁回'}
+                                </span>
+                             </div>
+                         ))}
+                    </div>
+
+                    <button 
+                        onClick={startGame}
+                        className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded flex items-center justify-center transition-colors font-serif"
+                    >
+                        <RefreshCw className="mr-2 w-4 h-4" /> 重新挑戰
+                    </button>
+                </div>
+             </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default PTSBoardSimulator;
