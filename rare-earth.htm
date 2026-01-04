@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>稀土保衛戰</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            color: white;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            animation: marquee 20s linear infinite;
+        }
+        
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+        
+        // 內嵌圖示組件 (移除外部依賴以確保穩定性)
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+                className={className}
+            >
+                {children}
+            </svg>
+        );
+
+        const Icons = {
+            ShieldAlert: (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></IconBase>,
+            CheckCircle: (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></IconBase>,
+            Wrench: (props) => <IconBase {...props}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></IconBase>,
+            RotateCcw: (props) => <IconBase {...props}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></IconBase>,
+            ChevronRight: (props) => <IconBase {...props}><polyline points="9 18 15 12 9 6"/></IconBase>,
+            ChevronLeft: (props) => <IconBase {...props}><polyline points="15 18 9 12 15 6"/></IconBase>,
+            Zap: (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconBase>,
+            Cpu: (props) => <IconBase {...props}><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></IconBase>,
+            Flame: (props) => <IconBase {...props}><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.6-3.3a1 1 0 0 1 2.9 2.8z"/></IconBase>,
+            Magnet: (props) => <IconBase {...props}><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"/><path d="m5 8 4 4"/><path d="m12 15 4 4"/></IconBase>,
+            Eye: (props) => <IconBase {...props}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></IconBase>,
+            Layers: (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></IconBase>,
+            Crosshair: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></IconBase>,
+            Smartphone: (props) => <IconBase {...props}><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></IconBase>,
+            Sun: (props) => <IconBase {...props}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></IconBase>,
+            Box: (props) => <IconBase {...props}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></IconBase>,
+            ArrowRight: (props) => <IconBase {...props}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></IconBase>,
+            Info: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></IconBase>,
+            AlertTriangle: (props) => <IconBase {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>,
+            HelpCircle: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></IconBase>,
+            GraduationCap: (props) => <IconBase {...props}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></IconBase>,
+            FlaskConical: (props) => <IconBase {...props}><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><line x1="8.5" y1="2" x2="15.5" y2="2"/><line x1="8.5" y1="14" x2="15.5" y2="14"/></IconBase>,
+            BookOpen: (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></IconBase>,
+            Microscope: (props) => <IconBase {...props}><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0 0-14h-1"/><path d="M9 14h2"/><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"/><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/></IconBase>,
+            Beaker: (props) => <IconBase {...props}><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><line x1="6" y1="14" x2="18" y2="14"/></IconBase>,
+            TrendingUp: (props) => <IconBase {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></IconBase>,
+            Globe: (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></IconBase>,
+            Activity: (props) => <IconBase {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></IconBase>,
+            Atom: (props) => <IconBase {...props}><circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/></IconBase>,
+            FileText: (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></IconBase>,
+        };
+
+        const { 
+            ShieldAlert, CheckCircle, Wrench, RotateCcw, ChevronRight, ChevronLeft, 
+            Zap, Cpu, Flame, Magnet, Eye, Layers, Crosshair, Smartphone, Sun, Box, 
+            ArrowRight, Info, AlertTriangle, HelpCircle, GraduationCap, FlaskConical, 
+            BookOpen, Microscope, Beaker, TrendingUp, Globe, Activity, Atom, FileText 
+        } = Icons;
+
+        // --- 常數定義 ---
+        const STAGES = {
+            INTRO: 'INTRO',
+            EDUCATION: 'EDUCATION', 
+            MATCHING: 'MATCHING',   
+            ASSEMBLY: 'ASSEMBLY',
+            RESULT: 'RESULT',
+            VICTORY: 'VICTORY'
+        };
+
+        const DECOY_SYMBOLS = ['Fe', 'Cu', 'Ag', 'Au', 'Zn', 'Al', 'Si', 'Pt', 'Ti', 'Ni', 'Mg', 'Ca'];
+
+        const ELEMENTS = [
+            { 
+                id: 'Ga', 
+                symbol: 'Ga', 
+                name: '鎵 (Gallium)', 
+                chineseName: '鎵',
+                category: '電子之眼',
+                desc: '半導體的核心。用於雷達、晶片、LED 與太陽能板。',
+                color: '#3b82f6', // Blue
+                icon: <Cpu size={32} />,
+                chinaShare: 98,
+                matchHint: '用於半導體與雷達',
+                atomicNumber: 31,
+                position: '第 13 族 (硼族), 第 4 週期',
+                chemProps: '質軟、銀白色金屬，熔點極低 (29.76°C)，在手中會熔化。',
+                molecules: ['砷化鎵 (GaAs)', '氮化鎵 (GaN)']
+            },
+            { 
+                id: 'Y', 
+                symbol: 'Y', 
+                name: '釔 (Yttrium)', 
+                chineseName: '釔',
+                category: '耐熱之盾',
+                desc: '增強金屬耐熱性。用於戰機引擎塗層、飛彈與雷射水晶。',
+                color: '#ef4444', // Red
+                icon: <Flame size={32} />,
+                chinaShare: 99,
+                matchHint: '引擎耐高溫塗層',
+                atomicNumber: 39,
+                position: '第 3 族 (過渡金屬), 第 5 週期',
+                chemProps: '銀白色金屬，在空氣中穩定，氧化物熔點極高。',
+                molecules: ['氧化釔 (Y₂O₃)', '釔鋁石榴石 (YAG)']
+            },
+            { 
+                id: 'Nd', 
+                symbol: 'Nd', 
+                name: '釹 (Neodymium)', 
+                chineseName: '釹',
+                category: '強力磁鐵',
+                desc: '最強永磁體。用於電動馬達、揚聲器、硬碟與風力發電機。',
+                color: '#a855f7', // Purple
+                icon: <Magnet size={32} />,
+                chinaShare: 90,
+                matchHint: '強力永久磁鐵',
+                atomicNumber: 60,
+                position: '鑭系元素 (稀土金屬), 第 6 週期',
+                chemProps: '活性強，在空氣中易氧化變暗，具強順磁性。',
+                molecules: ['氧化釹 (Nd₂O₃)', '釹鐵硼 (Nd₂Fe₁₄B)']
+            },
+            { 
+                id: 'Ge', 
+                symbol: 'Ge', 
+                name: '鍺 (Germanium)', 
+                chineseName: '鍺',
+                category: '紅外光學',
+                desc: '光纖與紅外線鏡頭關鍵。用於夜視鏡、熱顯像儀。',
+                color: '#f59e0b', // Amber
+                icon: <Eye size={32} />,
+                chinaShare: 68,
+                matchHint: '紅外線夜視鏡頭',
+                atomicNumber: 32,
+                position: '第 14 族 (碳族), 第 4 週期',
+                chemProps: '灰白色類金屬，硬而脆，具半導體性質。',
+                molecules: ['二氧化鍺 (GeO₂)', '四氫化鍺 (GeH₄)']
+            },
+            { 
+                id: 'In', 
+                symbol: 'In', 
+                name: '銦 (Indium)', 
+                chineseName: '銦',
+                category: '透明導電',
+                desc: '透明導電膜(ITO)。觸控螢幕、太陽能電池與微晶片焊接。',
+                color: '#06b6d4', // Cyan
+                icon: <Layers size={32} />,
+                chinaShare: 59,
+                matchHint: '觸控螢幕導電膜',
+                atomicNumber: 49,
+                position: '第 13 族 (硼族), 第 5 週期',
+                chemProps: '極軟、銀白色金屬，延展性佳，可用指甲劃痕。',
+                molecules: ['氧化銦錫 (ITO)', '磷化銦 (InP)']
+            },
+            { 
+                id: 'Co', 
+                symbol: 'Co', 
+                name: '鈷 (Cobalt)', 
+                chineseName: '鈷',
+                category: '能量合金',
+                desc: '電池正極與超耐熱合金。用於電動車電池、渦輪葉片。',
+                color: '#64748b', // Slate
+                icon: <Crosshair size={32} />,
+                chinaShare: 75,
+                matchHint: '電池與耐熱合金',
+                atomicNumber: 27,
+                position: '第 9 族 (過渡金屬), 第 4 週期',
+                chemProps: '硬而有光澤的銀灰色金屬，具鐵磁性，高熔點。',
+                molecules: ['鈷酸鋰 (LiCoO₂)', '氯化鈷 (CoCl₂)']
+            }
+        ];
+
+        const MISSIONS = [
+            {
+                id: 'fighter',
+                title: 'F-35 戰機',
+                subtitle: '空中優勢',
+                icon: <Zap size={60} className="text-blue-400" />,
+                description: '組裝第五代戰機的核心系統，確保其隱身與偵測能力。',
+                slots: [
+                    { id: 'radar', name: 'AESA 雷達', required: 'Ga', hint: '需要半導體材料' },
+                    { id: 'engine', name: '引擎熱障', required: 'Y', hint: '需要耐高溫塗層' },
+                    { id: 'motor', name: '控制馬達', required: 'Nd', hint: '需要強力磁鐵' }
+                ],
+                successMsg: 'F-35 系統上線！鎵讓雷達看見敵人，釔保護引擎不熔化。'
+            },
+            {
+                id: 'tank',
+                title: 'M1 主戰坦克',
+                subtitle: '陸戰王者',
+                icon: <Box size={60} className="text-green-600" />,
+                description: '升級坦克的夜戰能力與精準打擊系統。',
+                slots: [
+                    { id: 'optics', name: '熱像儀', required: 'Ge', hint: '夜視鏡頭需要紅外光學' },
+                    { id: 'laser', name: '雷射測距', required: 'Nd', hint: '雷射晶體需要稀土元素' },
+                    { id: 'alloy', name: '裝甲/渦輪', required: 'Co', hint: '高強度耐熱合金' }
+                ],
+                successMsg: '坦克現代化完成！鍺鏡頭讓其在黑夜中也能鎖定目標。'
+            },
+            {
+                id: 'chip',
+                title: '先進半導體',
+                subtitle: '數位大腦',
+                icon: <Cpu size={60} className="text-amber-400" />,
+                description: '製造 3nm 製程晶片，需要原子級的材料控制。',
+                slots: [
+                    { id: 'transistor', name: '電晶體', required: 'Ga', hint: '高頻高功率半導體' },
+                    { id: 'substrate', name: '晶圓基底', required: 'Ge', hint: '矽鍺合金提升速度' },
+                    { id: 'solder', name: '微散熱', required: 'In', hint: '導熱介面材料' }
+                ],
+                successMsg: '晶片良率達標！銦與鎵是摩爾定律延續的幕後功臣。'
+            },
+            {
+                id: 'phone',
+                title: '智慧型手機',
+                subtitle: '掌中世界',
+                icon: <Smartphone size={60} className="text-purple-400" />,
+                description: '組裝一台旗艦手機，整合顯示與能源技術。',
+                slots: [
+                    { id: 'screen', name: '觸控螢幕', required: 'In', hint: '透明導電膜 (ITO)' },
+                    { id: 'battery', name: '鋰電池', required: 'Co', hint: '正極材料穩定性' },
+                    { id: 'haptics', name: '震動/喇叭', required: 'Nd', hint: '微型強力磁鐵' }
+                ],
+                successMsg: '手機組裝完畢！沒有銦，世界上就沒有觸控螢幕。'
+            },
+            {
+                id: 'solar',
+                title: '太陽能發電',
+                subtitle: '綠色能源',
+                icon: <Sun size={60} className="text-yellow-400" />,
+                description: '建造高效能太陽能電池與儲能系統。',
+                slots: [
+                    { id: 'cell', name: '太陽能電池', required: 'Ga', hint: '砷化鎵/CIGS 薄膜' },
+                    { id: 'film', name: '導電層', required: 'In', hint: '透明電極層' },
+                    { id: 'storage', name: '儲能系統', required: 'Co', hint: '高效電池儲存' }
+                ],
+                successMsg: '綠能電網啟動！這些稀有金屬是能源轉型的基石。'
+            }
+        ];
+
+        // --- 共用元件 ---
+        const Hexagon = ({ element, active, onClick, size = "md", showDetail = true, labelOverride = null, isDraggable = false, onDragStart, styleType = "default" }) => {
+            const sizeClasses = size === "lg" ? "w-28 h-32" : "w-20 h-24";
+            const textSize = size === "lg" ? "text-3xl" : "text-xl";
+            const cursorClass = isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer';
+            
+            const bgColor = element ? element.color : '#334155';
+            const symbol = element ? element.symbol : labelOverride || '?';
+            const chineseName = element ? element.chineseName : '';
+
+            if (styleType === "lab") {
+                return (
+                    <div 
+                        onClick={onClick}
+                        draggable={isDraggable}
+                        onDragStart={onDragStart}
+                        className={`w-20 h-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 ${active ? 'scale-110 ring-4 ring-blue-300 shadow-xl' : 'hover:scale-105 shadow-md'} ${cursorClass} bg-white border-2 border-slate-200 relative overflow-hidden group`}
+                    >
+                        <div className="absolute bottom-0 left-0 right-0 h-1/2 opacity-30 transition-all group-hover:h-3/4" style={{backgroundColor: bgColor}}></div>
+                        <div className="text-center z-10">
+                            <div className="font-bold text-2xl text-slate-700 font-mono">{symbol}</div>
+                            <div className="text-xs text-slate-500 font-sans">{chineseName}</div>
+                        </div>
+                    </div>
+                );
+            }
+
+            const opacityClass = active ? 'opacity-100 scale-110 z-10 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]' : 'opacity-80 hover:opacity-100 hover:scale-105';
+            return (
+                <div 
+                    onClick={onClick}
+                    draggable={isDraggable}
+                    onDragStart={onDragStart}
+                    className={`${sizeClasses} relative flex items-center justify-center transition-all duration-300 ${opacityClass} ${cursorClass}`}
+                    style={{ 
+                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', 
+                        backgroundColor: bgColor
+                    }}
+                >
+                    <div className="text-center text-white pointer-events-none">
+                        <div className={`font-bold ${textSize}`}>{symbol}</div>
+                        {showDetail && element && <div className="text-[10px] opacity-90">{element.name.split(' ')[0]}</div>}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 子組件 ---
+        const IntroView = ({ setStage }) => (
+            <div className="flex flex-col items-center justify-center h-full text-center p-6 space-y-6 animate-fadeIn bg-[#2b3a42] relative border-8 border-[#5c4033] rounded-lg shadow-inner">
+                <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] pointer-events-none"></div>
+                <div className="relative z-10">
+                    <div className="flex justify-center mb-4">
+                        <BookOpen size={80} className="text-white opacity-80" />
+                    </div>
+                    <div className="font-serif text-white">
+                        <h1 className="text-5xl font-bold tracking-wider mb-2" style={{textShadow: '2px 2px 4px rgba(0,0,0,0.5)'}}>稀土化學課</h1>
+                        <h2 className="text-2xl text-yellow-100 italic border-b-2 border-yellow-100/30 inline-block pb-2">Rare Earth Elements 101</h2>
+                    </div>
+                </div>
+                <div className="max-w-md text-gray-200 space-y-4 text-lg font-serif relative z-10 bg-black/20 p-6 rounded transform rotate-1">
+                    <p>各位同學好，今天我們要學習的是支撐現代文明的關鍵元素。</p>
+                    <p>稍後的實驗課，我們將進入實驗室進行 <span className="text-yellow-300 font-bold underline decoration-wavy">功能配對</span>。</p>
+                    <p>最後，你們將被派往工廠進行實際組裝。</p>
+                </div>
+                <button 
+                    onClick={() => setStage(STAGES.EDUCATION)}
+                    className="relative z-10 px-8 py-3 bg-white text-[#2b3a42] font-serif font-bold text-xl rounded shadow-[4px_4px_0px_0px_rgba(0,0,0,0.3)] hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2"
+                >
+                    開始上課 <ChevronRight />
+                </button>
+                <div className="absolute bottom-4 right-4 text-white/30 font-serif text-sm">
+                    Chapter 1: The Hidden Elements
+                </div>
+            </div>
+        );
+
+        const EducationView = ({ setStage }) => {
+            const [eduSlide, setEduSlide] = useState(0);
+            const currentEl = ELEMENTS[eduSlide];
+            const [quizSolved, setQuizSolved] = useState(false);
+            const [options, setOptions] = useState([]);
+            const [wrongGuess, setWrongGuess] = useState(false);
+
+            useEffect(() => {
+                setQuizSolved(false);
+                setWrongGuess(false);
+                const correctAnswer = currentEl.symbol;
+                const otherElements = ELEMENTS.filter(e => e.id !== currentEl.id).map(e => e.symbol);
+                const pool = [...otherElements, ...DECOY_SYMBOLS];
+                const shuffledPool = pool.sort(() => 0.5 - Math.random());
+                const selectedDecoys = shuffledPool.slice(0, 3);
+                const finalOptions = [correctAnswer, ...selectedDecoys].sort(() => 0.5 - Math.random());
+                setOptions(finalOptions);
+            }, [eduSlide]);
+
+            const handleOptionClick = (option) => {
+                if (option === currentEl.symbol) {
+                    setQuizSolved(true);
+                    setWrongGuess(false);
+                } else {
+                    setWrongGuess(true);
+                    setTimeout(() => setWrongGuess(false), 500);
+                }
+            };
+
+            const nextSlide = () => {
+                if (eduSlide < ELEMENTS.length - 1) {
+                    setEduSlide(prev => prev + 1);
+                } else {
+                    setStage(STAGES.MATCHING);
+                }
+            };
+
+            if (!quizSolved) {
+                return (
+                    <div className="flex flex-col h-full items-center justify-center p-6 animate-fadeIn bg-[#2b3a42] border-8 border-[#5c4033] relative">
+                        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] pointer-events-none"></div>
+                        <div className="text-center mb-8 relative z-10 font-serif">
+                            <h2 className="text-xl text-gray-300 mb-2 border border-white/30 inline-block px-4 py-1 rounded">隨堂測驗 ({eduSlide + 1}/{ELEMENTS.length})</h2>
+                            <div className="text-7xl font-bold text-white mb-6 mt-4" style={{textShadow: '4px 4px 0px rgba(255,255,255,0.1)'}}>
+                                {currentEl.chineseName}
+                            </div>
+                            <p className="text-yellow-100 text-xl">請選擇正確的元素符號：</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6 w-full max-w-sm relative z-10">
+                            {options.map((opt, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => handleOptionClick(opt)}
+                                    className={`py-6 text-3xl font-serif font-bold rounded border-2 border-white/50 transition-all duration-200 
+                                        ${wrongGuess ? 'shake bg-red-900/50' : 'bg-transparent hover:bg-white/10'}
+                                        text-white relative shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-1 active:shadow-none`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                        {wrongGuess && <div className="mt-6 text-red-300 font-serif text-xl font-bold animate-bounce bg-black/30 px-4 py-2 rounded">❌ 答錯了，請再試一次</div>}
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex flex-col h-full bg-[#fdfbf7] text-slate-800 font-serif relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-50 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    <div className="w-full h-2 bg-slate-200 flex mb-4">
+                        {ELEMENTS.map((_, idx) => (
+                            <div key={idx} className={`flex-1 transition-all duration-500 border-r border-white ${idx <= eduSlide ? 'bg-blue-800' : 'bg-transparent'}`}></div>
+                        ))}
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center p-4 relative animate-slideIn">
+                        <div className="absolute top-10 right-10 text-[120px] font-black text-slate-200 opacity-50 select-none font-sans">{currentEl.symbol}</div>
+                        <div className="w-full max-w-2xl bg-white border border-slate-300 shadow-2xl z-10 flex flex-col relative rounded-sm overflow-hidden">
+                            <div className="bg-slate-100 p-6 border-b border-slate-200 flex items-center gap-6">
+                                <div className="p-3 bg-white border border-slate-300 rounded shadow-sm">
+                                    <div className="text-5xl font-bold text-blue-900 font-mono text-center leading-none">{currentEl.symbol}</div>
+                                    <div className="text-xs text-center text-slate-500 font-sans mt-1">{currentEl.atomicNumber}</div>
+                                </div>
+                                <div className="text-left flex-1">
+                                    <div className="text-blue-600 text-xs font-bold uppercase tracking-widest mb-1">{currentEl.category}</div>
+                                    <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                                        {currentEl.name} 
+                                        <span className="text-sm font-normal text-slate-500 bg-slate-200 px-2 py-0.5 rounded-full font-sans">No. {currentEl.atomicNumber}</span>
+                                    </h2>
+                                </div>
+                            </div>
+                            <div className="p-6 space-y-4 text-left font-sans">
+                                <div className="flex items-start gap-3 border-b border-slate-100 pb-3">
+                                    <div className="p-2 bg-blue-50 text-blue-600 rounded"><Globe size={20}/></div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-500 uppercase">週期表位置</h4>
+                                        <p className="text-slate-800 font-medium">{currentEl.position}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 border-b border-slate-100 pb-3">
+                                    <div className="p-2 bg-yellow-50 text-yellow-600 rounded"><Beaker size={20}/></div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-500 uppercase">化學屬性</h4>
+                                        <p className="text-slate-800">{currentEl.chemProps}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3 border-b border-slate-100 pb-3">
+                                    <div className="p-2 bg-green-50 text-green-600 rounded"><Atom size={20}/></div>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-500 uppercase">常見分子形式</h4>
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            {currentEl.molecules.map((m, i) => (
+                                                <span key={i} className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-sm font-mono border border-slate-200">
+                                                    {m}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded border-l-4 border-blue-500 mt-2">
+                                    <h4 className="text-sm font-bold text-blue-900 mb-1 flex items-center gap-2"><FileText size={14}/> 戰略應用筆記</h4>
+                                    <p className="text-sm text-slate-600 leading-relaxed">{currentEl.desc}</p>
+                                </div>
+                            </div>
+                            <div className="absolute top-2 right-2 bg-green-600 text-white px-3 py-1 text-xs font-bold shadow rounded-full opacity-0 animate-[fadeIn_0.5s_ease-in_forwards] animation-delay-500">
+                                已建檔 ✓
+                            </div>
+                        </div>
+                        <div className="absolute bottom-6 flex gap-4 z-20">
+                            <button onClick={nextSlide} className="px-8 py-3 bg-blue-900 hover:bg-blue-800 text-white font-bold rounded shadow-lg flex items-center gap-2">
+                                {eduSlide === ELEMENTS.length - 1 ? "前往實驗室" : "下一頁"} <ArrowRight size={20} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MatchingView = ({ setStage, setFeedback }) => {
+            const [matches, setMatches] = useState({}); 
+            const [completed, setCompleted] = useState(false);
+            const [attempts, setAttempts] = useState(0); 
+            
+            const shuffledSources = useMemo(() => {
+                const indices = [2, 5, 0, 4, 1, 3]; 
+                return indices.map(i => ELEMENTS[i]);
+            }, []);
+
+            const shuffledTargets = useMemo(() => {
+                const indices = [3, 1, 5, 0, 2, 4];
+                return indices.map(i => ELEMENTS[i]);
+            }, []);
+
+            useEffect(() => {
+                if (Object.keys(matches).length === ELEMENTS.length) {
+                    setCompleted(true);
+                }
+            }, [matches]);
+
+            const handleDragStart = (e, elementId) => {
+                e.dataTransfer.setData("text/plain", elementId);
+                e.dataTransfer.effectAllowed = "copyMove";
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = "move";
+            };
+
+            const handleDrop = (e, targetElId) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                
+                if (!ELEMENTS.find(el => el.id === draggedId)) return;
+
+                if (draggedId === targetElId) {
+                    setMatches(prev => ({ ...prev, [draggedId]: true }));
+                    setFeedback("配對正確！樣本吻合。");
+                    setTimeout(() => setFeedback(""), 1500);
+                } else {
+                    const newAttempts = attempts + 1;
+                    setAttempts(newAttempts);
+                    
+                    if (newAttempts >= 3) {
+                        setFeedback("多次操作錯誤。已啟動智慧輔助：請依照虛線提示操作。");
+                        setTimeout(() => setFeedback(""), 3000);
+                    } else {
+                        setFeedback(`錯誤：樣本與分析儀不匹配。(錯誤 ${newAttempts}/3)`);
+                        setTimeout(() => setFeedback(""), 1500);
+                    }
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-full bg-slate-100 text-slate-800 font-sans p-4 relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-200 via-slate-100 to-slate-100"></div>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500"></div>
+                    <div className="text-center mb-4 z-10 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-slate-200">
+                        <div className="flex items-center gap-2">
+                            <FlaskConical className="text-blue-500" />
+                            <div className="text-left">
+                                <h2 className="text-lg font-bold text-slate-800 uppercase tracking-widest">材料分析實驗室</h2>
+                                <p className="text-xs text-slate-500">LABORATORY ACCESS: GRANTED</p>
+                            </div>
+                        </div>
+                        <div className="text-sm bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-mono">
+                            STATUS: {Object.keys(matches).length}/{ELEMENTS.length} ANALYZED
+                        </div>
+                    </div>
+                    <div className="flex justify-around items-center bg-white p-4 rounded-xl mb-6 shadow-inner border border-slate-200 min-h-[130px] relative z-10">
+                        {shuffledSources.map(el => {
+                            const isMatched = matches[el.id];
+                            return (
+                                <div key={el.id} className={`transform transition-all duration-500 ${isMatched ? 'opacity-40 grayscale' : 'opacity-100 hover:scale-105'}`}>
+                                    <Hexagon 
+                                        element={el} 
+                                        isDraggable={!isMatched}
+                                        onDragStart={(e) => handleDragStart(e, el.id)}
+                                        styleType="lab"
+                                        showDetail={false}
+                                    />
+                                </div>
+                            );
+                        })}
+                        {Object.keys(matches).length === ELEMENTS.length && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-green-50/90 rounded-xl text-green-600 font-bold text-xl animate-pulse">
+                                <CheckCircle className="mr-2"/> 所有樣本分析完成
+                            </div>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 overflow-y-auto pb-20 z-10 flex-1">
+                        {shuffledTargets.map(el => {
+                            const isFilled = matches[el.id];
+                            const showHint = attempts >= 3 && !isFilled; 
+                            
+                            return (
+                                <div 
+                                    key={el.id}
+                                    onDragOver={!isFilled ? handleDragOver : undefined}
+                                    onDrop={!isFilled ? (e) => handleDrop(e, el.id) : undefined}
+                                    className={`p-4 rounded-lg border flex items-center justify-between transition-all min-h-[100px] relative bg-white group
+                                        ${isFilled ? 'border-green-400 shadow-md' : 'border-slate-200 hover:border-blue-300 shadow-sm'}
+                                    `}
+                                >
+                                    <div className="flex-1 pr-4">
+                                        <div className="text-xs font-mono text-slate-400 mb-1 uppercase">Target Property:</div>
+                                        <div className="text-sm font-bold text-slate-700">{el.matchHint}</div>
+                                    </div>
+                                    <div className={`w-16 h-16 rounded-full border-2 flex items-center justify-center transition-colors relative
+                                        ${isFilled ? 'border-green-500 bg-green-50' : 'border-dashed border-slate-300 bg-slate-50 group-hover:bg-blue-50'}
+                                    `}>
+                                        {isFilled ? (
+                                            <div className="text-xl font-bold font-mono" style={{color: el.color}}>{el.symbol}</div>
+                                        ) : (
+                                            <>
+                                                <Microscope size={20} className={showHint ? "text-slate-200" : "text-slate-300"} />
+                                                {showHint && (
+                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none animate-pulse">
+                                                        <span className="text-3xl font-bold font-mono opacity-40" style={{color: el.color}}>{el.symbol}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none z-50">
+                        {completed && (
+                            <button 
+                                onClick={() => {
+                                    setStage(STAGES.ASSEMBLY);
+                                    setFeedback("");
+                                }}
+                                className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-10 rounded shadow-lg animate-bounce flex items-center gap-2 mx-auto pointer-events-auto font-mono"
+                            >
+                                前往組裝工廠 <Wrench size={18} />
+                            </button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const AssemblyView = ({ mission, filledSlots, setFilledSlots, draggedElement, setDraggedElement, setFeedback, setStage }) => {
+            const allFilled = mission.slots.every(slot => filledSlots[slot.id]);
+
+            const handleDragStart = (e, elementId) => {
+                e.dataTransfer.setData("text/plain", elementId);
+                e.dataTransfer.effectAllowed = "copyMove";
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault(); 
+                e.dataTransfer.dropEffect = "move";
+            };
+
+            const handleDrop = (e, slot) => {
+                e.preventDefault();
+                const draggedId = e.dataTransfer.getData("text/plain");
+                const element = ELEMENTS.find(el => el.id === draggedId);
+                if (!element) return;
+
+                if (draggedId === slot.required) {
+                    setFilledSlots(prev => ({ ...prev, [slot.id]: element }));
+                    setFeedback("規格相符！安裝成功。");
+                    setTimeout(() => setFeedback(""), 1500);
+                } else {
+                    setFeedback(`錯誤！${element.name} 不適用於${slot.name}。`);
+                    setTimeout(() => setFeedback(""), 1500);
+                }
+            };
+
+            const handleSlotClick = (slot, requiredId) => {
+                if (!draggedElement) {
+                    setFeedback("請拖曳元素，或先點擊下方元素。");
+                    setTimeout(() => setFeedback(""), 1500);
+                    return;
+                }
+                if (draggedElement.id === requiredId) {
+                    setFilledSlots(prev => ({ ...prev, [slot.id]: draggedElement }));
+                    setDraggedElement(null);
+                    setFeedback("規格相符！安裝成功。");
+                    setTimeout(() => setFeedback(""), 1500);
+                } else {
+                    setFeedback(`錯誤！${draggedElement.name} 不適用於${slot.name}。`);
+                    setTimeout(() => setFeedback(""), 1500);
+                }
+            };
+
+            return (
+                <div className="flex flex-col h-full bg-slate-900 p-4">
+                    <div className="flex justify-between items-start mb-4 bg-slate-800 p-3 rounded-lg border border-slate-700">
+                        <div>
+                            <div className="text-xs text-blue-400 font-bold uppercase mb-1">MISSION ASSEMBLY</div>
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">{mission.title}</h2>
+                            <p className="text-xs text-gray-400">{mission.description}</p>
+                        </div>
+                        <div className="p-2 bg-slate-700 rounded-full">{mission.icon}</div>
+                    </div>
+                    <div className="flex-1 relative bg-slate-800/50 rounded-xl border-2 border-dashed border-slate-700 mb-4 overflow-hidden flex items-center justify-center">
+                        <div className="absolute inset-0 opacity-5 flex items-center justify-center pointer-events-none transform scale-150">
+                            {mission.icon}
+                        </div>
+                        <div className="relative w-full max-w-md h-64">
+                            {mission.slots.map((slot, index) => {
+                                const posClass = index === 0 ? 'top-10 left-4 md:left-10' : 
+                                                index === 1 ? 'bottom-10 right-4 md:right-10' : 
+                                                'top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2';
+
+                                return (
+                                    <div 
+                                        key={slot.id}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, slot)}
+                                        onClick={() => handleSlotClick(slot, slot.required)}
+                                        className={`absolute ${posClass} w-28 h-28 flex flex-col items-center justify-center rounded-xl border-2 transition-all cursor-pointer shadow-lg
+                                            ${filledSlots[slot.id] ? 'border-green-500 bg-green-900/20' : 'border-slate-600 bg-slate-800 border-dashed hover:border-blue-400'}
+                                            ${draggedElement?.id === slot.required ? 'animate-pulse ring-2 ring-yellow-400' : ''}
+                                        `}
+                                    >
+                                        {filledSlots[slot.id] ? (
+                                            <div className="text-center animate-bounce">
+                                                <CheckCircle className="text-green-400 mx-auto mb-1" size={24}/>
+                                                <div className="text-xs text-green-300 font-bold">{filledSlots[slot.id].name}</div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center p-2 pointer-events-none">
+                                                <div className="text-slate-500 mb-1 mx-auto w-6 h-6 border-2 border-slate-600 rounded-full flex items-center justify-center text-xs">?</div>
+                                                <div className="text-xs font-bold text-slate-300">{slot.name}</div>
+                                                <div className="text-[10px] text-slate-500 mt-1">{slot.hint}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <div className="bg-slate-800 p-2 rounded-lg">
+                        <div className="flex justify-between items-center px-2 mb-2">
+                            <span className="text-xs text-gray-400">請 <span className="text-yellow-400 font-bold">拖曳</span> 下方元素至上方對應位置</span>
+                        </div>
+                        <div className="flex justify-around items-center">
+                            {ELEMENTS.map(el => {
+                                const isUsed = Object.values(filledSlots).some(item => item?.id === el.id);
+                                return (
+                                    <div key={el.id} className={`transform transition-all ${isUsed ? 'opacity-20 grayscale scale-90' : ''}`}>
+                                        <Hexagon 
+                                            element={el} 
+                                            active={draggedElement?.id === el.id} 
+                                            onClick={() => !isUsed && setDraggedElement(el)}
+                                            isDraggable={!isUsed}
+                                            onDragStart={(e) => handleDragStart(e, el.id)}
+                                            size="md"
+                                            showDetail={false}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    {allFilled && (
+                        <button 
+                            onClick={() => {
+                                setStage(STAGES.RESULT);
+                                setFeedback("");
+                            }}
+                            className="absolute bottom-32 left-1/2 transform -translate-x-1/2 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-full shadow-[0_0_20px_rgba(34,197,94,0.6)] animate-bounce flex items-center gap-2 z-50 min-w-[200px] justify-center"
+                        >
+                            啟動系統 <Zap fill="currentColor" />
+                        </button>
+                    )}
+                </div>
+            );
+        };
+
+        const ResultView = ({ mission, onNext, isLast }) => (
+            <div className="flex flex-col h-full bg-[#0f172a] text-slate-100 font-sans relative overflow-hidden">
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(30,41,59,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(30,41,59,0.5)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(220,38,38,0.1),transparent_70%)] pointer-events-none"></div>
+                <div className="flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900/80 backdrop-blur z-10">
+                    <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                        <span className="font-mono text-xs text-red-400 tracking-widest">LIVE TRADE TERMINAL // GLOBAL SUPPLY MONITOR</span>
+                    </div>
+                    <div className="font-mono text-xs text-slate-500">SESSION ID: {Math.floor(Math.random() * 999999)}</div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6 z-10 flex flex-col items-center">
+                    <div className="w-full max-w-2xl bg-slate-800/50 border border-slate-600 rounded-lg p-6 mb-6 flex items-center justify-between backdrop-blur-sm shadow-lg">
+                        <div>
+                            <div className="text-xs text-gray-400 uppercase mb-1">Asset Class: Strategic</div>
+                            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                                {mission.title} <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded border border-green-500/30">ONLINE</span>
+                            </h2>
+                            <p className="text-sm text-gray-300 mt-2 font-mono border-l-2 border-blue-500 pl-3">
+                                {mission.successMsg}
+                            </p>
+                        </div>
+                        <div className="w-16 h-16 rounded-full border-2 border-blue-500/50 flex items-center justify-center bg-blue-500/10">
+                            {mission.icon}
+                        </div>
+                    </div>
+                    <div className="w-full max-w-2xl bg-[#1e1111] border border-red-900/50 rounded-lg p-6 shadow-[0_0_30px_rgba(220,38,38,0.1)] relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(220,38,38,0.05)_10px,rgba(220,38,38,0.05)_20px)] pointer-events-none"></div>
+                        <div className="flex justify-between items-end mb-6 border-b border-red-900/30 pb-2">
+                            <div>
+                                <h3 className="text-sm font-bold text-red-500 uppercase tracking-widest flex items-center gap-2">
+                                    <AlertTriangle size={16}/> Supply Chain Exposure
+                                </h3>
+                                <div className="text-xs text-red-800/80 font-mono mt-1">SOURCE ORIGIN ANALYSIS</div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-3xl font-bold text-red-500 font-mono">HIGH RISK</div>
+                                <div className="text-[10px] text-red-400">DEPENDENCY INDEX</div>
+                            </div>
+                        </div>
+                        <div className="space-y-6">
+                            {mission.slots.map(slot => {
+                                const el = ELEMENTS.find(e => e.id === slot.required);
+                                return (
+                                    <div key={slot.id} className="relative">
+                                        <div className="flex justify-between text-xs mb-2 font-mono">
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-6 h-6 flex items-center justify-center bg-slate-800 border border-slate-600 rounded text-slate-300 font-bold">{el.symbol}</span>
+                                                <span className="text-gray-400">{el.name.split(' ')[0]}</span>
+                                            </div>
+                                            <span className="text-red-400">
+                                                CN Share: <span className="text-white text-lg font-bold">{el.chinaShare}%</span>
+                                            </span>
+                                        </div>
+                                        <div className="h-4 w-full bg-slate-900 rounded-sm border border-slate-700 relative overflow-hidden">
+                                            <div className="absolute inset-0 flex">
+                                                {[...Array(10)].map((_, i) => (
+                                                    <div key={i} className="flex-1 border-r border-slate-800/50"></div>
+                                                ))}
+                                            </div>
+                                            <div 
+                                                className="h-full bg-gradient-to-r from-orange-600 via-red-600 to-red-500 transition-all duration-1000 ease-out relative" 
+                                                style={{width: `${el.chinaShare}%`}}
+                                            >
+                                                <div className="absolute right-0 top-0 bottom-0 w-px bg-white/50 shadow-[0_0_10px_white]"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <div className="mt-6 p-3 bg-red-950/30 border border-red-900/50 rounded text-xs text-red-300 font-mono flex gap-3 items-start">
+                            <Info size={14} className="mt-0.5 flex-shrink-0"/>
+                            <p>MARKET INTEL: 單一來源依賴度過高 (&gt;50%) 導致供應鏈極度脆弱。地緣政治波動可能導致價格飆升或斷供。</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="p-6 bg-slate-900 border-t border-slate-800 z-20 flex justify-center">
+                    <button 
+                        onClick={onNext}
+                        className="w-full max-w-md py-4 bg-slate-100 hover:bg-white text-slate-900 font-bold font-mono tracking-wider rounded-sm shadow-[0_0_20px_rgba(255,255,255,0.2)] flex items-center justify-center gap-3 transition-all hover:scale-[1.02]"
+                    >
+                        {isLast ? 'GENERATE FINAL REPORT' : 'PROCEED TO NEXT TARGET'} <ArrowRight size={20} />
+                    </button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-6 bg-black flex items-center overflow-hidden border-t border-slate-800 z-10">
+                    <div className="whitespace-nowrap animate-marquee font-mono text-[10px] text-gray-500 flex gap-8">
+                        {ELEMENTS.map(el => (
+                            <span key={el.id} className="flex items-center gap-1">
+                                {el.symbol.toUpperCase()} <span className={el.chinaShare > 80 ? "text-red-500" : "text-yellow-500"}>{el.chinaShare > 50 ? '▲' : '▼'} {100 + Math.floor(Math.random()*50)}</span>
+                            </span>
+                        ))}
+                        {ELEMENTS.map(el => (
+                            <span key={`${el.id}-dup`} className="flex items-center gap-1">
+                                {el.symbol.toUpperCase()} <span className={el.chinaShare > 80 ? "text-red-500" : "text-yellow-500"}>{el.chinaShare > 50 ? '▲' : '▼'} {100 + Math.floor(Math.random()*50)}</span>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+
+        const VictoryView = ({ onReset }) => (
+            <div className="flex flex-col items-center justify-center h-full p-6 text-center animate-fadeIn bg-slate-900 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black">
+                <div className="mb-6 flex gap-2">
+                    {MISSIONS.map(m => <div key={m.id} className="p-2 bg-green-500/20 rounded-full text-green-400">{m.icon}</div>)}
+                </div>
+                <h1 className="text-4xl font-bold text-white mb-4">供應鏈霸主</h1>
+                <p className="text-gray-300 max-w-md mb-8 leading-relaxed">
+                    恭喜您！您成功構建了從國防到綠能的完整產業鏈。
+                    但您也發現了殘酷的真相：<br/>
+                    <span className="text-red-400 font-bold">我們組裝的所有高科技產品，其命脈都掌握在少數供應源手中。</span>
+                </p>
+                <div className="bg-slate-800 p-6 rounded-xl border-l-4 border-yellow-500 text-left max-w-md shadow-lg">
+                    <h3 className="text-yellow-400 font-bold mb-2 flex items-center gap-2"><Info size={18}/> 戰略總結</h3>
+                    <p className="text-sm text-gray-400">
+                        鎵 (98%)、釔 (99%) 等關鍵元素的極高集中度，使得供應鏈極易受到地緣政治影響。
+                        真正的挑戰不在於組裝，而在於如何確保這些紅色的數字不會變成生產的紅燈。
+                    </p>
+                </div>
+                <button 
+                    onClick={onReset}
+                    className="mt-8 px-6 py-2 text-slate-500 hover:text-white flex items-center gap-2 transition-colors"
+                >
+                    <RotateCcw size={16} /> 重新開始訓練
+                </button>
+            </div>
+        );
+
+        const RareEarthGame = () => {
+            const [stage, setStage] = useState(STAGES.INTRO);
+            const [currentMissionIdx, setCurrentMissionIdx] = useState(0);
+            const [draggedElement, setDraggedElement] = useState(null); 
+            const [filledSlots, setFilledSlots] = useState({});
+            const [feedback, setFeedback] = useState("");
+
+            const currentMission = MISSIONS[currentMissionIdx];
+
+            const resetGame = () => {
+                setStage(STAGES.INTRO);
+                setCurrentMissionIdx(0);
+                setFilledSlots({});
+                setDraggedElement(null);
+                setFeedback("");
+            };
+
+            const nextMission = () => {
+                if (currentMissionIdx < MISSIONS.length - 1) {
+                    setCurrentMissionIdx(prev => prev + 1);
+                    setFilledSlots({});
+                    setFeedback("");
+                    setStage(STAGES.ASSEMBLY);
+                } else {
+                    setStage(STAGES.VICTORY);
+                }
+            };
+
+            return (
+                <div className="w-full h-[680px] bg-slate-900 text-slate-100 font-sans overflow-hidden relative shadow-2xl rounded-xl border border-slate-700 select-none">
+                    <div className="absolute top-0 left-0 w-full h-1 z-50 flex">
+                        <div className={`flex-1 transition-all border-r border-white/20 ${stage === STAGES.INTRO || stage === STAGES.EDUCATION ? 'bg-yellow-600' : 'bg-slate-800'}`}></div>
+                        <div className={`flex-1 transition-all border-r border-white/20 ${stage === STAGES.MATCHING ? 'bg-blue-500' : 'bg-slate-800'}`}></div>
+                        <div className={`flex-1 transition-all border-r border-white/20 ${stage === STAGES.ASSEMBLY || stage === STAGES.RESULT ? 'bg-green-500' : 'bg-slate-800'}`}></div>
+                    </div>
+
+                    <div className="h-full">
+                        {stage === STAGES.INTRO && <IntroView setStage={setStage} />}
+                        {stage === STAGES.EDUCATION && <EducationView setStage={setStage} />}
+                        {stage === STAGES.MATCHING && <MatchingView setStage={setStage} setFeedback={setFeedback} />}
+                        {stage === STAGES.ASSEMBLY && (
+                            <AssemblyView 
+                                mission={currentMission}
+                                filledSlots={filledSlots}
+                                setFilledSlots={setFilledSlots}
+                                draggedElement={draggedElement}
+                                setDraggedElement={setDraggedElement}
+                                setFeedback={setFeedback}
+                                setStage={setStage}
+                            />
+                        )}
+                        {stage === STAGES.RESULT && (
+                            <ResultView 
+                                mission={currentMission} 
+                                onNext={nextMission}
+                                isLast={currentMissionIdx === MISSIONS.length - 1}
+                            />
+                        )}
+                        {stage === STAGES.VICTORY && <VictoryView onReset={resetGame} />}
+                    </div>
+
+                    {feedback && (
+                        <div className="absolute bottom-6 left-0 right-0 text-center pointer-events-none z-50">
+                            <span className={`px-6 py-2 rounded-full text-sm font-bold shadow-lg inline-block mb-4 font-mono
+                                ${feedback.includes('錯誤') ? 'bg-red-100 text-red-600 border border-red-200' : 'bg-green-100 text-green-600 border border-green-200'}
+                            `}>
+                                {feedback}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<RareEarthGame />);
+    </script>
+</body>
+</html>
