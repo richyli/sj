@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>外送專法模擬器：雙視角分析 (完全獨立版)</title>
+    <style>
+        /* --- 基礎設定 (不依賴外部 CSS) --- */
+        :root {
+            --primary: #06C167;
+            --primary-dark: #048a4a;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg-gray: #f3f4f6;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+            background-color: #e5e7eb;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: var(--text-main);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- 主容器 --- */
+        #game-container {
+            width: 960px;
+            height: 640px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- 頂部 Header --- */
+        .header {
+            background-color: #111827;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-icon-box {
+            background-color: var(--primary);
+            width: 36px; height: 36px;
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .header-title h1 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.2; }
+        .header-title p { margin: 0; font-size: 12px; color: #9ca3af; }
+        
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .time-box { text-align: right; }
+        .time-label { font-size: 10px; color: #9ca3af; }
+        .time-val { font-size: 20px; font-family: monospace; font-weight: 700; color: var(--primary); }
+        .divider { width: 1px; height: 32px; background-color: #374151; }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+        .btn:hover { background-color: var(--primary-dark); }
+        .btn.paused { background-color: var(--warning); }
+        .btn.reset { background-color: #374151; }
+
+        /* --- 頁籤 Tabs --- */
+        .tabs {
+            display: flex;
+            background-color: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-sub);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { background-color: #f3f4f6; }
+        .tab-btn.active { background-color: white; color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-btn.active.proposed { color: var(--danger); border-bottom-color: var(--danger); }
+        .tag {
+            font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: normal;
+        }
+        .tag.green { background-color: #d1fae5; color: #047857; }
+        .tag.red { background-color: #fee2e2; color: #b91c1c; }
+
+        /* --- 內容區塊 --- */
+        .content { flex: 1; display: flex; overflow: hidden; }
+
+        /* 左側數據 */
+        .sidebar {
+            width: 320px;
+            background-color: #f9fafb;
+            border-right: 1px solid #e5e7eb;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .section { padding: 16px; border-bottom: 1px solid #e5e7eb; }
+        .section-title {
+            font-weight: 700; font-size: 14px; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+            padding-left: 8px; border-left: 4px solid #ccc;
+        }
+        .card {
+            background: white; border: 1px solid #e5e7eb; border-radius: 8px;
+            padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .card-label { font-size: 12px; color: var(--text-sub); }
+        .card-val-lg { font-size: 24px; font-weight: 700; color: var(--text-main); }
+        .badge { font-size: 12px; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
+        .badge-green { background: #d1fae5; color: #047857; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .center-text { text-align: center; }
+
+        .missed-box {
+            background-color: #fef2f2; border: 1px solid #fee2e2;
+            padding: 8px; border-radius: 8px;
+            display: flex; align-items: center; gap: 8px;
+            color: #b91c1c; font-size: 12px;
+        }
+        .hidden { display: none !important; }
+
+        /* 右側地圖 */
+        .map-area {
+            flex: 1;
+            background-color: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+        }
+        .grid-bg {
+            position: absolute; inset: 0; opacity: 0.2; pointer-events: none;
+            background-image: linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+        #map-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        
+        .map-obj {
+            position: absolute; transform: translate(-50%, -50%);
+            display: flex; flex-direction: column; align-items: center;
+            z-index: 20; transition: left 0.5s linear, top 0.5s linear; /* Smooth movement for driver */
+        }
+        .static-obj { transition: none; } /* Orders jump in */
+
+        .icon-circle {
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: white; border: 2px solid #ccc;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        .icon-circle.driver { width: 40px; height: 40px; background: var(--primary); border-color: white; color: white; }
+        .icon-circle.merchant { border-color: var(--warning); color: var(--warning); }
+        .icon-circle.customer { border-color: #3b82f6; background: #93c5fd; color: white; border: 2px solid white; }
+        
+        .badge-count {
+            position: absolute; top: -4px; right: -4px;
+            background: var(--warning); color: black;
+            font-size: 10px; font-weight: 700;
+            width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid white;
+        }
+
+        .label-tag {
+            margin-top: 4px; background: rgba(255,255,255,0.9);
+            padding: 2px 6px; border-radius: 4px;
+            font-size: 10px; font-weight: 700; color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        /* Log 區域 */
+        .log-container {
+            position: absolute; bottom: 12px; left: 12px; right: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px;
+            height: 100px;
+            overflow-y: auto;
+            z-index: 40;
+            font-size: 12px;
+        }
+        .log-item {
+            padding: 4px 8px; border-radius: 4px; margin-bottom: 4px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .log-success { background: #ecfdf5; color: #065f46; }
+        .log-bad { background: #fef2f2; color: #991b1b; }
+        .log-info { background: #f3f4f6; color: #4b5563; }
+        .log-warning { background: #fffbeb; color: #92400e; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: flex; justify-content: center; align-items: center; z-index: 100;
+            backdrop-filter: blur(2px);
+        }
+        .modal-box {
+            background: white; width: 500px; border-radius: 16px; padding: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+            animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .modal-card { background: #f9fafb; padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #e5e7eb; }
+        .modal-desc { background: #fffbeb; padding: 16px; border-radius: 8px; border: 1px solid #fcd34d; font-size: 13px; color: #92400e; line-height: 1.5; margin-bottom: 24px; }
+        .modal-btns { display: flex; gap: 12px; }
+        .btn-full { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; }
+        .btn-sec { background: #f3f4f6; color: #374151; }
+        .btn-pri { background: var(--primary); color: white; }
+
+        /* Error */
+        #error-msg {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: #dc2626; color: white; text-align: center; padding: 8px;
+            z-index: 9999; display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="error-msg">程式發生錯誤，請重新整理頁面。</div>
+
+    <div id="game-container">
+        
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="header-icon-box">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+                </div>
+                <div class="header-title">
+                    <h1>外送工作日誌模擬</h1>
+                    <p id="header-desc">設定：6小時 • 現行制度</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="time-box">
+                    <div class="time-label">時間</div>
+                    <div id="sim-time-display" class="time-val">10:00</div>
+                </div>
+                <div class="divider"></div>
+                <button id="btn-control" class="btn">
+                    <span id="btn-icon">▶</span> <span id="btn-text">上線</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button id="tab-current" class="tab-btn active">
+                現行制度 <span class="tag green">疊單效率高</span>
+            </button>
+            <button id="tab-proposed" class="tab-btn">
+                專法草案 <span class="tag red">單線成本高</span>
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Driver Stats -->
+                <div class="section" style="border-left-color: var(--primary);">
+                    <div class="section-title" style="border-left-color: var(--primary);">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+                        外送員數據
+                    </div>
+                    <div class="card">
+                        <div class="card-row">
+                            <span class="card-label">今日收入</span>
+                            <span id="stat-hourly-rate" class="badge badge-green">時薪 $0</span>
+                        </div>
+                        <div id="stat-earnings" class="card-val-lg">$0</div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="card center-text">
+                            <div class="card-label">完成單數</div>
+                            <div id="stat-completed" class="card-val-lg" style="font-size: 18px;">0</div>
+                        </div>
+                        <div class="card center-text">
+                            <div class="card-label">每單耗時</div>
+                            <div class="card-val-lg" style="font-size: 18px;"><span id="stat-avg-time">0</span><span style="font-size:12px; font-weight:normal;">分</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Stats -->
+                <div class="section" style="background-color: #eff6ff;">
+                    <div class="section-title" style="border-left-color: #3b82f6;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        消費者體驗
+                    </div>
+                    <div class="card">
+                        <div class="card-row">
+                            <span class="card-label">平均每單外送費</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                        <div id="stat-base-fee" class="card-val-lg">$30</div>
+                        <div id="stat-fee-desc" style="font-size: 10px; color: #9ca3af; margin-top: 4px;">有疊單分攤，費用較低</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-row">
+                            <span class="card-label">平均等待時間</span>
+                            <svg id="icon-timer" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div class="card-val-lg">
+                            <span id="stat-wait-time">20</span> <span style="font-size:14px; color:#6b7280; font-weight:normal;">分鐘</span>
+                        </div>
+                    </div>
+                    <div id="stat-missed-box" class="missed-box hidden">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <div>
+                            已流失 <span id="stat-missed">0</span> 位顧客<br/>
+                            <span id="stat-missed-reason" style="opacity:0.7">(因運能不足)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Map Area -->
+            <div class="map-area" id="map-area">
+                <div class="grid-bg"></div>
+                <svg id="map-svg"></svg>
+                
+                <div id="map-objects">
+                    <!-- Driver -->
+                    <div id="driver" class="map-obj" style="left: 50%; top: 50%;">
+                        <div class="icon-circle driver">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+                        </div>
+                        <div id="driver-badge" class="badge-count hidden">0</div>
+                    </div>
+                </div>
+
+                <div class="log-container" id="log-container">
+                    <!-- Logs -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="summary-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div style="text-align:center; margin-bottom: 24px;">
+                <h2 style="font-size: 24px; font-weight: 700; margin: 0 0 8px 0;">班表結束 (6小時)</h2>
+                <p id="modal-mode" style="color: #6b7280; margin:0; font-size: 14px;">模式：現行制度</p>
+            </div>
+
+            <div class="modal-grid">
+                <div class="modal-card">
+                    <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">完成單量</div>
+                    <div style="font-size:24px; font-weight:700;"><span id="modal-completed">0</span> <span style="font-size:14px; font-weight:normal;">單</span></div>
+                </div>
+                <div class="modal-card">
+                    <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">總收入</div>
+                    <div id="modal-earnings" style="font-size:24px; font-weight:700;">$0</div>
+                </div>
+                <div class="modal-card">
+                    <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">平均時薪</div>
+                    <div id="modal-hourly" style="font-size:24px; font-weight:700; color:#2563eb;">$0</div>
+                </div>
+                <div class="modal-card">
+                    <div style="font-size:12px; color:#6b7280; margin-bottom:4px;">流失/等待</div>
+                    <div style="font-size:24px; font-weight:700; color:#dc2626;"><span id="modal-missed">0</span> <span style="font-size:14px; font-weight:normal;">次</span></div>
+                </div>
+            </div>
+
+            <div class="modal-desc">
+                <strong>模擬分析：</strong><br/>
+                <span id="modal-desc-text"></span>
+            </div>
+
+            <div class="modal-btns">
+                <button id="btn-close-modal" class="btn-full btn-sec">查看細節</button>
+                <button id="btn-switch-modal" class="btn-full btn-pri">試試看專法模式</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // --- 設定 ---
+                const WORK_HOURS = 6;
+                const SIMULATION_SECONDS = 30; // 30秒跑完6小時
+                
+                const SCENARIOS = {
+                    current: {
+                        name: "現行制度",
+                        description: "允許疊單，效率較高",
+                        minPay: 40,
+                        deliveryTimeMinutes: 20,
+                        stackingAllowed: true,
+                        hourlyCapacity: 3.3,
+                        baseFee: 30,
+                        demand: 1.0, // 基準需求
+                        pickupThreshold: 20,
+                    },
+                    proposed: {
+                        name: "專法草案",
+                        description: "禁止疊單，單趟獨立 (需求相同)",
+                        minPay: 45,
+                        deliveryTimeMinutes: 35, // 無法順路，單趟時間增加
+                        stackingAllowed: false,
+                        hourlyCapacity: 1.7,
+                        baseFee: 50,
+                        demand: 1.0, // 設定為相同需求，測試運能極限
+                        pickupThreshold: 30,
+                    }
+                };
+
+                // --- 狀態變數 ---
+                let state = {
+                    scenario: 'current',
+                    isPlaying: false,
+                    simTime: 0,
+                    driverPos: { x: 50, y: 50 },
+                    activeOrders: [],
+                    stats: {
+                        ordersCompleted: 0,
+                        earnings: 0,
+                        missedOrders: 0,
+                        totalWaitTime: 0,
+                    },
+                    lastFrameTime: 0,
+                };
+                let animationFrameId;
+
+                // --- DOM 元素 ---
+                const els = {
+                    timeDisplay: document.getElementById('sim-time-display'),
+                    btnControl: document.getElementById('btn-control'),
+                    btnIcon: document.getElementById('btn-icon'),
+                    btnText: document.getElementById('btn-text'),
+                    headerDesc: document.getElementById('header-desc'),
+                    tabCurrent: document.getElementById('tab-current'),
+                    tabProposed: document.getElementById('tab-proposed'),
+                    // Stats
+                    statHourly: document.getElementById('stat-hourly-rate'),
+                    statEarnings: document.getElementById('stat-earnings'),
+                    statCompleted: document.getElementById('stat-completed'),
+                    statAvgTime: document.getElementById('stat-avg-time'),
+                    statBaseFee: document.getElementById('stat-base-fee'),
+                    statFeeDesc: document.getElementById('stat-fee-desc'),
+                    statWaitTime: document.getElementById('stat-wait-time'),
+                    statMissedBox: document.getElementById('stat-missed-box'),
+                    statMissed: document.getElementById('stat-missed'),
+                    statMissedReason: document.getElementById('stat-missed-reason'),
+                    iconTimer: document.getElementById('icon-timer'),
+                    // Map
+                    mapSvg: document.getElementById('map-svg'),
+                    mapObjects: document.getElementById('map-objects'),
+                    driver: document.getElementById('driver'),
+                    driverBadge: document.getElementById('driver-badge'),
+                    logContainer: document.getElementById('log-container'),
+                    // Modal
+                    modal: document.getElementById('summary-modal'),
+                    modalMode: document.getElementById('modal-mode'),
+                    modalCompleted: document.getElementById('modal-completed'),
+                    modalEarnings: document.getElementById('modal-earnings'),
+                    modalHourly: document.getElementById('modal-hourly'),
+                    modalMissed: document.getElementById('modal-missed'),
+                    modalDescText: document.getElementById('modal-desc-text'),
+                    btnCloseModal: document.getElementById('btn-close-modal'),
+                    btnSwitchModal: document.getElementById('btn-switch-modal'),
+                };
+
+                // --- 初始化 ---
+                function init() {
+                    resetGame('current');
+                    setupListeners();
+                }
+
+                function setupListeners() {
+                    els.btnControl.addEventListener('click', togglePlay);
+                    els.tabCurrent.addEventListener('click', () => resetGame('current'));
+                    els.tabProposed.addEventListener('click', () => resetGame('proposed'));
+                    els.btnCloseModal.addEventListener('click', () => els.modal.classList.add('hidden'));
+                    els.btnSwitchModal.addEventListener('click', () => {
+                        els.modal.classList.add('hidden');
+                        resetGame(state.scenario === 'current' ? 'proposed' : 'current');
+                    });
+                }
+
+                // --- 核心邏輯 ---
+
+                function togglePlay() {
+                    if (state.simTime >= WORK_HOURS * 60) {
+                        resetGame(state.scenario);
+                        state.isPlaying = true;
+                    } else {
+                        state.isPlaying = !state.isPlaying;
+                    }
+
+                    if (state.isPlaying) {
+                        state.lastFrameTime = performance.now();
+                        animationFrameId = requestAnimationFrame(loop);
+                    } else {
+                        cancelAnimationFrame(animationFrameId);
+                    }
+                    renderHeader();
+                }
+
+                function resetGame(mode) {
+                    state.scenario = mode;
+                    state.isPlaying = false;
+                    state.simTime = 0;
+                    state.driverPos = { x: 50, y: 50 };
+                    state.activeOrders = [];
+                    state.stats = {
+                        ordersCompleted: 0,
+                        earnings: 0,
+                        missedOrders: 0,
+                        totalWaitTime: 0
+                    };
+                    els.logContainer.innerHTML = '';
+                    
+                    const objs = document.querySelectorAll('.static-obj');
+                    objs.forEach(o => o.remove());
+
+                    addLog(`開始模擬：${SCENARIOS[mode].name}`, 'info');
+                    cancelAnimationFrame(animationFrameId);
+                    
+                    render();
+                }
+
+                function loop(timestamp) {
+                    if (!state.isPlaying) return;
+                    if (!timestamp) timestamp = performance.now(); 
+
+                    const deltaTime = timestamp - state.lastFrameTime;
+                    state.lastFrameTime = timestamp;
+
+                    if (deltaTime > 1000) {
+                        animationFrameId = requestAnimationFrame(loop);
+                        return;
+                    }
+
+                    const deltaMinutes = deltaTime * (WORK_HOURS * 60 / (SIMULATION_SECONDS * 1000));
+                    const oldSimTime = state.simTime;
+                    state.simTime += deltaMinutes;
+
+                    if (state.simTime >= WORK_HOURS * 60) {
+                        state.simTime = WORK_HOURS * 60;
+                        state.isPlaying = false;
+                        render();
+                        showSummary();
+                        return;
+                    }
+
+                    if (Math.floor(state.simTime) > Math.floor(oldSimTime)) {
+                        generateOrder(state.simTime);
+                    }
+
+                    updateOrders();
+                    updateDriverPosition();
+                    render();
+
+                    animationFrameId = requestAnimationFrame(loop);
+                }
+
+                function generateOrder(currentMinutes) {
+                    const config = SCENARIOS[state.scenario];
+                    const maxConcurrent = config.stackingAllowed ? 3 : 1;
+
+                    // 1. 產生訂單需求 (兩者機率相同)
+                    // 每分鐘有 10% 機率產生訂單，6小時約 36 單
+                    if (Math.random() > (0.1 * config.demand)) return; 
+
+                    // 2. 檢查運能是否已滿
+                    // 這是關鍵差異：專法模式下只要有1單就滿了，會導致後續訂單流失
+                    if (state.activeOrders.length >= maxConcurrent) {
+                        state.stats.missedOrders++;
+                        // 偶爾顯示 Log 避免洗版
+                        if (Math.random() > 0.7) addLog("外送員忙碌中，錯失訂單", "warning");
+                        renderStats();
+                        return; 
+                    }
+
+                    // 3. 生成位置
+                    let merchantPos;
+                    const existingOrder = state.activeOrders[0];
+                    
+                    if (existingOrder && config.stackingAllowed) {
+                        merchantPos = existingOrder.merchantPos;
+                    } else {
+                        merchantPos = { x: 10 + Math.random()*80, y: 15 + Math.random()*70 };
+                    }
+                    const targetPos = { x: 10 + Math.random()*80, y: 15 + Math.random()*70 };
+
+                    const dist = Math.sqrt(Math.pow(targetPos.x - merchantPos.x, 2) + Math.pow(targetPos.y - merchantPos.y, 2));
+                    const distanceFactor = dist / 50;
+                    const requiredTime = config.deliveryTimeMinutes * (0.8 + distanceFactor * 0.4);
+
+                    const newOrder = {
+                        id: 'ord-' + Date.now() + Math.random().toString(36).substr(2, 5),
+                        startTime: currentMinutes,
+                        requiredTime: requiredTime,
+                        pay: config.minPay,
+                        progress: 0,
+                        merchantPos: merchantPos,
+                        targetPos: targetPos,
+                        phase: 'pickup'
+                    };
+
+                    state.activeOrders.push(newOrder);
+                    createOrderElements(newOrder);
+                    addLog(state.activeOrders.length > 1 ? "系統疊單派送 (順路)" : "接到新訂單", "success");
+                }
+
+                function updateOrders() {
+                    const config = SCENARIOS[state.scenario];
+                    let completedIndices = [];
+
+                    state.activeOrders.forEach((order, index) => {
+                        const p = ((state.simTime - order.startTime) / order.requiredTime) * 100;
+                        order.progress = p;
+
+                        if (p > config.pickupThreshold) order.phase = 'delivery';
+                        else order.phase = 'pickup';
+
+                        if (p >= 100) {
+                            completedIndices.push(index);
+                            state.stats.ordersCompleted++;
+                            state.stats.earnings += order.pay;
+                            state.stats.totalWaitTime += order.requiredTime;
+                            removeOrderElements(order.id);
+                        }
+                    });
+
+                    for (let i = completedIndices.length - 1; i >= 0; i--) {
+                        state.activeOrders.splice(completedIndices[i], 1);
+                    }
+                }
+
+                function updateDriverPosition() {
+                    if (state.activeOrders.length === 0) return;
+
+                    let target = state.driverPos;
+                    const pickingUp = state.activeOrders.filter(o => o.phase === 'pickup');
+                    const delivering = state.activeOrders.filter(o => o.phase === 'delivery');
+
+                    if (pickingUp.length > 0) target = pickingUp[0].merchantPos;
+                    else if (delivering.length > 0) target = delivering[0].targetPos;
+
+                    const dx = target.x - state.driverPos.x;
+                    const dy = target.y - state.driverPos.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    const speed = 1.5;
+
+                    if (dist < speed) {
+                        state.driverPos = target;
+                    } else {
+                        state.driverPos = {
+                            x: state.driverPos.x + (dx/dist) * speed,
+                            y: state.driverPos.y + (dy/dist) * speed
+                        };
+                    }
+                }
+
+                // --- 渲染 ---
+
+                function render() {
+                    renderHeader();
+                    renderStats();
+                    renderMap();
+                }
+
+                function renderHeader() {
+                    const startHour = 10;
+                    const totalMins = startHour * 60 + state.simTime;
+                    const h = Math.floor(totalMins / 60);
+                    const m = Math.floor(totalMins % 60);
+                    els.timeDisplay.textContent = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+
+                    const config = SCENARIOS[state.scenario];
+                    els.headerDesc.textContent = `設定：${WORK_HOURS}小時 • ${config.description}`;
+
+                    if (state.isPlaying) {
+                        els.btnIcon.textContent = "II";
+                        els.btnText.textContent = "暫停";
+                        els.btnControl.className = "btn paused";
+                    } else if (state.simTime === 0) {
+                        els.btnIcon.textContent = "▶";
+                        els.btnText.textContent = "上線";
+                        els.btnControl.className = "btn";
+                    } else if (state.simTime >= WORK_HOURS * 60) {
+                        els.btnIcon.textContent = "↻";
+                        els.btnText.textContent = "重來";
+                        els.btnControl.className = "btn reset";
+                    } else {
+                        els.btnIcon.textContent = "▶";
+                        els.btnText.textContent = "繼續";
+                        els.btnControl.className = "btn";
+                    }
+
+                    if (state.scenario === 'current') {
+                        els.tabCurrent.classList.add('active');
+                        els.tabProposed.classList.remove('active', 'proposed');
+                        els.iconTimer.setAttribute('stroke', '#10b981'); 
+                    } else {
+                        els.tabProposed.classList.add('active', 'proposed');
+                        els.tabCurrent.classList.remove('active');
+                        els.iconTimer.setAttribute('stroke', '#f97316'); 
+                    }
+                }
+
+                function renderStats() {
+                    const config = SCENARIOS[state.scenario];
+                    const hourly = state.simTime > 0 ? (state.stats.earnings / (state.simTime / 60)) : 0;
+                    const avgTime = state.stats.ordersCompleted > 0 
+                        ? (state.stats.totalWaitTime / state.stats.ordersCompleted).toFixed(0) 
+                        : config.deliveryTimeMinutes;
+
+                    els.statEarnings.textContent = `$${state.stats.earnings.toFixed(0)}`;
+                    els.statHourly.textContent = `時薪 $${hourly.toFixed(0)}`;
+                    els.statCompleted.textContent = state.stats.ordersCompleted;
+                    els.statAvgTime.textContent = avgTime;
+
+                    els.statBaseFee.textContent = `$${config.baseFee}`;
+                    els.statFeeDesc.textContent = state.scenario === 'current' ? '有疊單分攤，費用較低' : '無疊單分攤，費用調漲';
+                    els.statWaitTime.textContent = avgTime;
+
+                    if (state.stats.missedOrders > 0) {
+                        els.statMissedBox.classList.remove('hidden');
+                        els.statMissed.textContent = state.stats.missedOrders;
+                        els.statMissedReason.textContent = state.scenario === 'current' ? '(因運能不足)' : '(因忙碌無法接單)';
+                    } else {
+                        els.statMissedBox.classList.add('hidden');
+                    }
+                }
+
+                function renderMap() {
+                    els.driver.style.left = `${state.driverPos.x}%`;
+                    els.driver.style.top = `${state.driverPos.y}%`;
+                    
+                    const driverCircle = els.driver.querySelector('.icon-circle');
+                    driverCircle.style.background = state.scenario === 'current' ? '#06C167' : '#1f2937';
+
+                    if (state.activeOrders.length > 1) {
+                        els.driverBadge.classList.remove('hidden');
+                        els.driverBadge.textContent = state.activeOrders.length;
+                    } else {
+                        els.driverBadge.classList.add('hidden');
+                    }
+
+                    els.mapSvg.innerHTML = '';
+                    
+                    state.activeOrders.forEach(order => {
+                        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                        line.setAttribute("x1", `${order.merchantPos.x}%`);
+                        line.setAttribute("y1", `${order.merchantPos.y}%`);
+                        line.setAttribute("x2", `${order.targetPos.x}%`);
+                        line.setAttribute("y2", `${order.targetPos.y}%`);
+                        line.setAttribute("stroke", "#cbd5e1");
+                        line.setAttribute("stroke-width", "2");
+                        line.setAttribute("stroke-dasharray", "4,4");
+                        els.mapSvg.appendChild(line);
+                    });
+
+                    if (state.activeOrders.length > 0) {
+                        let target;
+                        const pickingUp = state.activeOrders.filter(o => o.phase === 'pickup');
+                        const delivering = state.activeOrders.filter(o => o.phase === 'delivery');
+
+                        if (pickingUp.length > 0) target = pickingUp[0].merchantPos;
+                        else if (delivering.length > 0) target = delivering[0].targetPos;
+
+                        if (target) {
+                            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                            line.setAttribute("x1", `${state.driverPos.x}%`);
+                            line.setAttribute("y1", `${state.driverPos.y}%`);
+                            line.setAttribute("x2", `${target.x}%`);
+                            line.setAttribute("y2", `${target.y}%`);
+                            line.setAttribute("stroke", state.scenario === 'current' ? "#06C167" : "#ef4444");
+                            line.setAttribute("stroke-width", "3");
+                            line.setAttribute("stroke-opacity", "0.5");
+                            els.mapSvg.appendChild(line);
+                        }
+                    }
+                    
+                    state.activeOrders.forEach(order => {
+                        const merch = document.getElementById(`merch-${order.id}`);
+                        const cust = document.getElementById(`cust-${order.id}`);
+                        
+                        if (merch) {
+                            const icon = merch.querySelector('.icon-circle');
+                            if (order.phase === 'pickup') {
+                                icon.style.borderColor = "#f59e0b"; icon.style.color = "#f59e0b"; icon.style.transform = "scale(1.1)";
+                            } else {
+                                icon.style.borderColor = "#e5e7eb"; icon.style.color = "#9ca3af"; icon.style.transform = "scale(1)";
+                            }
+                        }
+                        if (cust) {
+                            const icon = cust.querySelector('.icon-circle');
+                            if (order.phase === 'delivery') {
+                                icon.style.background = "#3b82f6"; icon.style.transform = "scale(1.1)";
+                            } else {
+                                icon.style.background = "#93c5fd"; icon.style.transform = "scale(1)";
+                            }
+                        }
+                    });
+                }
+
+                function createOrderElements(order) {
+                    const m = document.createElement('div');
+                    m.id = `merch-${order.id}`;
+                    m.className = "map-obj static-obj";
+                    m.style.left = `${order.merchantPos.x}%`;
+                    m.style.top = `${order.merchantPos.y}%`;
+                    m.innerHTML = `
+                        <div class="icon-circle merchant">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                        </div>
+                        ${state.activeOrders.indexOf(order) === 0 ? '<div class="label-tag">店家</div>' : ''}
+                    `;
+                    els.mapObjects.appendChild(m);
+
+                    const c = document.createElement('div');
+                    c.id = `cust-${order.id}`;
+                    c.className = "map-obj static-obj";
+                    c.style.left = `${order.targetPos.x}%`;
+                    c.style.top = `${order.targetPos.y}%`;
+                    c.innerHTML = `
+                        <div class="icon-circle customer">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                    `;
+                    els.mapObjects.appendChild(c);
+                }
+
+                function removeOrderElements(id) {
+                    const m = document.getElementById(`merch-${id}`);
+                    const c = document.getElementById(`cust-${id}`);
+                    if(m) m.remove();
+                    if(c) c.remove();
+                }
+
+                function addLog(text, type) {
+                    const div = document.createElement('div');
+                    let cls = 'log-info';
+                    if (type === 'success') cls = 'log-success';
+                    if (type === 'bad') cls = 'log-bad';
+                    if (type === 'warning') cls = 'log-warning';
+                    
+                    div.className = `log-item ${cls}`;
+                    div.innerHTML = `<span>${text}</span>`;
+                    
+                    els.logContainer.insertBefore(div, els.logContainer.firstChild);
+                    if (els.logContainer.children.length > 5) els.logContainer.lastChild.remove();
+                }
+
+                function showSummary() {
+                    const config = SCENARIOS[state.scenario];
+                    const hourly = (state.stats.earnings / WORK_HOURS);
+                    
+                    els.modalMode.textContent = `模式：${config.name}`;
+                    document.getElementById('modal-completed').textContent = state.stats.ordersCompleted;
+                    document.getElementById('modal-earnings').textContent = `$${state.stats.earnings.toFixed(0)}`;
+                    document.getElementById('modal-hourly').textContent = `$${hourly.toFixed(0)}`;
+                    document.getElementById('modal-missed').textContent = state.stats.missedOrders;
+
+                    if (state.scenario === 'current') {
+                        els.modalDescText.textContent = "現行制度下，外送員可以利用「順路疊單」一次配送多筆，即使單筆運費較低，總時薪與接單量仍較高，且能消化大部分訂單。";
+                        els.btnSwitchModal.textContent = "試試看專法模式";
+                    } else {
+                        els.modalDescText.textContent = "專法限制每單必須「單進單出」後，即使顧客下單需求不變（剛性需求），外送員也會因為忙於跑單趟而無法承接新訂單，導致大量訂單流失，且外送員時薪因空車率增加而下降。";
+                        els.btnSwitchModal.textContent = "試試看現行模式";
+                    }
+
+                    els.modal.classList.remove('hidden');
+                }
+
+                init();
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('error-msg').style.display = 'block';
+                document.getElementById('error-msg').textContent = "程式錯誤: " + e.message;
+            }
+        });
+    </script>
+</body>
+</html>
