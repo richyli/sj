@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown 轉 Word 格式工具</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f0f2f5;
+    color: #333;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: #2b579a;
+    color: #fff;
+    padding: 16px 24px;
+    text-align: center;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 600;
+  }
+
+  .header p {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-top: 4px;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .panels {
+    display: flex;
+    gap: 16px;
+    min-height: 70vh;
+  }
+
+  .panel {
+    flex: 1;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    font-weight: 600;
+    font-size: 14px;
+    color: #555;
+  }
+
+  #md-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 16px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    resize: none;
+    background: #fff;
+  }
+
+  #doc-output {
+    flex: 1;
+    padding: 20px 28px;
+    overflow-y: auto;
+    font-family: "Times New Roman", "DFKai-SB", serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000;
+    cursor: text;
+  }
+
+  /* Word-like output styles */
+  #doc-output h1 { font-size: 22pt; font-weight: bold; margin: 12pt 0 6pt; color: #000; }
+  #doc-output h2 { font-size: 16pt; font-weight: bold; margin: 10pt 0 4pt; color: #000; }
+  #doc-output h3 { font-size: 14pt; font-weight: bold; margin: 8pt 0 4pt; color: #000; }
+  #doc-output h4 { font-size: 12pt; font-weight: bold; margin: 6pt 0 3pt; color: #000; }
+  #doc-output p { margin: 0 0 6pt; }
+  #doc-output strong { font-weight: bold; }
+  #doc-output em { font-style: italic; }
+  #doc-output ul, #doc-output ol { margin: 4pt 0 8pt 24pt; }
+  #doc-output li { margin: 2pt 0; }
+  #doc-output blockquote {
+    border-left: 3px solid #999;
+    padding-left: 12px;
+    margin: 6pt 0;
+    color: #555;
+  }
+  #doc-output code {
+    font-family: Consolas, "Courier New", monospace;
+    background: #f4f4f4;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10.5pt;
+  }
+  #doc-output pre {
+    background: #f6f6f6;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin: 6pt 0;
+    overflow-x: auto;
+  }
+  #doc-output pre code {
+    background: none;
+    padding: 0;
+    font-size: 10pt;
+    line-height: 1.5;
+  }
+  #doc-output table {
+    border-collapse: collapse;
+    margin: 8pt 0;
+    width: 100%;
+  }
+  #doc-output th, #doc-output td {
+    border: 1px solid #666;
+    padding: 4pt 8pt;
+    text-align: left;
+  }
+  #doc-output th {
+    background: #e8e8e8;
+    font-weight: bold;
+  }
+  #doc-output hr {
+    border: none;
+    border-top: 1px solid #aaa;
+    margin: 10pt 0;
+  }
+  #doc-output a {
+    color: #2b579a;
+    text-decoration: underline;
+  }
+
+  .btn {
+    padding: 6px 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 13px;
+    color: #444;
+    transition: all 0.15s;
+  }
+
+  .btn:hover { background: #f0f0f0; }
+
+  .btn-primary {
+    background: #2b579a;
+    color: #fff;
+    border-color: #2b579a;
+  }
+
+  .btn-primary:hover { background: #1e3f73; }
+
+  .btn-group { display: flex; gap: 6px; }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #333;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .toast.show { opacity: 1; }
+
+  .placeholder {
+    color: #bbb;
+    font-style: italic;
+    font-family: sans-serif;
+    font-size: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .panels { flex-direction: column; min-height: auto; }
+    .panel { min-height: 40vh; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Markdown → Word 格式轉換器</h1>
+  <p>左側貼上 Markdown，右側複製結果直接貼到 Word / Google Docs</p>
+</div>
+
+<div class="container">
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-header">
+        <span>Markdown 輸入</span>
+        <div class="btn-group">
+          <button class="btn" onclick="loadDemo()">範例</button>
+          <button class="btn" onclick="clearInput()">清除</button>
+        </div>
+      </div>
+      <textarea id="md-input" placeholder="在此貼上 Markdown 內容..."></textarea>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span>Word 格式預覽</span>
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="copyOutput()">複製結果</button>
+          <button class="btn" onclick="selectOutput()">全選</button>
+        </div>
+      </div>
+      <div id="doc-output">
+        <p class="placeholder">轉換結果會顯示在這裡，可直接複製貼到 Word</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Markdown parser
+function parseMd(md) {
+  let html = md;
+
+  // Normalize line endings
+  html = html.replace(/\r\n/g, '\n');
+
+  // Code blocks (fenced) - must be processed first
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
+    code = escapeHtml(code.replace(/\n$/, ''));
+    return '<pre><code>' + code + '</code></pre>';
+  });
+
+  // Split into lines for block-level processing
+  const lines = html.split('\n');
+  const blocks = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Skip pre blocks (already processed)
+    if (line.startsWith('<pre>')) {
+      let block = line;
+      while (i < lines.length && !lines[i].includes('</pre>')) {
+        if (i > lines.indexOf(line)) block += '\n' + lines[i];
+        i++;
+      }
+      if (i < lines.length) block += '\n' + lines[i];
+      blocks.push(block);
+      i++;
+      continue;
+    }
+
+    // Headings
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      blocks.push('<h' + level + '>' + inline(headingMatch[2]) + '</h' + level + '>');
+      i++;
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^(\*{3,}|-{3,}|_{3,})\s*$/.test(line)) {
+      blocks.push('<hr>');
+      i++;
+      continue;
+    }
+
+    // Table
+    if (i + 1 < lines.length && /^\|/.test(line) && /^\|[\s-:|]+\|/.test(lines[i + 1])) {
+      let tableHtml = '<table>';
+      // Header
+      const headers = parseTableRow(line);
+      tableHtml += '<tr>' + headers.map(h => '<th>' + inline(h.trim()) + '</th>').join('') + '</tr>';
+      i += 2; // skip header and separator
+      // Body rows
+      while (i < lines.length && /^\|/.test(lines[i])) {
+        const cells = parseTableRow(lines[i]);
+        tableHtml += '<tr>' + cells.map(c => '<td>' + inline(c.trim()) + '</td>').join('') + '</tr>';
+        i++;
+      }
+      tableHtml += '</table>';
+      blocks.push(tableHtml);
+      continue;
+    }
+
+    // Blockquote
+    if (/^>\s?/.test(line)) {
+      let quoteLines = [];
+      while (i < lines.length && /^>\s?/.test(lines[i])) {
+        quoteLines.push(lines[i].replace(/^>\s?/, ''));
+        i++;
+      }
+      blocks.push('<blockquote>' + inline(quoteLines.join('<br>')) + '</blockquote>');
+      continue;
+    }
+
+    // Unordered list
+    if (/^[\s]*[-*+]\s+/.test(line)) {
+      let listItems = [];
+      while (i < lines.length && /^[\s]*[-*+]\s+/.test(lines[i])) {
+        listItems.push(lines[i].replace(/^[\s]*[-*+]\s+/, ''));
+        i++;
+      }
+      blocks.push('<ul>' + listItems.map(li => '<li>' + inline(li) + '</li>').join('') + '</ul>');
+      continue;
+    }
+
+    // Ordered list
+    if (/^[\s]*\d+\.\s+/.test(line)) {
+      let listItems = [];
+      while (i < lines.length && /^[\s]*\d+\.\s+/.test(lines[i])) {
+        listItems.push(lines[i].replace(/^[\s]*\d+\.\s+/, ''));
+        i++;
+      }
+      blocks.push('<ol>' + listItems.map(li => '<li>' + inline(li) + '</li>').join('') + '</ol>');
+      continue;
+    }
+
+    // Empty line
+    if (line.trim() === '') {
+      i++;
+      continue;
+    }
+
+    // Paragraph - collect consecutive non-empty lines
+    let paraLines = [];
+    while (i < lines.length && lines[i].trim() !== '' &&
+           !/^#{1,6}\s/.test(lines[i]) &&
+           !/^(\*{3,}|-{3,}|_{3,})\s*$/.test(lines[i]) &&
+           !/^\|/.test(lines[i]) &&
+           !/^>\s?/.test(lines[i]) &&
+           !/^[\s]*[-*+]\s+/.test(lines[i]) &&
+           !/^[\s]*\d+\.\s+/.test(lines[i]) &&
+           !lines[i].startsWith('<pre>')) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    if (paraLines.length > 0) {
+      blocks.push('<p>' + inline(paraLines.join('<br>')) + '</p>');
+    }
+  }
+
+  return blocks.join('\n');
+}
+
+function parseTableRow(row) {
+  return row.replace(/^\|/, '').replace(/\|$/, '').split('|');
+}
+
+// Inline formatting
+function inline(text) {
+  // Images
+  text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
+  // Links
+  text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // Bold + italic
+  text = text.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  // Bold
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  // Italic
+  text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  text = text.replace(/_(.+?)_/g, '<em>$1</em>');
+  // Strikethrough
+  text = text.replace(/~~(.+?)~~/g, '<del>$1</del>');
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  return text;
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Real-time conversion
+const input = document.getElementById('md-input');
+const output = document.getElementById('doc-output');
+
+input.addEventListener('input', convert);
+
+function convert() {
+  const md = input.value.trim();
+  if (!md) {
+    output.innerHTML = '<p class="placeholder">轉換結果會顯示在這裡，可直接複製貼到 Word</p>';
+    return;
+  }
+  output.innerHTML = parseMd(md);
+}
+
+// Copy rich text to clipboard
+function copyOutput() {
+  const content = output.innerHTML;
+  if (!content || output.querySelector('.placeholder')) {
+    showToast('沒有內容可複製');
+    return;
+  }
+
+  // Use Clipboard API to copy rich text
+  const blob = new Blob([content], { type: 'text/html' });
+  const data = [new ClipboardItem({ 'text/html': blob })];
+
+  navigator.clipboard.write(data).then(function() {
+    showToast('已複製！可直接貼到 Word');
+  }).catch(function() {
+    // Fallback: select and copy
+    selectOutput();
+    document.execCommand('copy');
+    showToast('已複製！');
+  });
+}
+
+function selectOutput() {
+  const range = document.createRange();
+  range.selectNodeContents(output);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  showToast('已全選，按 Ctrl+C 複製');
+}
+
+function clearInput() {
+  input.value = '';
+  output.innerHTML = '<p class="placeholder">轉換結果會顯示在這裡，可直接複製貼到 Word</p>';
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 2000);
+}
+
+function loadDemo() {
+  input.value = `# 標題一
+
+## 標題二
+
+### 標題三
+
+這是一段**粗體**與*斜體*的範例文字，還有\`行內程式碼\`。
+
+---
+
+#### 清單範例
+
+- 項目一
+- 項目二
+- 項目三
+
+1. 第一步
+2. 第二步
+3. 第三步
+
+> 這是引用區塊的文字
+
+#### 表格範例
+
+| 欄位 | 說明 | 備註 |
+|------|------|------|
+| A    | 第一欄 | 測試 |
+| B    | 第二欄 | 範例 |
+
+#### 程式碼區塊
+
+\`\`\`javascript
+function hello() {
+  console.log("Hello World");
+}
+\`\`\`
+
+這是一個[連結範例](https://example.com)。
+
+~~刪除線文字~~與***粗斜體***。`;
+  convert();
+}
+</script>
+
+</body>
+</html>
