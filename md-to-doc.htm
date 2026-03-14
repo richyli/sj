@@ -207,7 +207,7 @@
 
 <div class="header">
   <h1>Markdown → Word 格式轉換器</h1>
-  <p>左側貼上 Markdown，右側複製結果直接貼到 Word / Google Docs</p>
+  <p>貼上 Markdown 後自動轉換並複製，直接貼到 Word / Google Docs</p>
 </div>
 
 <div class="container">
@@ -405,6 +405,13 @@ const output = document.getElementById('doc-output');
 
 input.addEventListener('input', convert);
 
+input.addEventListener('paste', function() {
+  setTimeout(function() {
+    convert();
+    autoCopy();
+  }, 0);
+});
+
 function convert() {
   const md = input.value.trim();
   if (!md) {
@@ -412,6 +419,22 @@ function convert() {
     return;
   }
   output.innerHTML = parseMd(md);
+}
+
+function autoCopy() {
+  const content = output.innerHTML;
+  if (!content || output.querySelector('.placeholder')) return;
+
+  const blob = new Blob([content], { type: 'text/html' });
+  const data = [new ClipboardItem({ 'text/html': blob })];
+
+  navigator.clipboard.write(data).then(function() {
+    showToast('已複製！');
+  }).catch(function() {
+    selectOutput();
+    document.execCommand('copy');
+    showToast('已複製！');
+  });
 }
 
 // Copy rich text to clipboard
