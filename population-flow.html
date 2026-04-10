@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台灣人口流動 — 出生地 × 居住地</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf9f7;
+  --surface: #ffffff;
+  --border: #e5e2dc;
+  --border2: #d0ccc4;
+  --text: #1a1916;
+  --muted: #888078;
+  --accent: #c0392b;
+  --accent-light: #f8ece9;
+  --blue: #2471a3;
+  --blue-light: #e8f1f8;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Noto Sans TC', sans-serif;
+  /* heat colors - from white to deep red */
+  --h0: #f7f7f7;
+  --h1: #fde8e6;
+  --h2: #f9b8b2;
+  --h3: #f08070;
+  --h4: #d95035;
+  --h5: #9b1a0f;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+header {
+  background: var(--text);
+  color: #fff;
+  padding: 1.4rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.header-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.header-sub {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 0.1em;
+  margin-top: 0.2rem;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* file upload */
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.upload-btn:hover { background: rgba(255,255,255,0.2); }
+.upload-btn input { display: none; }
+
+/* year tabs */
+.year-tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.year-tab {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+}
+
+.year-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.year-tab:hover:not(.active) { background: rgba(255,255,255,0.2); color: #fff; }
+
+/* mode toggle */
+.mode-toggle {
+  display: flex;
+  border: 1px solid rgba(255,255,255,0.25);
+  overflow: hidden;
+}
+
+.mode-btn {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  padding: 0.4rem 0.8rem;
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,0.55);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.mode-btn.active { background: var(--blue); color: #fff; }
+.mode-btn:hover:not(.active) { background: rgba(255,255,255,0.15); color: #fff; }
+
+/* ── LOADING / EMPTY ── */
+#drop-zone {
+  margin: 4rem auto;
+  max-width: 480px;
+  text-align: center;
+  padding: 3rem 2rem;
+  border: 2px dashed var(--border2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+#drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.drop-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.drop-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.4rem; }
+.drop-sub { color: var(--muted); font-size: 0.82rem; font-family: var(--mono); }
+
+#loading {
+  text-align: center;
+  padding: 4rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  display: none;
+}
+
+/* ── MAIN LAYOUT ── */
+#app { display: none; padding: 1.5rem 2rem; }
+
+.app-grid {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* ── MATRIX PANEL ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.panel-header {
+  padding: 1rem 1.2rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+}
+
+.panel-meta {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* matrix container */
+.matrix-wrap {
+  padding: 1rem 1.2rem 1.2rem;
+  overflow-x: auto;
+}
+
+.matrix-note {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-bottom: 0.8rem;
+  letter-spacing: 0.05em;
+}
+
+/* matrix grid */
+.matrix-grid {
+  display: grid;
+  /* set by JS */
+}
+
+.matrix-corner { /* top-left empty cell */
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 4px 3px 0;
+}
+
+.axis-arrow {
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* col headers */
+.col-header {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  padding: 4px 2px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.col-header:hover, .col-header.active { color: var(--accent); font-weight: 500; }
+
+/* row headers */
+.row-header {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  padding: 2px 6px 2px 0;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.row-header:hover, .row-header.active { color: var(--accent); font-weight: 500; }
+
+/* cells */
+.cell {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  position: relative;
+}
+
+.cell:hover {
+  transform: scale(1.25);
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.cell.diagonal {
+  outline: 1.5px solid rgba(0,0,0,0.15);
+  outline-offset: -1.5px;
+}
+
+.cell.selected {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+  z-index: 20;
+}
+
+/* tooltip */
+#tooltip {
+  position: fixed;
+  background: var(--text);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  pointer-events: none;
+  z-index: 1000;
+  display: none;
+  max-width: 200px;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+}
+
+/* legend */
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+}
+
+.legend-bar {
+  display: flex;
+  height: 8px;
+  flex: 1;
+  max-width: 160px;
+}
+
+.legend-seg { flex: 1; }
+
+/* ── SIDE PANEL ── */
+.side-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+
+/* stat cards */
+.stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+}
+
+.stat-box {
+  text-align: center;
+}
+
+.stat-num {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+  letter-spacing: 0.04em;
+}
+
+/* bar chart */
+.bars-wrap {
+  padding: 0.5rem 1.2rem 1.2rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 52px;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.55rem;
+}
+
+.bar-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.02em;
+}
+
+.bar-track {
+  background: var(--border);
+  height: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+.bar-val {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+.no-selection {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: italic;
+  border-top: 1px solid var(--border);
+}
+
+/* ── INFO STRIP ── */
+.info-strip {
+  display: flex;
+  gap: 2rem;
+  padding: 0.8rem 2rem;
+  background: var(--blue-light);
+  border-top: 1px solid #c8dff0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  color: var(--blue);
+  font-family: var(--mono);
+  flex-wrap: wrap;
+}
+
+.info-strip span { opacity: 0.7; }
+.info-strip strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-title">台灣人口流動分析</div>
+    <div class="header-sub">出生地 × 現居縣市 · 縣市層級 OD 矩陣</div>
+  </div>
+
+  <div class="header-controls">
+    <div class="year-tabs" id="yearTabs"></div>
+
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeFrom" onclick="setMode('from')">出生地視角</button>
+      <button class="mode-btn" id="modeTo" onclick="setMode('to')">居住地視角</button>
+    </div>
+
+    <label class="upload-btn">
+      ＋ 載入 CSV
+      <input type="file" id="fileInput" accept=".csv">
+    </label>
+  </div>
+</header>
+
+<div class="info-strip" id="infoStrip" style="display:none">
+  <span>矩陣說明：</span>
+  <strong id="modeDesc">橫軸 = 現居縣市（去哪裡），縱軸 = 出生地（從哪裡來），格子顏色 = 人口數</strong>
+  <span>· 對角線 = 留在出生縣市的人口</span>
+  <span>· 點擊縣市名稱或格子查看詳情</span>
+</div>
+
+<!-- DROP ZONE -->
+<div id="drop-zone">
+  <div class="drop-icon">📂</div>
+  <div class="drop-title">拖曳或點擊載入 CSV 檔案</div>
+  <div class="drop-sub">merged_population_district.csv</div>
+</div>
+
+<div id="loading">⏳ 解析中...</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="app-grid">
+
+    <!-- MATRIX -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title" id="matrixTitle">人口流動 OD 矩陣</div>
+        <div class="panel-meta" id="matrixMeta"></div>
+      </div>
+      <div class="matrix-wrap">
+        <div class="matrix-note" id="matrixNote"></div>
+        <div id="matrixGrid" class="matrix-grid"></div>
+        <div class="legend">
+          <span>少</span>
+          <div class="legend-bar">
+            <div class="legend-seg" style="background:var(--h1)"></div>
+            <div class="legend-seg" style="background:var(--h2)"></div>
+            <div class="legend-seg" style="background:var(--h3)"></div>
+            <div class="legend-seg" style="background:var(--h4)"></div>
+            <div class="legend-seg" style="background:var(--h5)"></div>
+          </div>
+          <span>多（對數尺度，不含同縣市）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDE -->
+    <div class="side-panel">
+
+      <!-- stats -->
+      <div class="panel" id="statsPanel">
+        <div class="panel-header">
+          <div class="panel-title" id="sideTitle">請選擇縣市</div>
+        </div>
+        <div id="sideContent">
+          <div class="no-selection">點擊矩陣中的縣市名稱<br>或任一格子查看詳細流向</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ────────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────────
+let allData = {}; // { year: { from: { to: count } } }
+let years = [];
+let counties = [];
+let currentYear = null;
+let currentMode = 'from'; // 'from'=出生地視角(row=出生地,col=居住地), 'to'=居住地視角
+let selectedCounty = null;
+
+const COLORS = ['#f7f7f7','#fde8e6','#f9b8b2','#f08070','#d95035','#9b1a0f'];
+const COLORS_BLUE = ['#f7f7f7','#e3eef7','#b3d0e8','#6ea8cf','#2e7db8','#1a4d7a'];
+
+// ────────────────────────────────────────────────────
+// FILE INPUT
+// ────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('click', () => document.getElementById('fileInput').click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+
+function loadFile(file) {
+  dropZone.style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: results => {
+      processData(results.data);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      document.getElementById('infoStrip').style.display = 'flex';
+    }
+  });
+}
+
+// ────────────────────────────────────────────────────
+// PROCESS DATA
+// ────────────────────────────────────────────────────
+function processData(rows) {
+  const tmp = {};
+  const yearSet = new Set();
+  const countySet = new Set();
+
+  rows.forEach(r => {
+    // Support both original (7-col) and simplified (4-col: year,from,to,pop)
+    const yr   = (r['year']   || r['統計年']  || '').trim();
+    const from = (r['from']   || r['出生地']  || '').trim();
+    const to   = (r['to']     || r['居住縣市']|| '').trim();
+    const pop  = parseInt(r['pop'] || r['人口數'] || 0, 10);
+    // original format needs country filter; simplified is already filtered
+    const country = r['出生國'] ? r['出生國'].trim() : '國內';
+
+    if (!yr || !from || !to || country !== '國內' || isNaN(pop)) return;
+
+    if (!tmp[yr]) tmp[yr] = {};
+    if (!tmp[yr][from]) tmp[yr][from] = {};
+    tmp[yr][from][to] = (tmp[yr][from][to] || 0) + pop;
+
+    yearSet.add(yr);
+    countySet.add(from);
+    countySet.add(to);
+  });
+
+  allData = tmp;
+  years = [...yearSet].sort();
+  counties = [...countySet].sort();
+  currentYear = years[years.length - 1]; // latest
+
+  buildYearTabs();
+  renderMatrix();
+}
+
+// ────────────────────────────────────────────────────
+// YEAR TABS
+// ────────────────────────────────────────────────────
+function buildYearTabs() {
+  const c = document.getElementById('yearTabs');
+  c.innerHTML = years.map(y =>
+    `<button class="year-tab${y===currentYear?' active':''}" onclick="setYear('${y}')">${y}</button>`
+  ).join('');
+}
+
+function setYear(y) {
+  currentYear = y;
+  document.querySelectorAll('.year-tab').forEach(b => b.classList.toggle('active', b.textContent===y));
+  renderMatrix();
+  if (selectedCounty) renderSide(selectedCounty);
+}
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('modeFrom').classList.toggle('active', m==='from');
+  document.getElementById('modeTo').classList.toggle('active', m==='to');
+  updateModeDesc();
+  renderMatrix();
+  if (selectedCounty) renderSide(selectedCounty);
+}
+
+function updateModeDesc() {
+  const desc = document.getElementById('modeDesc');
+  if (currentMode === 'from') {
+    desc.textContent = '橫軸 = 現居縣市（去哪裡），縱軸 = 出生地（從哪裡來），格子顏色 = 人口數';
+  } else {
+    desc.textContent = '橫軸 = 出生地（從哪裡來），縱軸 = 現居縣市（去哪裡），格子顏色 = 人口數';
+  }
+}
+
+// ────────────────────────────────────────────────────
+// MATRIX RENDER
+// ────────────────────────────────────────────────────
+function getFlowValue(from, to) {
+  return (allData[currentYear] || {})[from]?.[to] || 0;
+}
+
+// Get matrix cell value: row=出生地 col=居住地 (from mode)
+// or row=居住地 col=出生地 (to mode)
+function getCellValue(rowCounty, colCounty) {
+  if (currentMode === 'from') {
+    return getFlowValue(rowCounty, colCounty); // from=row, to=col
+  } else {
+    return getFlowValue(colCounty, rowCounty); // from=col, to=row
+  }
+}
+
+function renderMatrix() {
+  const n = counties.length;
+  const grid = document.getElementById('matrixGrid');
+
+  // Collect all non-diagonal values for color scale
+  const vals = [];
+  counties.forEach(r => counties.forEach(c => {
+    if (r !== c) {
+      const v = getCellValue(r, c);
+      if (v > 0) vals.push(v);
+    }
+  }));
+
+  vals.sort((a,b) => a-b);
+  const logMin = vals.length ? Math.log(vals[0] || 1) : 0;
+  const logMax = vals.length ? Math.log(vals[vals.length-1]) : 1;
+
+  function colorScale(v, isDiag) {
+    if (isDiag) return '#f0f0ee';
+    if (!v) return '#f7f7f7';
+    const t = (Math.log(v) - logMin) / (logMax - logMin || 1);
+    const idx = Math.min(Math.floor(t * (COLORS.length-1)), COLORS.length-2);
+    return COLORS[idx+1];
+  }
+
+  // Build grid: (n+1) cols × (n+1) rows
+  grid.style.gridTemplateColumns = `62px repeat(${n}, 22px)`;
+  grid.style.gridTemplateRows = `62px repeat(${n}, 22px)`;
+  grid.style.display = 'grid';
+  grid.style.gap = '1px';
+
+  let html = '';
+
+  // Top-left corner
+  const rowLabel = currentMode === 'from' ? '出生地 ↓' : '居住地 ↓';
+  const colLabel = currentMode === 'from' ? '→ 居住地' : '→ 出生地';
+  html += `<div class="matrix-corner"><div class="axis-arrow" style="writing-mode:horizontal-tb;font-size:0.5rem;color:#bbb;text-align:right;line-height:1.3">${rowLabel}<br>${colLabel}</div></div>`;
+
+  // Col headers (county names rotated)
+  counties.forEach(c => {
+    const active = selectedCounty === c ? ' active' : '';
+    html += `<div class="col-header${active}" onclick="selectCounty('${c}')" title="${c}">${c}</div>`;
+  });
+
+  // Rows
+  counties.forEach(rowC => {
+    // Row header
+    const active = selectedCounty === rowC ? ' active' : '';
+    html += `<div class="row-header${active}" onclick="selectCounty('${rowC}')">${rowC}</div>`;
+
+    // Cells
+    counties.forEach(colC => {
+      const isDiag = rowC === colC;
+      const v = getCellValue(rowC, colC);
+      const bg = colorScale(v, isDiag);
+      const fromC = currentMode === 'from' ? rowC : colC;
+      const toC   = currentMode === 'from' ? colC : rowC;
+      const selected = (selectedCounty === rowC || selectedCounty === colC) ? ' selected' : '';
+      const diagCls = isDiag ? ' diagonal' : '';
+
+      html += `<div class="cell${diagCls}${selected}" 
+        style="background:${bg}"
+        data-from="${fromC}" data-to="${toC}" data-val="${v}"
+        onmouseenter="showTip(event,this)"
+        onmouseleave="hideTip()"
+        onclick="cellClick('${rowC}','${colC}')">
+      </div>`;
+    });
+  });
+
+  grid.innerHTML = html;
+
+  // Stats
+  const year = currentYear;
+  let total = 0;
+  counties.forEach(r => counties.forEach(c => {
+    if (r!==c) total += getCellValue(r,c);
+  }));
+
+  document.getElementById('matrixMeta').textContent = `${year} 年・${counties.length} 縣市・國內出生人口`;
+  document.getElementById('matrixNote').textContent =
+    currentMode === 'from'
+    ? '縱軸（列）= 出生地，橫軸（欄）= 現居縣市。格子越紅表示流動人口越多。對角線（灰色框）= 留在出生縣市。'
+    : '縱軸（列）= 現居縣市，橫軸（欄）= 出生地。格子越紅表示流動人口越多。對角線（灰色框）= 留在出生縣市。';
+}
+
+// ────────────────────────────────────────────────────
+// TOOLTIP
+// ────────────────────────────────────────────────────
+const tip = document.getElementById('tooltip');
+
+function showTip(e, el) {
+  const from = el.dataset.from;
+  const to = el.dataset.to;
+  const v = parseInt(el.dataset.val);
+  if (from === to) {
+    tip.innerHTML = `<strong>${from}</strong><br>留在出生縣市<br>${fmt(v)} 人`;
+  } else {
+    tip.innerHTML = `出生地：<strong>${from}</strong><br>現居地：<strong>${to}</strong><br>${fmt(v)} 人`;
+  }
+  tip.style.display = 'block';
+  moveTip(e);
+}
+
+document.addEventListener('mousemove', moveTip);
+
+function moveTip(e) {
+  if (tip.style.display === 'none') return;
+  const x = e.clientX + 14;
+  const y = e.clientY - 10;
+  tip.style.left = Math.min(x, window.innerWidth - 220) + 'px';
+  tip.style.top = y + 'px';
+}
+
+function hideTip() { tip.style.display = 'none'; }
+
+// ────────────────────────────────────────────────────
+// COUNTY SELECTION
+// ────────────────────────────────────────────────────
+function cellClick(rowC, colC) {
+  // Click cell → select the non-diagonal county (prefer the outflow county)
+  const target = rowC === colC ? rowC : (currentMode === 'from' ? rowC : colC);
+  selectCounty(target);
+}
+
+function selectCounty(name) {
+  selectedCounty = name;
+  renderMatrix();
+  renderSide(name);
+}
+
+function renderSide(name) {
+  document.getElementById('sideTitle').textContent = name;
+
+  // Outflows: 從 name 出生的人，現在住在各縣市
+  const outData = allData[currentYear]?.[name] || {};
+  const outFlows = counties
+    .filter(c => c !== name)
+    .map(c => ({ county: c, val: outData[c] || 0 }))
+    .sort((a,b) => b.val-a.val)
+    .slice(0, 10);
+
+  // Inflows: 出生在各縣市，現在住在 name
+  const inFlows = counties
+    .filter(c => c !== name)
+    .map(c => ({ county: c, val: (allData[currentYear]?.[c]?.[name]) || 0 }))
+    .sort((a,b) => b.val-a.val)
+    .slice(0, 10);
+
+  const stayVal = outData[name] || 0;
+  const totalOut = Object.values(outData).reduce((s,v)=>s+v, 0);
+  const totalIn = counties.reduce((s,c)=>{
+    return s + ((allData[currentYear]?.[c]?.[name]) || 0);
+  }, 0);
+  const movedOut = totalOut - stayVal;
+
+  const outMax = outFlows[0]?.val || 1;
+  const inMax  = inFlows[0]?.val || 1;
+
+  let html = `
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--accent)">${fmt(movedOut)}</div>
+        <div class="stat-label">離開出生地</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" style="color:var(--blue)">${fmt(totalIn - stayVal)}</div>
+        <div class="stat-label">外縣市遷入</div>
+      </div>
+    </div>
+    <div class="stat-row" style="padding-top:0">
+      <div class="stat-box">
+        <div class="stat-num">${fmt(stayVal)}</div>
+        <div class="stat-label">留在出生縣市</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">${pct(stayVal, totalOut)}</div>
+        <div class="stat-label">留鄉率</div>
+      </div>
+    </div>
+
+    <div class="panel-header" style="border-top:1px solid var(--border)">
+      <div class="panel-title" style="font-size:0.78rem;color:var(--accent)">▸ 出生在 ${name}，移居至…</div>
+    </div>
+    <div class="bars-wrap">
+      ${outFlows.map(f => barRow(f.county, f.val, outMax, 'var(--accent)')).join('')}
+    </div>
+
+    <div class="panel-header" style="border-top:1px solid var(--border)">
+      <div class="panel-title" style="font-size:0.78rem;color:var(--blue)">▸ 現居 ${name}，出生於…</div>
+    </div>
+    <div class="bars-wrap">
+      ${inFlows.map(f => barRow(f.county, f.val, inMax, 'var(--blue)')).join('')}
+    </div>
+  `;
+
+  document.getElementById('sideContent').innerHTML = html;
+}
+
+function barRow(label, val, max, color) {
+  const w = max > 0 ? (val / max * 100).toFixed(1) : 0;
+  return `<div class="bar-row">
+    <div class="bar-label">${label}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div>
+    <div class="bar-val">${fmt(val)}</div>
+  </div>`;
+}
+
+// ────────────────────────────────────────────────────
+// UTILS
+// ────────────────────────────────────────────────────
+function fmt(n) {
+  return n >= 10000
+    ? (n/10000).toFixed(1) + '萬'
+    : n.toLocaleString();
+}
+
+function pct(a, b) {
+  if (!b) return '—';
+  return (a/b*100).toFixed(1) + '%';
+}
+</script>
+</body>
+</html>
