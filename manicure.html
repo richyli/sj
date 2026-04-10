@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>指尖之下｜美甲產業專題入口</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#f6f1ea;
+      --paper:#fffdf9;
+      --paper-2:#efe6da;
+      --ink:#201a16;
+      --ink-soft:#65594f;
+      --line:rgba(32,26,22,.10);
+      --accent:#a55a64;
+      --accent-2:#b9935d;
+      --accent-3:#5d7d87;
+      --shadow:0 16px 42px rgba(32,26,22,.08);
+      --max:1120px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      font-family:'Noto Sans TC',sans-serif;
+      background:linear-gradient(180deg,#f3ece3 0%,#f8f4ee 35%,#f6f1ea 100%);
+      color:var(--ink);
+      line-height:1.8;
+    }
+    body::before{
+      content:'';
+      position:fixed; inset:0;
+      pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      opacity:.6;
+      z-index:10;
+    }
+
+    a{color:inherit;text-decoration:none}
+    .wrap{position:relative;z-index:1}
+    .container{max-width:var(--max);margin:0 auto;padding:0 24px}
+
+    .hero{
+      min-height:92vh;
+      display:flex;
+      align-items:center;
+      border-bottom:1px solid var(--line);
+      background:
+        radial-gradient(circle at 18% 18%, rgba(165,90,100,.15), transparent 28%),
+        radial-gradient(circle at 82% 34%, rgba(185,147,93,.18), transparent 26%),
+        linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,0));
+    }
+    .hero-grid{
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:48px;
+      align-items:end;
+      padding:56px 0 72px;
+    }
+    .eyebrow{
+      font-size:.78rem;
+      letter-spacing:.28em;
+      color:var(--ink-soft);
+      margin-bottom:18px;
+    }
+    .headline{
+      font-family:'Noto Serif TC',serif;
+      font-weight:900;
+      font-size:clamp(2.3rem,5vw,4.6rem);
+      line-height:1.22;
+      letter-spacing:.02em;
+      margin-bottom:18px;
+    }
+    .headline .grad{
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .deck{
+      max-width:720px;
+      color:var(--ink-soft);
+      font-size:1.04rem;
+      margin-bottom:26px;
+    }
+    .hero-meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-bottom:28px;
+    }
+    .meta-chip{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.58);
+      backdrop-filter:blur(8px);
+      padding:8px 14px;
+      border-radius:999px;
+      font-size:.86rem;
+      color:var(--ink-soft);
+    }
+    .hero-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:14px 22px;
+      border-radius:999px;
+      font-weight:700;
+      transition:.25s ease;
+      border:1px solid var(--line);
+    }
+    .btn:hover{transform:translateY(-2px)}
+    .btn-primary{
+      background:var(--ink);
+      color:#f8f3ec;
+      border-color:var(--ink);
+      box-shadow:var(--shadow);
+    }
+    .btn-secondary{
+      background:rgba(255,255,255,.7);
+      color:var(--ink);
+    }
+
+    .hero-aside{
+      background:rgba(255,253,249,.82);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:26px 24px;
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(10px);
+    }
+    .aside-label{
+      font-size:.76rem;
+      letter-spacing:.2em;
+      color:var(--accent);
+      margin-bottom:12px;
+      font-weight:700;
+    }
+    .aside-title{
+      font-family:'Noto Serif TC',serif;
+      font-size:1.28rem;
+      line-height:1.5;
+      margin-bottom:14px;
+    }
+    .aside-text{
+      color:var(--ink-soft);
+      font-size:.96rem;
+      margin-bottom:16px;
+    }
+    .aside-list{list-style:none;display:grid;gap:10px}
+    .aside-list li{
+      padding-left:18px;
+      position:relative;
+      color:var(--ink-soft);
+      font-size:.92rem;
+    }
+    .aside-list li::before{
+      content:'•';position:absolute;left:0;top:0;color:var(--accent-2);font-weight:900;
+    }
+
+    .intro{
+      padding:68px 0 24px;
+    }
+    .section-kicker{
+      font-size:.78rem;
+      letter-spacing:.22em;
+      color:var(--ink-soft);
+      margin-bottom:12px;
+    }
+    .section-title{
+      font-family:'Noto Serif TC',serif;
+      font-size:clamp(1.7rem,3.2vw,2.6rem);
+      line-height:1.4;
+      margin-bottom:14px;
+    }
+    .section-body{
+      max-width:860px;
+      color:var(--ink-soft);
+      font-size:1rem;
+    }
+
+    .feature-grid{
+      padding:28px 0 72px;
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:22px;
+    }
+    .card{
+      background:var(--paper);
+      border:1px solid var(--line);
+      border-radius:26px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:100%;
+    }
+    .card-visual{
+      padding:24px 24px 18px;
+      border-bottom:1px solid var(--line);
+      min-height:154px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-end;
+      position:relative;
+      overflow:hidden;
+    }
+    .card-visual::before{
+      content:'';
+      position:absolute; inset:0;
+      opacity:.9;
+    }
+    .card.story .card-visual::before{
+      background:linear-gradient(135deg, rgba(196,112,122,.18), rgba(232,196,184,.45));
+    }
+    .card.sim .card-visual::before{
+      background:linear-gradient(135deg, rgba(107,163,160,.18), rgba(201,169,110,.28));
+    }
+    .card.policy .card-visual::before{
+      background:linear-gradient(135deg, rgba(221,224,232,.9), rgba(196,112,122,.12));
+    }
+    .card-tag, .card-title{position:relative;z-index:1}
+    .card-tag{
+      display:inline-block;
+      width:max-content;
+      margin-bottom:10px;
+      font-size:.72rem;
+      letter-spacing:.18em;
+      color:var(--ink-soft);
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.62);
+      border:1px solid rgba(32,26,22,.08);
+    }
+    .card-title{
+      font-family:'Noto Serif TC',serif;
+      font-size:1.45rem;
+      line-height:1.45;
+    }
+    .card-body{
+      padding:24px;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      flex:1;
+    }
+    .card-desc{
+      color:var(--ink-soft);
+      font-size:.96rem;
+    }
+    .card-points{
+      list-style:none;
+      display:grid;
+      gap:10px;
+    }
+    .card-points li{
+      position:relative;
+      padding-left:18px;
+      color:var(--ink-soft);
+      font-size:.9rem;
+    }
+    .card-points li::before{
+      content:'—';
+      position:absolute;
+      left:0;
+      color:var(--accent-2);
+      font-weight:700;
+    }
+    .card-actions{
+      margin-top:auto;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .action-link{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      width:100%;
+      padding:14px 16px;
+      border-radius:14px;
+      font-weight:700;
+      transition:.2s ease;
+      text-align:center;
+    }
+    .action-link.primary{background:var(--ink);color:#f7f1ea}
+    .action-link.primary:hover{background:var(--accent)}
+    .action-link.secondary{
+      background:var(--paper-2);
+      color:var(--ink-soft);
+    }
+    .action-link.secondary:hover{background:#e8ddd0;color:var(--ink)}
+
+    .source{
+      padding:6px 0 84px;
+    }
+    .source-box{
+      background:rgba(255,253,249,.72);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:26px;
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:24px;
+      align-items:start;
+    }
+    .source-title{
+      font-family:'Noto Serif TC',serif;
+      font-size:1.3rem;
+      margin-bottom:10px;
+    }
+    .source-text{
+      color:var(--ink-soft);
+      font-size:.96rem;
+    }
+    .source-links{
+      display:grid;
+      gap:12px;
+    }
+    .source-item{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      padding:14px 16px;
+      border-radius:14px;
+      background:var(--paper);
+      border:1px solid var(--line);
+    }
+    .source-item span{font-size:.95rem}
+    .source-item strong{font-weight:700}
+    .source-item em{font-style:normal;color:var(--ink-soft);font-size:.85rem}
+
+    footer{
+      border-top:1px solid var(--line);
+      padding:22px 0 44px;
+      color:var(--ink-soft);
+      font-size:.82rem;
+    }
+
+    @media (max-width: 980px){
+      .hero-grid,.source-box,.feature-grid{grid-template-columns:1fr}
+      .hero{min-height:auto}
+      .hero-grid{padding:44px 0 54px}
+    }
+    @media (max-width: 640px){
+      .container{padding:0 18px}
+      .headline{font-size:2.2rem}
+      .deck{font-size:.98rem}
+      .hero-actions{flex-direction:column;align-items:stretch}
+      .btn{justify-content:center}
+      .card-body,.card-visual,.source-box{padding:20px}
+      .feature-grid{gap:18px;padding-bottom:54px}
+      .source{padding-bottom:56px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="eyebrow">政大大學報・專題入口</div>
+          <h1 class="headline">指尖之下：<span class="grad">美甲產業的三種真實</span></h1>
+          <p class="deck">
+            這不是單一路徑的閱讀頁，而是一個延伸自報導的專題首頁。你可以先讀非線性故事、扮演創業中的美甲師，或直接進入制度抉擇，從不同位置理解這個快速擴張、卻仍缺乏完整規範的產業。
+          </p>
+          <div class="hero-meta">
+            <div class="meta-chip">非線性敘事</div>
+            <div class="meta-chip">互動模擬</div>
+            <div class="meta-chip">政策情境</div>
+          </div>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#features">開始探索 ↓</a>
+            <a class="btn btn-secondary" href="https://unews.nccu.edu.tw/unews/nails-beauty-nailartist/" target="_blank" rel="noopener noreferrer">閱讀原始報導 ↗</a>
+          </div>
+        </div>
+
+        <aside class="hero-aside">
+          <div class="aside-label">這個首頁怎麼讀</div>
+          <div class="aside-title">從報導出發，進入三種不同的觀看方式</div>
+          <p class="aside-text">
+            三個互動頁面都源自同一篇美甲產業報導，但各自聚焦不同問題：消費者如何看見風險、從業者如何在低門檻市場生存，以及當制度來不及跟上市場時，規則應該如何被重寫。
+          </p>
+          <ul class="aside-list">
+            <li>先讀故事：適合第一次進入題目的人。</li>
+            <li>再做模擬：理解從業者的選擇壓力。</li>
+            <li>最後看政策：對照制度與現實的落差。</li>
+          </ul>
+        </aside>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div class="container">
+          <div class="section-kicker">專題導讀</div>
+          <h2 class="section-title">一個美甲產業，不只有「漂亮」這件事</h2>
+          <p class="section-body">
+            在社群平台上，美甲看起來是一門關於風格、審美與流量的生意；但在報導現場，它同時也是一個涉及消費糾紛、專業認證、營業灰區、耗材安全與職業培訓的現實場域。以下三個入口，各自對應一種閱讀方式，也對應這個產業的三種真實。
+          </p>
+        </div>
+      </section>
+
+      <section class="container feature-grid" id="features">
+        <article class="card story">
+          <div class="card-visual">
+            <div class="card-tag">非線性故事</div>
+            <h3 class="card-title">指尖之下</h3>
+          </div>
+          <div class="card-body">
+            <p class="card-desc">
+              從消費者、美甲師與制度觀察者三種身分切入，同一個產業，走出不同閱讀路徑。這一頁最像新聞專題本體的延伸敘事。
+            </p>
+            <ul class="card-points">
+              <li>以角色切換方式進入報導核心情境</li>
+              <li>可折返、跳轉、重看不同支線</li>
+              <li>適合先建立整體理解</li>
+            </ul>
+            <div class="card-actions">
+              <a class="action-link primary" href="nail-story.html">體驗故事</a>
+              <a class="action-link secondary" href="nail-story.html" target="_blank" rel="noopener noreferrer">另開故事頁</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card sim">
+          <div class="card-visual">
+            <div class="card-tag">創業模擬</div>
+            <h3 class="card-title">開一間美甲工作室</h3>
+          </div>
+          <div class="card-body">
+            <p class="card-desc">
+              你將扮演剛進入產業的美甲師，從工作室地點、營業登記、耗材選擇到是否開課，一步步面對現實中的生存抉擇。
+            </p>
+            <ul class="card-points">
+              <li>帶有收入、口碑、風險、專業四項指標</li>
+              <li>突出產業低門檻與高不確定性的張力</li>
+              <li>適合理解從業者處境</li>
+            </ul>
+            <div class="card-actions">
+              <a class="action-link primary" href="nail-sim.html">扮演創業美甲師</a>
+              <a class="action-link secondary" href="nail-sim.html" target="_blank" rel="noopener noreferrer">另開模擬頁</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card policy">
+          <div class="card-visual">
+            <div class="card-tag">政策互動</div>
+            <h3 class="card-title">如果你來寫規則</h3>
+          </div>
+          <div class="card-body">
+            <p class="card-desc">
+              你將扮演制度設計者，在證照、產業分類、耗材管理與教學資格等議題中做選擇，感受每一條規則背後的代價。
+            </p>
+            <ul class="card-points">
+              <li>從「嚴格管制／溫和改良／維持自由」做取捨</li>
+              <li>看見民意支持、消費安全、可執行性的拉扯</li>
+              <li>適合進一步思考制度層問題</li>
+            </ul>
+            <div class="card-actions">
+              <a class="action-link primary" href="nail-policy.html">扮演制度設計者</a>
+              <a class="action-link secondary" href="nail-policy.html" target="_blank" rel="noopener noreferrer">另開政策頁</a>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="source">
+        <div class="container source-box">
+          <div>
+            <div class="section-kicker">來源與延伸</div>
+            <h2 class="source-title">原始報導與三個互動頁面</h2>
+            <p class="source-text">
+              本頁整合自政大大學報的美甲產業報導，以及三個延伸 HTML 互動頁面。你可以從這裡直接前往原文，或切換不同互動版本閱讀。
+            </p>
+          </div>
+          <div class="source-links">
+            <a class="source-item" href="https://unews.nccu.edu.tw/unews/nails-beauty-nailartist/" target="_blank" rel="noopener noreferrer">
+              <span><strong>原始報導</strong><br><em>政大大學報專題頁</em></span>
+              <span>↗</span>
+            </a>
+            <a class="source-item" href="nail-story.html">
+              <span><strong>指尖之下</strong><br><em>非線性故事閱讀</em></span>
+              <span>→</span>
+            </a>
+            <a class="source-item" href="nail-sim.html">
+              <span><strong>開一間美甲工作室</strong><br><em>創業決策模擬</em></span>
+              <span>→</span>
+            </a>
+            <a class="source-item" href="nail-policy.html">
+              <span><strong>如果你來寫規則</strong><br><em>政策情境互動</em></span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        專題入口頁：整合原始新聞報導與三個互動延伸頁面。
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

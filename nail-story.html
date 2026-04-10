@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指尖之下——美甲產業的三種真實</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FAF6F1;
+  --bg-deep: #F0E8DD;
+  --ink: #2A2118;
+  --ink-soft: #6B5D4F;
+  --accent-rose: #C4707A;
+  --accent-gold: #B8935A;
+  --accent-blush: #E8C4B8;
+  --accent-teal: #5B8A8A;
+  --card-consumer: #F2E0DA;
+  --card-artist: #E0E4DF;
+  --card-system: #DDE0E8;
+  --glow-consumer: rgba(196,112,122,0.15);
+  --glow-artist: rgba(184,147,90,0.15);
+  --glow-system: rgba(91,138,138,0.15);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.85;
+  font-size: 16px;
+  overflow-x: hidden;
+}
+
+/* ── OPENING ── */
+#opening {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+#opening::before {
+  content: '';
+  position: absolute;
+  top: -40%; left: -20%;
+  width: 140%; height: 140%;
+  background: radial-gradient(ellipse at 30% 40%, var(--accent-blush) 0%, transparent 55%),
+              radial-gradient(ellipse at 75% 60%, rgba(221,224,232,0.5) 0%, transparent 50%);
+  animation: drift 20s ease-in-out infinite alternate;
+  z-index: 0;
+}
+
+@keyframes drift {
+  0% { transform: translate(0,0) scale(1); }
+  100% { transform: translate(30px,-20px) scale(1.04); }
+}
+
+.opening-label {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-weight: 300;
+  font-size: 0.8rem;
+  letter-spacing: 0.35em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 0.3s forwards;
+}
+
+.opening-title {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 900;
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  text-align: center;
+  line-height: 1.3;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 0.6s forwards;
+}
+
+.opening-title em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent-rose), var(--accent-gold));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.opening-sub {
+  font-weight: 300;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  color: var(--ink-soft);
+  text-align: center;
+  max-width: 520px;
+  margin-top: 1.5rem;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 0.9s forwards;
+}
+
+.scroll-hint {
+  margin-top: 3rem;
+  z-index: 1;
+  opacity: 0;
+  animation: fadeUp 1s 1.2s forwards;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+}
+
+.scroll-hint .arrow {
+  width: 1px; height: 40px;
+  background: var(--ink-soft);
+  position: relative;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.3); }
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(24px); }
+  to { opacity:1; transform:translateY(0); }
+}
+
+/* ── CHOOSE ── */
+#choose {
+  padding: 4rem 2rem 6rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.choose-prompt {
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  text-align: center;
+  margin-bottom: 0.8rem;
+}
+
+.choose-sub {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin-bottom: 3rem;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.role-card {
+  border: none;
+  border-radius: 16px;
+  padding: 2.2rem 1.8rem;
+  cursor: pointer;
+  transition: transform 0.35s, box-shadow 0.35s;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-card::after {
+  content: '→';
+  position: absolute;
+  bottom: 1.5rem; right: 1.8rem;
+  font-size: 1.4rem;
+  opacity: 0.3;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.role-card:hover::after { opacity: 1; transform: translateX(4px); }
+
+.role-card:hover { transform: translateY(-6px); box-shadow: 0 16px 48px rgba(0,0,0,0.08); }
+
+.role-card[data-role="consumer"] { background: var(--card-consumer); }
+.role-card[data-role="artist"] { background: var(--card-artist); }
+.role-card[data-role="system"] { background: var(--card-system); }
+
+.role-icon { font-size: 2rem; margin-bottom: 1rem; }
+.role-name {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+}
+.role-desc {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.7;
+}
+
+/* ── STORY PANELS ── */
+.story-container {
+  display: none;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 2rem 6rem;
+}
+
+.story-container.active { display: block; }
+
+.story-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-bottom: 2rem;
+  letter-spacing: 0.05em;
+}
+
+.story-breadcrumb .back-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--accent-rose);
+  font-size: 0.85rem;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.chapter-marker {
+  font-family: 'Noto Sans TC', sans-serif;
+  font-weight: 300;
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.story-container h2 {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  line-height: 1.4;
+  margin-bottom: 2rem;
+}
+
+.story-container p {
+  margin-bottom: 1.4rem;
+  font-size: 1.02rem;
+}
+
+.story-container .highlight {
+  background: linear-gradient(180deg, transparent 55%, var(--accent-blush) 55%);
+  padding: 0 2px;
+}
+
+.story-container .quote-block {
+  border-left: 3px solid var(--accent-gold);
+  padding: 1.2rem 1.5rem;
+  margin: 2rem 0;
+  background: rgba(184,147,90,0.06);
+  border-radius: 0 10px 10px 0;
+  font-size: 0.95rem;
+}
+
+.quote-block .speaker {
+  display: block;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--accent-gold);
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.05em;
+}
+
+.story-container .data-callout {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  background: var(--bg-deep);
+  border-radius: 12px;
+  padding: 1.4rem 1.6rem;
+  margin: 2rem 0;
+}
+
+.data-callout .big-num {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 900;
+  font-size: 2.4rem;
+  color: var(--accent-rose);
+  white-space: nowrap;
+}
+
+.data-callout .data-text {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+/* ── BRANCH CHOICES ── */
+.branch-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+.branch-label {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin-bottom: 1rem;
+  letter-spacing: 0.08em;
+}
+
+.branch-btn {
+  display: block;
+  width: 100%;
+  background: white;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  margin-bottom: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: all 0.25s;
+  position: relative;
+}
+
+.branch-btn:hover {
+  border-color: var(--accent-rose);
+  background: rgba(196,112,122,0.04);
+  transform: translateX(4px);
+}
+
+.branch-btn .btn-hint {
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  margin-top: 0.3rem;
+}
+
+/* ── REFLECTION / ENDING ── */
+#reflection {
+  display: none;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 4rem 2rem 6rem;
+  text-align: center;
+}
+
+#reflection.active { display: block; }
+
+#reflection h2 {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  margin-bottom: 1.5rem;
+}
+
+#reflection p {
+  font-size: 1rem;
+  color: var(--ink-soft);
+  max-width: 560px;
+  margin: 0 auto 1.2rem;
+}
+
+.visited-tracker {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.visited-dot {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  opacity: 0.25;
+  transition: opacity 0.5s;
+}
+
+.visited-dot.seen { opacity: 1; }
+
+.visited-dot[data-r="consumer"] { background: var(--card-consumer); }
+.visited-dot[data-r="artist"] { background: var(--card-artist); }
+.visited-dot[data-r="system"] { background: var(--card-system); }
+
+.restart-btn {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 0.9rem 2.5rem;
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+  border-radius: 99px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.restart-btn:hover { background: var(--accent-rose); }
+
+/* ── PROGRESS DOTS ── */
+.progress-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: rgba(0,0,0,0.04);
+  z-index: 999;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-rose), var(--accent-gold));
+  width: 0;
+  transition: width 0.5s;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 600px) {
+  .role-cards { grid-template-columns: 1fr; }
+  .data-callout { flex-direction: column; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- ═══ OPENING ═══ -->
+<section id="opening">
+  <div class="opening-label">互動式非線性敘事</div>
+  <h1 class="opening-title">指尖<em>之下</em></h1>
+  <p class="opening-sub">一個美甲產業，三種截然不同的真實。<br>選擇一個身分，走進他們的世界。</p>
+  <div class="scroll-hint" onclick="document.getElementById('choose').scrollIntoView()">
+    開始閱讀
+    <div class="arrow"></div>
+  </div>
+</section>
+
+<!-- ═══ ROLE SELECTION ═══ -->
+<section id="choose">
+  <p class="choose-prompt">你想先成為誰？</p>
+  <p class="choose-sub">每條路線都會帶你看見這個產業的不同面向。你可以隨時折返，換一個人的眼睛重新看。</p>
+  <div class="role-cards">
+    <button class="role-card" data-role="consumer" onclick="enterStory('consumer')">
+      <div class="role-icon">💅</div>
+      <div class="role-name">消費者・倪倪</div>
+      <div class="role-desc">你只是想做一次漂亮的指甲。打開 IG 搜尋「美甲」，上千個帳號映入眼簾。你不知道，這個選擇將帶來一段不太愉快的經歷。</div>
+    </button>
+    <button class="role-card" data-role="artist" onclick="enterStory('artist')">
+      <div class="role-icon">✦</div>
+      <div class="role-name">美甲師・Wendy & 吳宜融</div>
+      <div class="role-desc">你把指尖當畫布，把每一片甲面當作品。但在「人人都能做美甲」的時代，你的專業該如何被看見？</div>
+    </button>
+    <button class="role-card" data-role="system" onclick="enterStory('system')">
+      <div class="role-icon">⚖</div>
+      <div class="role-name">制度觀察者</div>
+      <div class="role-desc">產業五年翻倍、證照形同虛設、糾紛無人受理——當市場跑得比規則快，誰來守住那條線？</div>
+    </button>
+  </div>
+</section>
+
+<!-- ═══ CONSUMER STORY ═══ -->
+<div class="story-container" id="story-consumer">
+  <!-- C1: The Search -->
+  <div class="story-page" id="c1">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="backToChoose()">← 重新選擇</button>
+      <span>/</span><span>消費者視角</span>
+    </div>
+    <div class="chapter-marker">第一幕</div>
+    <h2>滑開手機的那一刻</h2>
+    <p>你想做指甲。也許是因為朋友的限時動態，也許是 Hailey Bieber 那款像甜甜圈糖霜一樣的珠光美甲。你打開 Instagram，輸入「美甲」。</p>
+    <div class="data-callout">
+      <div class="big-num">1.5 億</div>
+      <div class="data-text">Instagram 上標註「美甲」相關標籤的貼文數量，每天還在以 3.3 萬則的速度增加。</div>
+    </div>
+    <p>數百個工作室帳號湧入眼前。你被精緻的作品照吸引，選了一家風格對味的。你不知道對方有沒有證照，也不覺得需要問——畢竟，<span class="highlight">作品好看不就夠了嗎？</span></p>
+    <div class="branch-section">
+      <div class="branch-label">接下來⋯</div>
+      <button class="branch-btn" onclick="goTo('c2')">
+        預約完成，你走進了工作室
+        <div class="btn-hint">繼續倪倪的故事</div>
+      </button>
+      <button class="branch-btn" onclick="goTo('c_cross_cert')">
+        等等，美甲師到底需不需要證照？
+        <div class="btn-hint">暫時跳出，了解制度現況</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- C2: The Disaster -->
+  <div class="story-page" id="c2" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('c1')">← 上一段</button>
+      <span>/</span><span>消費者視角</span>
+    </div>
+    <div class="chapter-marker">第二幕</div>
+    <h2>兩千元的代價</h2>
+    <p>施作開始了。你把手交給對方，對方低著頭開始磨甲。你感覺到疼痛——但你不確定這是正常的。你想說什麼，卻又怕顯得「太挑剔」。</p>
+    <p>三個小時後，你低頭看自己的手。四隻手指破皮流血。甲面凹凸不平，封層滿是氣泡，溢出的指甲油也沒被清理。</p>
+    <div class="quote-block">
+      <span class="speaker">倪倪</span>
+      「我跟美甲師反應，對方回我：注意事項有寫『不接完美主義者』。」
+    </div>
+    <p>這一次，你花了將近 2,000 元。最後只拿回 500 元的「受傷賠償」。</p>
+    <div class="branch-section">
+      <div class="branch-label">你會怎麼做？</div>
+      <button class="branch-btn" onclick="goTo('c3_giveup')">
+        算了，為了兩千元跑流程太麻煩了
+        <div class="btn-hint">多數消費者的選擇</div>
+      </button>
+      <button class="branch-btn" onclick="goTo('c3_fight')">
+        不行，我要申訴
+        <div class="btn-hint">走進消費者保護的真實流程</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- C3a: Give up -->
+  <div class="story-page" id="c3_giveup" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('c2')">← 上一段</button>
+      <span>/</span><span>消費者視角</span>
+    </div>
+    <div class="chapter-marker">第三幕・A</div>
+    <h2>自認倒楣的大多數</h2>
+    <p>你不是唯一這樣想的人。</p>
+    <div class="quote-block">
+      <span class="speaker">倪倪</span>
+      「為了 2000 元的糾紛跑流程太麻煩了，我只想趕快私下處理完。」
+    </div>
+    <p>台北市主任消保官林傳健指出，美甲單次消費多在數百至數千元之間，金額不高，讓許多消費者選擇私下和解或直接放棄。</p>
+    <div class="data-callout">
+      <div class="big-num">＜10 件</div>
+      <div class="data-text">2026 年截至三月中旬，台北市進入消保法程序的美甲爭議案件。2023–2025 年間，每年也僅約 30–40 件。</div>
+    </div>
+    <p>那些沒有被記錄的不滿，在社群上變成了「公審文」——惡意放鳥、成品落差、施作受傷。這些故事被轉發、被議論，但始終沒有走進制度的大門。</p>
+    <p>你學到了教訓。下一次，你會怎麼保護自己？</p>
+    <div class="branch-section">
+      <div class="branch-label">繼續探索⋯</div>
+      <button class="branch-btn" onclick="goTo('c4_prevention')">
+        倪倪後來怎麼挑美甲師？
+        <div class="btn-hint">消費者的自保之道</div>
+      </button>
+      <button class="branch-btn" onclick="switchRole('artist')">
+        換一個角度——如果我是美甲師？
+        <div class="btn-hint">切換至美甲師視角</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- C3b: Fight -->
+  <div class="story-page" id="c3_fight" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('c2')">← 上一段</button>
+      <span>/</span><span>消費者視角</span>
+    </div>
+    <div class="chapter-marker">第三幕・B</div>
+    <h2>走進制度的迷宮</h2>
+    <p>你決定不忍了。但接下來你才發現——申訴的路比想像中長。</p>
+    <p>美甲消費受《消費者保護法》與民法保障，理論上有調解管道。但實際上，程序耗費的時間與心力常常讓人卻步。</p>
+    <div class="quote-block">
+      <span class="speaker">美容法律協會理事長 邱毓哲</span>
+      「現在缺乏的不是法律，而是從業人員對法律的認知。」
+    </div>
+    <p>邱毓哲指出，美甲消費與一般消費並無不同，問題出在<span class="highlight">雙方對制度的不熟悉</span>。他建議業者事前以預約須知、同意書等方式釐清權責——預防糾紛，比事後追訴有效得多。</p>
+    <div class="branch-section">
+      <div class="branch-label">繼續探索⋯</div>
+      <button class="branch-btn" onclick="goTo('c4_prevention')">
+        那消費者可以怎麼自保？
+      </button>
+      <button class="branch-btn" onclick="switchRole('system')">
+        我想了解更大的制度問題
+        <div class="btn-hint">切換至制度觀察視角</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- C4: Prevention -->
+  <div class="story-page" id="c4_prevention" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('c3_giveup')">← 上一段</button>
+      <span>/</span><span>消費者視角</span>
+    </div>
+    <div class="chapter-marker">尾聲</div>
+    <h2>下一次，你會先問什麼？</h2>
+    <p>經歷那次之後，倪倪養成了新習慣。</p>
+    <p>預約前，她會主動詢問美甲師使用的<span class="highlight">指甲油、指甲膠品牌與產地</span>，確認重金屬、塑化劑、甲醛含量是否有台灣檢驗合格標章。施作時也會留意器具是否經過高溫滅菌或酒精消毒。</p>
+    <div class="quote-block">
+      <span class="speaker">倪倪</span>
+      「法規應該明文規範禁用未合格的甲膠，店家也應主動公開耗材成分與品牌。」
+    </div>
+    <p>她也認為，如果證照制度要讓消費者信任，考試內容就該涵蓋前置作業、甲型修整與施作穩定度——而不只是紙上的知識。</p>
+    <p>你放下手機，看看自己的指尖。下一次，你會更知道該問什麼。</p>
+    <div class="branch-section">
+      <div class="branch-label">這條路走完了。換一雙眼睛？</div>
+      <button class="branch-btn" onclick="switchRole('artist')">成為美甲師</button>
+      <button class="branch-btn" onclick="switchRole('system')">成為制度觀察者</button>
+      <button class="branch-btn" onclick="showReflection()">我讀完了，帶我去結尾</button>
+    </div>
+  </div>
+
+  <!-- C_cross: cert detour -->
+  <div class="story-page" id="c_cross_cert" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('c1')">← 回到故事</button>
+      <span>/</span><span>岔路：證照現況</span>
+    </div>
+    <div class="chapter-marker">知識岔路</div>
+    <h2>一張證照的重量</h2>
+    <p>台灣的美甲證照分為兩大體系：勞動部的「指甲彩繪技能職類測驗」（TNA，等同丙級檢定），以及工會主導的「TNL 美甲師認證」。此外還有各種民間分級證照。</p>
+    <p>但問題是——<span class="highlight">法律並未規定從業者必須持證</span>。</p>
+    <div class="data-callout">
+      <div class="big-num">1/7</div>
+      <div class="data-text">美甲師小恩估計，同業中持有美甲證照者的比例約為七分之一。</div>
+    </div>
+    <p>消費者選擇美甲師，看的是 IG 作品風格與美感，不是牆上的那張紙。這讓證照在這個產業裡，近乎「僅供參考」。</p>
+    <div class="branch-section">
+      <button class="branch-btn" onclick="goTo('c2')">
+        了解了。回到倪倪的故事
+        <div class="btn-hint">繼續預約那間工作室</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ARTIST STORY ═══ -->
+<div class="story-container" id="story-artist">
+  <!-- A1 -->
+  <div class="story-page" id="a1">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="backToChoose()">← 重新選擇</button>
+      <span>/</span><span>美甲師視角</span>
+    </div>
+    <div class="chapter-marker">第一幕</div>
+    <h2>十萬元，一張桌子，一個夢</h2>
+    <p>你一直想創業。在所有選項裡面，美甲的初始成本最低。</p>
+    <div class="data-callout">
+      <div class="big-num">約 10 萬</div>
+      <div class="data-text">小恩分享的入行初始投資金額。一張桌子、一盞 LED 燈、基本膠材與工具，就能開始。</div>
+    </div>
+    <p>Wendy 從高中美容科踏入這行，考取了證照，畢業即開始接案。一開始從親友做起，拍作品、投 IG 廣告，一步步建立品牌。</p>
+    <p>吳宜融走了另一條路——沒有證照，從學徒做起，靠前雇主介紹累積客源，一年前才獨立創業。至今仍持續進修美感課程與進階技術。</p>
+    <p><span class="highlight">兩條截然不同的路，都走進了同一個市場。</span>這正是美甲產業的特性：門檻低，路徑多，但終點的風景因人而異。</p>
+    <div class="branch-section">
+      <div class="branch-label">你想了解哪一面？</div>
+      <button class="branch-btn" onclick="goTo('a2_growth')">
+        從月客 30 人到 100 人——怎麼活下來的？
+        <div class="btn-hint">Wendy 的經營之路</div>
+      </button>
+      <button class="branch-btn" onclick="goTo('a2_trouble')">
+        被放鳥、被糾纏——美甲師的另一面
+        <div class="btn-hint">吳宜融遇到的問題</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- A2a: Growth -->
+  <div class="story-page" id="a2_growth" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('a1')">← 上一段</button>
+      <span>/</span><span>美甲師視角</span>
+    </div>
+    <div class="chapter-marker">第二幕・A</div>
+    <h2>回訪率，是你最好的夥伴</h2>
+    <p>美甲有一個其他產業少見的特性：<span class="highlight">高回訪率</span>。顧客每三到四周就需要重新保養與施作。一旦建立信任，回頭客就是穩定收入。</p>
+    <p>Wendy 的客源從每月二、三十人，逐步成長到近百人。工作空間也從自家搬到了獨立工作室。</p>
+    <div class="data-callout">
+      <div class="big-num">×2.2</div>
+      <div class="data-text">2018 年至 2023 年，台灣美甲美睫業家數從 1,587 家成長至 3,523 家，五年翻了超過一倍。</div>
+    </div>
+    <p>但市場變大，也意味著競爭變激烈。越來越多人進入這個「低門檻」行業，品質參差不齊，連帶影響了整個產業的信任度。</p>
+    <div class="branch-section">
+      <button class="branch-btn" onclick="goTo('a3_teaching')">
+        那些開課教人的美甲師，真的夠格嗎？
+        <div class="btn-hint">培訓市場的亂象</div>
+      </button>
+      <button class="branch-btn" onclick="goTo('a2_trouble')">
+        美甲師自己遇到的糾紛呢？
+      </button>
+    </div>
+  </div>
+
+  <!-- A2b: Trouble -->
+  <div class="story-page" id="a2_trouble" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('a1')">← 上一段</button>
+      <span>/</span><span>美甲師視角</span>
+    </div>
+    <div class="chapter-marker">第二幕・B</div>
+    <h2>被放鳥的那些下午</h2>
+    <p>你空出了兩個小時，備好了材料，等著客人上門。然後——對方沒來。沒有通知，電話不接，訊息已讀不回。</p>
+    <div class="quote-block">
+      <span class="speaker">吳宜融</span>
+      「法律在消費糾紛保障上程序繁雜，很多時候只能自己承擔損失。」
+    </div>
+    <p>不只放鳥。有時候客人對成品不滿意，在社群上發「公審文」。你覺得自己的作品沒有問題，但網路上的聲量不是你能控制的。</p>
+    <p>吳宜融說，他知道法律上並非毫無保障，但金額太小、程序太長，投入的時間根本不值得。</p>
+    <div class="branch-section">
+      <button class="branch-btn" onclick="goTo('a3_teaching')">
+        除了接客，還有人開始教課⋯⋯
+        <div class="btn-hint">培訓市場的爆發與問題</div>
+      </button>
+      <button class="branch-btn" onclick="switchRole('consumer')">
+        換一個角度——消費者在想什麼？
+      </button>
+    </div>
+  </div>
+
+  <!-- A3: Teaching -->
+  <div class="story-page" id="a3_teaching" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('a2_growth')">← 上一段</button>
+      <span>/</span><span>美甲師視角</span>
+    </div>
+    <div class="chapter-marker">尾聲</div>
+    <h2>誰有資格教下一個你？</h2>
+    <div class="data-callout">
+      <div class="big-num">17 → 110</div>
+      <div class="data-text">台灣美甲開課數量從 2018 年的 17 期，增至 2023 年的 110 期。</div>
+    </div>
+    <p>市場需求升溫，開課成了許多美甲師的新選擇。但 Wendy 擔心的是：如果老師自己還沒準備好呢？</p>
+    <div class="quote-block">
+      <span class="speaker">Wendy</span>
+      「如果我是一個初學者，剛準備入行，根本不會知道老師需要具備多少知識才能教會自己。」
+    </div>
+    <p>沒有教學門檻，沒有審核機制，「開業即開課」正在發生。Wendy 建議由工會等單位設立門檻，審核授課資格。</p>
+    <p>她也談到美國的經驗——明確的證照分級與訓練模式，讓技術有了衡量標準。如果台灣要走這條路，不只看技術，<span class="highlight">指甲構造、成分知識</span>也該是考試的一部分。</p>
+    <div class="branch-section">
+      <div class="branch-label">這條路走完了。</div>
+      <button class="branch-btn" onclick="switchRole('consumer')">走進消費者的世界</button>
+      <button class="branch-btn" onclick="switchRole('system')">看看制度的全貌</button>
+      <button class="branch-btn" onclick="showReflection()">我讀完了，帶我去結尾</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SYSTEM STORY ═══ -->
+<div class="story-container" id="story-system">
+  <!-- S1 -->
+  <div class="story-page" id="s1">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="backToChoose()">← 重新選擇</button>
+      <span>/</span><span>制度觀察視角</span>
+    </div>
+    <div class="chapter-marker">第一幕</div>
+    <h2>當市場跑得比規則快</h2>
+    <div class="data-callout">
+      <div class="big-num">3,523</div>
+      <div class="data-text">2023 年台灣美甲美睫業登記家數。五年前，這個數字是 1,587。</div>
+    </div>
+    <p>產業翻倍成長，但制度原地踏步。目前美甲業仍被歸在「美容美髮產業」之下，沒有獨立的專法規範、沒有強制證照、沒有統一的耗材標準。</p>
+    <p>這不是沒有法律——而是法律的網目太粗，撈不住這個產業的細節。</p>
+    <div class="branch-section">
+      <button class="branch-btn" onclick="goTo('s2_classify')">
+        美甲為什麼不能獨立分類？
+        <div class="btn-hint">產業歸屬的爭議</div>
+      </button>
+      <button class="branch-btn" onclick="goTo('s2_dispute')">
+        糾紛來了，制度接得住嗎？
+        <div class="btn-hint">消保機制的實際運作</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- S2a: Classification -->
+  <div class="story-page" id="s2_classify" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('s1')">← 上一段</button>
+      <span>/</span><span>制度觀察視角</span>
+    </div>
+    <div class="chapter-marker">第二幕・A</div>
+    <h2>被歸錯類的產業</h2>
+    <div class="quote-block">
+      <span class="speaker">美容法律協會理事長 邱毓哲</span>
+      美甲服務相對單純，不涉及高度隱私，不會造成污染或噪音，具備在住宅區經營的條件。若獨立分類，就不需要被侷限在特定商業區內營業。
+    </div>
+    <p>把美甲和美髮放在一起管理，就像把腳踏車和汽車用同一套法規——<span class="highlight">看似都在路上跑，需要的規範卻完全不同</span>。</p>
+    <p>邱毓哲指出，若能將美甲獨立分類，政府就能針對營業登記、衛生安全、教學認證做出更精準的規範。</p>
+    <p>美甲涉及化學成分（甲膠、卸甲液）與人體接觸（磨甲、修剪），缺乏明確審查標準，消費者的安全就成了灰色地帶。</p>
+    <div class="branch-section">
+      <button class="branch-btn" onclick="goTo('s2_dispute')">
+        那消費糾紛的制度呢？
+      </button>
+      <button class="branch-btn" onclick="goTo('s3_future')">
+        所以，出路在哪？
+      </button>
+    </div>
+  </div>
+
+  <!-- S2b: Dispute -->
+  <div class="story-page" id="s2_dispute" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('s1')">← 上一段</button>
+      <span>/</span><span>制度觀察視角</span>
+    </div>
+    <div class="chapter-marker">第二幕・B</div>
+    <h2>法律並未缺席，但認知缺席了</h2>
+    <p>許多人以為美甲糾紛「沒有法管」。事實並非如此。</p>
+    <div class="quote-block">
+      <span class="speaker">邱毓哲</span>
+      「美甲消費其實無異於其他產業，《消費者保護法》與民法已有規範。現在缺乏的是從業人員對法律的認知。」
+    </div>
+    <p>以營業登記為例，美甲師小恩坦言不確定月收一兩千元是否需要登記。邱毓哲釐清：只要有營利行為就應登記，否則可能面臨補稅或罰鍰。</p>
+    <p>對美甲師而言，施作中不得使消費者受傷、成品不得有瑕疵，這些都是法律上的責任。但多數從業者並不清楚。</p>
+    <p>消費者這邊也一樣——知道可以申訴的人不多，願意走完流程的更少。</p>
+    <div class="branch-section">
+      <button class="branch-btn" onclick="goTo('s3_future')">
+        那可以怎麼改？
+      </button>
+      <button class="branch-btn" onclick="switchRole('consumer')">
+        回去聽消費者的故事
+      </button>
+    </div>
+  </div>
+
+  <!-- S3: Future -->
+  <div class="story-page" id="s3_future" style="display:none">
+    <div class="story-breadcrumb">
+      <button class="back-btn" onclick="goTo('s2_classify')">← 上一段</button>
+      <span>/</span><span>制度觀察視角</span>
+    </div>
+    <div class="chapter-marker">尾聲</div>
+    <h2>在現行法律下，補強那些缺口</h2>
+    <p>不需要推翻一切重來。邱毓哲建議從「事前預防」做起：預約須知、同意書、施作流程透明化——這些低成本的措施，就能減少大量糾紛。</p>
+    <p>更長遠來看，三件事可以改變這個產業的面貌：</p>
+    <p><strong>一、獨立分類。</strong>讓美甲從「美容美髮」中獨立出來，才有精準規範的可能。</p>
+    <p><strong>二、證照改革。</strong>不只考基礎知識，更要涵蓋技術分級、施作品質、指甲構造與化學成分認知。</p>
+    <p><strong>三、培訓門檻。</strong>授課者需經工會或專業單位審核，終結「開業即開課」的亂象。</p>
+    <p>產業已經起飛了。剩下的問題是：<span class="highlight">制度要多久才能追上？</span></p>
+    <div class="branch-section">
+      <div class="branch-label">這條路走完了。</div>
+      <button class="branch-btn" onclick="switchRole('consumer')">走進消費者的世界</button>
+      <button class="branch-btn" onclick="switchRole('artist')">走進美甲師的世界</button>
+      <button class="branch-btn" onclick="showReflection()">我讀完了，帶我去結尾</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REFLECTION ═══ -->
+<section id="reflection">
+  <h2>三條路，一個產業</h2>
+  <div class="visited-tracker">
+    <div class="visited-dot" data-r="consumer" id="dot-consumer">💅</div>
+    <div class="visited-dot" data-r="artist" id="dot-artist">✦</div>
+    <div class="visited-dot" data-r="system" id="dot-system">⚖</div>
+  </div>
+  <p id="visited-msg"></p>
+  <p>消費者想要安全與品質保障，美甲師想要專業被尊重，制度想跟上一個早已狂奔的市場。</p>
+  <p>他們的困境看似不同，根源卻相連——<strong>當一個產業快速膨脹，而規則還停在原地，每個人都成了代價的一部分。</strong></p>
+  <p style="font-size:0.82rem;color:var(--ink-soft);margin-top:2rem;">原始報導：政大大學報《指尖上的產業擴張：美甲熱潮下的制度隱憂》<br>記者／李若水、劉倚瑄、蔡孟安</p>
+  <button class="restart-btn" onclick="restart()">從頭再讀一次</button>
+</section>
+
+<script>
+const visited = new Set();
+let totalPages = 0;
+let viewedPages = new Set();
+
+function enterStory(role) {
+  visited.add(role);
+  document.querySelectorAll('.story-container').forEach(c => c.classList.remove('active'));
+  const container = document.getElementById('story-' + role);
+  container.classList.add('active');
+  // show first page, hide others
+  container.querySelectorAll('.story-page').forEach((p, i) => {
+    p.style.display = i === 0 ? 'block' : 'none';
+  });
+  const firstPage = container.querySelector('.story-page');
+  viewedPages.add(firstPage.id);
+  updateProgress();
+  container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function goTo(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // hide siblings
+  el.closest('.story-container').querySelectorAll('.story-page').forEach(p => p.style.display = 'none');
+  el.style.display = 'block';
+  viewedPages.add(id);
+  updateProgress();
+  el.scrollIntoView({ behavior: 'smooth' });
+}
+
+function switchRole(role) {
+  document.querySelectorAll('.story-container').forEach(c => c.classList.remove('active'));
+  enterStory(role);
+}
+
+function backToChoose() {
+  document.querySelectorAll('.story-container').forEach(c => c.classList.remove('active'));
+  document.getElementById('choose').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showReflection() {
+  document.querySelectorAll('.story-container').forEach(c => c.classList.remove('active'));
+  const ref = document.getElementById('reflection');
+  ref.classList.add('active');
+  // update dots
+  visited.forEach(r => {
+    const dot = document.getElementById('dot-' + r);
+    if (dot) dot.classList.add('seen');
+  });
+  const names = { consumer: '消費者', artist: '美甲師', system: '制度觀察者' };
+  const seen = [...visited].map(r => names[r]);
+  const msg = document.getElementById('visited-msg');
+  if (visited.size === 3) {
+    msg.textContent = '你走過了全部三條路線。這個故事的全貌，你已經看見了。';
+  } else {
+    const unseen = ['consumer','artist','system'].filter(r => !visited.has(r)).map(r => names[r]);
+    msg.textContent = `你看過了${seen.join('與')}的世界。還有${unseen.join('與')}的故事等著你。`;
+  }
+  document.getElementById('progressFill').style.width = '100%';
+  ref.scrollIntoView({ behavior: 'smooth' });
+}
+
+function restart() {
+  visited.clear();
+  viewedPages.clear();
+  document.getElementById('reflection').classList.remove('active');
+  document.querySelectorAll('.story-container').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.visited-dot').forEach(d => d.classList.remove('seen'));
+  document.getElementById('progressFill').style.width = '0';
+  document.getElementById('opening').scrollIntoView({ behavior: 'smooth' });
+}
+
+function updateProgress() {
+  // rough progress: total unique pages = 15, viewedPages.size / 15
+  const pct = Math.min(100, Math.round((viewedPages.size / 15) * 100));
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+</script>
+</body>
+</html>

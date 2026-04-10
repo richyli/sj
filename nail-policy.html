@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>如果你來寫規則</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&family=Crimson+Pro:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#F5F1EB;
+  --bg2:#EDE8E0;
+  --bg3:#E4DED5;
+  --surface:#fff;
+  --ink:#1C1916;
+  --ink2:#5C544A;
+  --ink3:#8E857A;
+  --ink4:#B5AEA4;
+  --red:#A63D2F;
+  --red-bg:#FDF0ED;
+  --blue:#2F5E7A;
+  --blue-bg:#EDF4F8;
+  --green:#3D6B4F;
+  --green-bg:#EDF5F0;
+  --amber:#8B6914;
+  --amber-bg:#FBF6E9;
+  --stamp-red:rgba(166,61,47,0.12);
+  --divider:rgba(0,0,0,0.06);
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans TC',sans-serif;
+  background:var(--bg);color:var(--ink);
+  line-height:1.85;font-size:15.5px;
+  overflow-x:hidden;
+}
+
+/* ── PAPER TEXTURE ── */
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='4' type='fractalNoise'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;
+}
+
+.wrap{max-width:640px;margin:0 auto;padding:1.5rem}
+
+/* ── INTRO ── */
+#intro{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:3rem 0}
+.doc-stamp{
+  display:inline-block;
+  border:2px solid var(--red);color:var(--red);
+  padding:0.2rem 0.8rem;font-size:0.68rem;
+  letter-spacing:0.3em;font-weight:700;
+  transform:rotate(-3deg);margin-bottom:2rem;
+  opacity:0.7;
+}
+#intro h1{
+  font-family:'Noto Serif TC',serif;font-weight:900;
+  font-size:clamp(2rem,6vw,3rem);line-height:1.3;
+  margin-bottom:1rem;
+}
+#intro h1 ruby{ruby-position:over}
+#intro h1 rt{font-size:0.4em;color:var(--ink3);font-weight:400;letter-spacing:0.1em}
+.intro-lead{
+  font-size:1.05rem;color:var(--ink2);max-width:480px;
+  margin-bottom:1rem;
+}
+.intro-context{
+  font-size:0.82rem;color:var(--ink3);line-height:1.9;
+  border-left:2px solid var(--ink4);
+  padding-left:1rem;margin:1.5rem 0 2.5rem;
+  max-width:440px;
+}
+.begin-btn{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  padding:0.9rem 2.2rem;
+  background:var(--ink);color:var(--bg);
+  border:none;border-radius:2px;
+  font-family:inherit;font-size:0.9rem;font-weight:500;
+  cursor:pointer;transition:all 0.3s;
+  letter-spacing:0.05em;
+}
+.begin-btn:hover{background:var(--red);transform:translateY(-1px)}
+.begin-btn svg{width:16px;height:16px;fill:currentColor}
+
+/* ── DASHBOARD ── */
+#dashboard{display:none;position:sticky;top:0;z-index:100;background:var(--bg);padding:0.8rem 0;border-bottom:1px solid var(--divider);margin-bottom:1.5rem}
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem}
+.dash-item{
+  background:var(--surface);border-radius:6px;
+  padding:0.6rem 0.8rem;text-align:center;
+  border:1px solid var(--divider);
+  position:relative;overflow:hidden;
+}
+.dash-label{font-size:0.58rem;color:var(--ink3);letter-spacing:0.15em;margin-bottom:0.15rem;text-transform:uppercase}
+.dash-val{font-family:'Crimson Pro',serif;font-size:1.35rem;font-weight:700;transition:all 0.5s}
+.dash-val.flash{animation:flash 0.6s}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:0.3}}
+.dash-bar{position:absolute;bottom:0;left:0;height:2px;transition:width 0.8s cubic-bezier(.22,1,.36,1)}
+.d-support .dash-val{color:var(--blue)}
+.d-support .dash-bar{background:var(--blue)}
+.d-safety .dash-val{color:var(--green)}
+.d-safety .dash-bar{background:var(--green)}
+.d-enforce .dash-val{color:var(--amber)}
+.d-enforce .dash-bar{background:var(--amber)}
+.round-label{text-align:center;font-size:0.65rem;color:var(--ink4);margin-top:0.4rem;letter-spacing:0.12em}
+
+/* ── POLICY CARD ── */
+#gameArea{display:none}
+.policy-card{
+  background:var(--surface);
+  border:1px solid var(--divider);
+  border-radius:4px;
+  padding:2rem 1.8rem;
+  position:relative;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+.policy-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+}
+.policy-num{
+  font-family:'Crimson Pro',serif;font-style:italic;
+  font-size:0.8rem;color:var(--ink4);margin-bottom:0.5rem;
+}
+.policy-title{
+  font-family:'Noto Serif TC',serif;font-weight:700;
+  font-size:clamp(1.2rem,3.5vw,1.55rem);line-height:1.45;
+  margin-bottom:0.8rem;
+}
+.policy-desc{font-size:0.9rem;color:var(--ink2);margin-bottom:1.5rem;line-height:1.9}
+.policy-desc strong{color:var(--ink);font-weight:500}
+
+/* ── STATUS QUO BOX ── */
+.status-quo{
+  background:var(--bg2);border-radius:4px;
+  padding:1rem 1.2rem;margin-bottom:1.8rem;
+  border-left:3px solid var(--ink4);
+}
+.status-quo-label{font-size:0.65rem;color:var(--ink3);letter-spacing:0.2em;margin-bottom:0.3rem;font-weight:700}
+.status-quo p{font-size:0.82rem;color:var(--ink2);line-height:1.8;margin:0}
+
+/* ── OPTIONS ── */
+.options{display:flex;flex-direction:column;gap:0.8rem}
+.option-btn{
+  background:var(--surface);
+  border:1.5px solid var(--divider);
+  border-radius:4px;padding:1.2rem 1.3rem;
+  cursor:pointer;text-align:left;font-family:inherit;
+  color:var(--ink);transition:all 0.25s;
+  position:relative;
+}
+.option-btn:hover{border-color:var(--ink3);box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.option-btn .opt-label{
+  font-size:0.62rem;font-weight:700;letter-spacing:0.2em;
+  margin-bottom:0.35rem;padding:0.15rem 0.5rem;
+  border-radius:2px;display:inline-block;
+}
+.option-btn[data-stance="strict"] .opt-label{background:var(--red-bg);color:var(--red)}
+.option-btn[data-stance="moderate"] .opt-label{background:var(--amber-bg);color:var(--amber)}
+.option-btn[data-stance="free"] .opt-label{background:var(--blue-bg);color:var(--blue)}
+.option-btn .opt-text{font-size:0.92rem;font-weight:500;margin-bottom:0.25rem}
+.option-btn .opt-sub{font-size:0.78rem;color:var(--ink3);line-height:1.7}
+
+/* ── REACTIONS ── */
+.reactions{
+  margin-top:1.5rem;display:none;
+  animation:reactIn 0.5s ease;
+}
+.reactions.show{display:block}
+@keyframes reactIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.reaction-grid{display:flex;flex-direction:column;gap:0.7rem;margin-bottom:1.2rem}
+.reaction{
+  display:flex;gap:0.8rem;align-items:flex-start;
+  padding:0.9rem 1rem;border-radius:4px;
+  font-size:0.82rem;line-height:1.7;
+}
+.reaction-icon{
+  flex-shrink:0;width:32px;height:32px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:0.95rem;
+}
+.r-artist{background:var(--amber-bg)}.r-artist .reaction-icon{background:var(--amber-bg)}
+.r-consumer{background:var(--green-bg)}.r-consumer .reaction-icon{background:var(--green-bg)}
+.r-union{background:var(--blue-bg)}.r-union .reaction-icon{background:var(--blue-bg)}
+.r-official{background:var(--red-bg)}.r-official .reaction-icon{background:var(--red-bg)}
+.reaction-who{font-weight:700;font-size:0.72rem;color:var(--ink3);margin-bottom:0.15rem;letter-spacing:0.05em}
+.reaction-text{color:var(--ink2)}
+.reaction-text strong{color:var(--ink);font-weight:500}
+
+.impact-line{
+  display:flex;gap:0.5rem;flex-wrap:wrap;
+  margin-bottom:1.2rem;
+}
+.impact-tag{
+  font-size:0.72rem;font-weight:600;
+  padding:0.2rem 0.6rem;border-radius:2px;
+}
+.impact-tag.up-good{background:var(--green-bg);color:var(--green)}
+.impact-tag.up-bad{background:var(--red-bg);color:var(--red)}
+.impact-tag.down-good{background:var(--green-bg);color:var(--green)}
+.impact-tag.down-bad{background:var(--red-bg);color:var(--red)}
+.impact-tag.neutral{background:var(--bg2);color:var(--ink3)}
+
+.reality-note{
+  font-size:0.78rem;color:var(--ink3);
+  border-top:1px solid var(--divider);
+  padding-top:0.8rem;margin-top:0.5rem;
+  line-height:1.8;font-style:italic;
+}
+
+.next-btn{
+  display:block;margin:1.5rem auto 0;
+  padding:0.7rem 2rem;
+  background:var(--ink);color:var(--bg);
+  border:none;border-radius:2px;
+  font-family:inherit;font-size:0.82rem;
+  cursor:pointer;transition:all 0.3s;
+}
+.next-btn:hover{background:var(--red)}
+
+/* ── FINAL ── */
+#final{display:none;padding:2rem 0 4rem}
+.final-header{text-align:center;margin-bottom:2rem}
+.final-header h2{font-family:'Noto Serif TC',serif;font-weight:900;font-size:clamp(1.4rem,4vw,2rem);margin-bottom:0.5rem}
+.final-header p{color:var(--ink2);font-size:0.88rem}
+
+.verdict-card{
+  background:var(--surface);border:1px solid var(--divider);
+  border-radius:4px;padding:1.8rem;margin-bottom:1.5rem;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+.verdict-card h3{
+  font-family:'Noto Serif TC',serif;font-weight:700;
+  font-size:1.1rem;margin-bottom:1rem;
+  padding-bottom:0.6rem;border-bottom:1px solid var(--divider);
+}
+.final-meter-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem}
+.final-meter-label{font-size:0.8rem;color:var(--ink2)}
+.final-meter-val{font-family:'Crimson Pro',serif;font-weight:700;font-size:1.1rem}
+.final-meter{width:100%;height:6px;background:var(--bg2);border-radius:99px;margin-bottom:1.2rem;overflow:hidden}
+.final-meter-fill{height:100%;border-radius:99px;width:0;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+
+.choice-log{margin-top:1rem}
+.choice-log-item{
+  display:flex;gap:0.8rem;align-items:flex-start;
+  padding:0.7rem 0;border-bottom:1px solid var(--divider);
+  font-size:0.8rem;
+}
+.choice-log-item:last-child{border-bottom:none}
+.cl-num{
+  flex-shrink:0;width:22px;height:22px;
+  border-radius:50%;background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.62rem;color:var(--ink3);font-weight:700;
+}
+.cl-q{color:var(--ink3);font-size:0.75rem}
+.cl-a{color:var(--ink);font-weight:500}
+
+.comparison-box{
+  background:var(--bg2);border-radius:4px;
+  padding:1.5rem;margin-top:1.5rem;
+}
+.comparison-box h4{font-size:0.7rem;letter-spacing:0.2em;color:var(--red);margin-bottom:0.8rem;font-weight:700}
+.comparison-box p{font-size:0.82rem;color:var(--ink2);line-height:1.85;margin-bottom:0.5rem}
+.comparison-box p:last-child{margin-bottom:0}
+
+.restart-btn{
+  display:block;margin:2rem auto;
+  padding:0.8rem 2.2rem;
+  background:var(--ink);color:var(--bg);
+  border:none;border-radius:2px;
+  font-family:inherit;font-size:0.85rem;
+  cursor:pointer;transition:all 0.3s;
+}
+.restart-btn:hover{background:var(--red)}
+
+.credit{text-align:center;font-size:0.68rem;color:var(--ink4);line-height:1.7;padding-bottom:2rem}
+
+@media(max-width:500px){
+  .wrap{padding:1rem}
+  .policy-card{padding:1.5rem 1.2rem}
+  .dash-grid{gap:0.35rem}
+  .dash-val{font-size:1.1rem}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ═══ INTRO ═══ -->
+<section id="intro">
+  <div class="doc-stamp">政策模擬</div>
+  <h1>如果你來<br>寫規則</h1>
+  <p class="intro-lead">美甲產業五年翻倍，證照形同虛設，糾紛無人受理。你被賦予了修訂規則的權力——但每條規則都有代價。</p>
+  <div class="intro-context">
+    你將面對五道政策議題。每一道都有三種立場：<strong>嚴格管制</strong>、<strong>溫和改良</strong>、<strong>維持自由</strong>。沒有標準答案。每個選擇都會觸發不同利害關係人的反應——然後你會看見，為什麼現實中這些規則至今沒有被寫出來。
+  </div>
+  <button class="begin-btn" onclick="startGame()">
+    進入政策會議
+    <svg viewBox="0 0 20 20"><path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+  </button>
+</section>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="dashboard">
+  <div class="dash-grid">
+    <div class="dash-item d-support">
+      <div class="dash-label">民意支持</div>
+      <div class="dash-val" id="vSupport">60</div>
+      <div class="dash-bar" id="bSupport" style="width:60%"></div>
+    </div>
+    <div class="dash-item d-safety">
+      <div class="dash-label">消費安全</div>
+      <div class="dash-val" id="vSafety">35</div>
+      <div class="dash-bar" id="bSafety" style="width:35%"></div>
+    </div>
+    <div class="dash-item d-enforce">
+      <div class="dash-label">可執行性</div>
+      <div class="dash-val" id="vEnforce">50</div>
+      <div class="dash-bar" id="bEnforce" style="width:50%"></div>
+    </div>
+  </div>
+  <div class="round-label" id="roundLabel">議題 1 / 5</div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="gameArea"></div>
+
+<!-- ═══ FINAL ═══ -->
+<section id="final"></section>
+
+</div>
+
+<script>
+const STATE = { support: 60, safety: 35, enforce: 50 };
+let round = 0;
+const log = [];
+
+const ROUNDS = [
+// ─── 1: 證照 ───
+{
+  title: '美甲師需要強制持證嗎？',
+  desc: '目前台灣法律<strong>未規定美甲師必須持證</strong>。市場上持照比例約七分之一。消費者倪倪因遇到技術不佳的美甲師而受傷——四隻手指破皮流血。',
+  statusQuo: '現行 TNA（勞動部）與 TNL（工會）雙軌並行，均非強制。任何人都可以接案、開工作室、甚至開課教學。',
+  options: [
+    {
+      stance: 'strict', label: '嚴格管制',
+      text: '強制持證才能執業',
+      sub: '所有美甲師須通過國家統一考試，無照營業即開罰',
+      effects: { support: -20, safety: 25, enforce: -15 },
+      reactions: [
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '大量反彈。吳宜融這樣的自學派美甲師將被迫停業考照。Wendy 認為考試內容需涵蓋<strong>技術分級與指甲構造知識</strong>，否則「考了也沒意義」。' },
+        { who: '消費者', icon: '💅', type: 'consumer', text: '倪倪表示支持，但也擔心：<strong>如果考試只考基礎護理，照樣擋不住品質問題</strong>。她認為應納入前置作業與施作穩定度。' },
+        { who: '立法實務', icon: '⚖', type: 'official', text: '台灣美容產業從未有過強制證照。要推動立法需跨部會協調，<strong>預估耗時 3–5 年</strong>，期間市場繼續無序成長。' }
+      ],
+      impacts: [
+        { text: '消費安全 +25', cls: 'up-good' },
+        { text: '民意支持 -20', cls: 'up-bad' },
+        { text: '可執行性 -15', cls: 'down-bad' },
+      ],
+      reality: '現實中，即使是美髮業的丙級證照也僅為「參考」，執法單位鮮少因無照營業進行裁罰。強制持證在行政上幾乎無前例可循。'
+    },
+    {
+      stance: 'moderate', label: '溫和改良',
+      text: '不強制持證，但建立分級標示制度',
+      sub: '業者可自願取得認證，通過者獲得官方「品質標章」供消費者辨識',
+      effects: { support: 5, safety: 10, enforce: 5 },
+      reactions: [
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '多數可接受。小恩認為「作品才是證明」，但願意考取一個<strong>能真正反映技術的認證</strong>，前提是考試內容不只是紙上知識。' },
+        { who: '消費者', icon: '💅', type: 'consumer', text: '有標章可看，選擇時多一層依據。但倪倪追問：<strong>沒拿標章的就代表不好嗎？</strong>資訊不對稱只是略微改善。' },
+        { who: '工會', icon: '🏛', type: 'union', text: '工會可能成為認證主體。但目前 TNL 等民間認證已存在，<strong>官方介入可能壓縮既有體系的空間</strong>，引發利益衝突。' }
+      ],
+      impacts: [
+        { text: '消費安全 +10', cls: 'up-good' },
+        { text: '民意支持 +5', cls: 'up-good' },
+        { text: '可執行性 +5', cls: 'up-good' },
+      ],
+      reality: '分級標示在部分國家行之有效，但台灣類似機制（如餐飲衛生分級）推動後，消費者認知度有限，實際影響力尚待驗證。'
+    },
+    {
+      stance: 'free', label: '維持自由',
+      text: '不介入，讓市場自行淘汰',
+      sub: '消費者透過社群口碑自行篩選優劣，政府不增設門檻',
+      effects: { support: 10, safety: -5, enforce: 10 },
+      reactions: [
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '鬆了口氣。低門檻讓更多人能進入這行創業——這正是產業五年翻倍的原因。<strong>但品質落差將持續存在。</strong>' },
+        { who: '消費者', icon: '💅', type: 'consumer', text: '倪倪嘆氣：<strong>「那我只能繼續靠自己的眼力判斷。」</strong>社群上的「公審文」依然會是消費者的主要自保手段。' },
+        { who: '消保官', icon: '⚖', type: 'official', text: '林傳健指出，每年台北市僅 30–40 件美甲案進入消保程序。<strong>多數糾紛根本不會被記錄。</strong>' }
+      ],
+      impacts: [
+        { text: '民意支持 +10', cls: 'up-good' },
+        { text: '消費安全 -5', cls: 'down-bad' },
+        { text: '可執行性 +10', cls: 'up-good' },
+      ],
+      reality: '這就是台灣目前的現狀。市場自由、門檻極低，消費糾紛靠社群公審與私下和解處理。'
+    }
+  ]
+},
+// ─── 2: 產業分類 ───
+{
+  title: '美甲應該從「美容美髮業」獨立分類嗎？',
+  desc: '目前美甲被歸在美容美髮產業之下，適用相同的<strong>營業場所限制、衛生規範與行政管理</strong>。但兩者的服務性質差異很大。',
+  statusQuo: '美甲業與美髮、美容共用同一套行業代碼與規範。營業場所需位於商業區，住宅區經營屬灰色地帶。',
+  options: [
+    {
+      stance: 'strict', label: '嚴格管制',
+      text: '獨立分類，並制定美甲專屬管理辦法',
+      sub: '新設行業代碼、專屬衛生標準、耗材審查機制',
+      effects: { support: -10, safety: 20, enforce: -20 },
+      reactions: [
+        { who: '法律專家', icon: '⚖', type: 'official', text: '邱毓哲支持獨立分類。美甲不涉及高度隱私、不產生污染噪音，<strong>具備在住宅區經營的條件</strong>。分開管理才能精準規範。' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '樂見獨立——但擔心新法帶來更多行政負擔。<strong>小型工作室的合規成本可能大幅上升。</strong>' },
+        { who: '行政機關', icon: '🏛', type: 'union', text: '新增行業分類需修改統計制度、稅務系統、地方自治條例。<strong>跨部門協調的行政成本極高。</strong>' }
+      ],
+      impacts: [
+        { text: '消費安全 +20', cls: 'up-good' },
+        { text: '民意支持 -10', cls: 'up-bad' },
+        { text: '可執行性 -20', cls: 'down-bad' },
+      ],
+      reality: '台灣行業分類修訂需經主計總處、經濟部、地方政府多重程序。美甲美睫業在統計上已有獨立類別，但法規層面尚未跟進。'
+    },
+    {
+      stance: 'moderate', label: '溫和改良',
+      text: '維持現有分類，但放寬美甲業的場所限制',
+      sub: '允許美甲工作室在住宅區合法經營，其餘規範不變',
+      effects: { support: 10, safety: 5, enforce: 5 },
+      reactions: [
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '最直接的利多。大量家庭式工作室可以合法化，<strong>Wendy 從住家到獨立空間的過渡也不必那麼急</strong>。' },
+        { who: '消費者', icon: '💅', type: 'consumer', text: '對消費體驗影響不大。但至少不用再擔心「去別人家做指甲」是不是合不合法的問題。' },
+        { who: '都市規劃', icon: '🏛', type: 'union', text: '住宅區商業活動管制是地方自治權限，<strong>各縣市態度不一</strong>，全面放寬需要時間。' }
+      ],
+      impacts: [
+        { text: '民意支持 +10', cls: 'up-good' },
+        { text: '消費安全 +5', cls: 'up-good' },
+        { text: '可執行性 +5', cls: 'up-good' },
+      ],
+      reality: '場所限制是多數小型美甲師的實際痛點。但地方政府對住宅區商業活動的態度保守，推動放寬需要產業團體持續倡議。'
+    },
+    {
+      stance: 'free', label: '維持自由',
+      text: '不改分類，沿用現行架構',
+      sub: '美甲繼續歸在美容美髮業下，灰色地帶自行運作',
+      effects: { support: 5, safety: -5, enforce: 5 },
+      reactions: [
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '現狀不變。多數人本來就在灰色地帶經營，<strong>「反正也沒人來查」</strong>——但法律風險一直存在。' },
+        { who: '法律專家', icon: '⚖', type: 'official', text: '邱毓哲直言：不分類就無法做精準規範。<strong>美甲涉及化學成分與人體接觸，不適合用管理美髮的方式來管。</strong>' }
+      ],
+      impacts: [
+        { text: '民意支持 +5', cls: 'up-good' },
+        { text: '消費安全 -5', cls: 'down-bad' },
+        { text: '可執行性 +5', cls: 'up-good' },
+      ],
+      reality: '這就是現狀。多數小型工作室處於半合法狀態，衛生標準因人而異，制度形同虛設。'
+    }
+  ]
+},
+// ─── 3: 耗材管理 ───
+{
+  title: '美甲耗材需要強制檢驗嗎？',
+  desc: '美甲施作涉及甲膠、卸甲液等<strong>化學成分</strong>，直接接觸人體。目前市場上的耗材品質參差不齊，缺乏統一審查標準。',
+  statusQuo: '美甲耗材不屬於藥品或醫療器材，不受衛福部強制審查。進口甲膠的重金屬、塑化劑、甲醛含量是否合格，全靠業者自律。',
+  options: [
+    {
+      stance: 'strict', label: '嚴格管制',
+      text: '所有美甲耗材須經台灣檢驗合格才能販售',
+      sub: '比照化妝品管理，強制檢測重金屬、塑化劑、甲醛',
+      effects: { support: -5, safety: 25, enforce: -15 },
+      reactions: [
+        { who: '消費者', icon: '💅', type: 'consumer', text: '倪倪舉雙手贊成：<strong>「法規應明文規範禁用檢驗未合格的甲膠，店家也應主動公開使用的耗材成分與品牌。」</strong>' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '認證耗材成本更高，<strong>小型工作室的利潤將被壓縮</strong>。部分低價經營者可能被迫退出市場或轉入地下。' },
+        { who: '衛福部', icon: '🏛', type: 'union', text: '美甲耗材種類繁多、更新快速，<strong>建立完整的檢驗體系需要大量人力與預算</strong>。目前化妝品管理已經人手不足。' }
+      ],
+      impacts: [
+        { text: '消費安全 +25', cls: 'up-good' },
+        { text: '民意支持 -5', cls: 'up-bad' },
+        { text: '可執行性 -15', cls: 'down-bad' },
+      ],
+      reality: '台灣化妝品已有「化粧品衛生安全管理法」，但美甲膠是否屬於化妝品仍有模糊空間。跨品類管理是法規灰色地帶。'
+    },
+    {
+      stance: 'moderate', label: '溫和改良',
+      text: '要求業者公開耗材資訊，不強制統一檢驗',
+      sub: '店家須標示使用品牌、產地與基本成分，違者罰款',
+      effects: { support: 5, safety: 10, enforce: 0 },
+      reactions: [
+        { who: '消費者', icon: '💅', type: 'consumer', text: '至少知道自己手上塗了什麼。倪倪已經在這樣做——<strong>預約前主動詢問品牌與產地</strong>。制度化後所有消費者都能受惠。' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '使用認證品牌的美甲師會被凸顯優勢，<strong>形成正向競爭</strong>。但標示規範的細節如何制定，業界需要參與討論。' },
+        { who: '執法面', icon: '⚖', type: 'official', text: '誰來稽查？地方衛生局？消保官？<strong>美甲工作室多為一人經營，稽查人力與量能是現實瓶頸。</strong>' }
+      ],
+      impacts: [
+        { text: '消費安全 +10', cls: 'up-good' },
+        { text: '民意支持 +5', cls: 'up-good' },
+        { text: '可執行性 ±0', cls: 'neutral' },
+      ],
+      reality: '資訊公開是成本最低的改善手段，但「要求公開」與「確保公開」之間有很大的落差，尤其對數千家一人工作室而言。'
+    },
+    {
+      stance: 'free', label: '維持自由',
+      text: '不介入，交由市場機制',
+      sub: '消費者自行判斷，業者自律公開',
+      effects: { support: 5, safety: -10, enforce: 5 },
+      reactions: [
+        { who: '消費者', icon: '💅', type: 'consumer', text: '繼續自己做功課。<strong>但不是每個消費者都知道要問、知道怎麼問。</strong>資訊不對稱是結構性問題，不是個人能力問題。' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '沒有額外負擔。但也代表——<strong>用心挑選安全耗材的美甲師，無法與使用廉價品的競爭者做出制度性區隔。</strong>' }
+      ],
+      impacts: [
+        { text: '民意支持 +5', cls: 'up-good' },
+        { text: '消費安全 -10', cls: 'down-bad' },
+        { text: '可執行性 +5', cls: 'up-good' },
+      ],
+      reality: '目前的現狀。品質好壞全靠業者良心和消費者眼力。'
+    }
+  ]
+},
+// ─── 4: 培訓門檻 ───
+{
+  title: '開課教美甲需要資格審查嗎？',
+  desc: '台灣美甲培訓課程從 2018 年的 17 期暴增至 2023 年的 110 期。<strong>任何人都可以開班授課</strong>，不需要教學資格、不需要年資、不需要證照。',
+  statusQuo: '無任何法規或行業規範要求美甲授課者具備特定資格。「開業即開課」是普遍現象。',
+  options: [
+    {
+      stance: 'strict', label: '嚴格管制',
+      text: '授課者須持有進階證照且通過教學資格審核',
+      sub: '由工會或政府單位審核授課資格，不合格者不得招生',
+      effects: { support: -15, safety: 15, enforce: -20 },
+      reactions: [
+        { who: '資深美甲師', icon: '✦', type: 'artist', text: 'Wendy 支持。<strong>「如果我是初學者，根本不會知道老師需要具備多少知識才能教會自己。」</strong>但她也知道，這會淘汰很多正在開課的同業。' },
+        { who: '新進美甲師', icon: '✦', type: 'artist', text: '對剛入行一兩年就想開課賺錢的人來說，這<strong>等於斷了一條收入來源</strong>。不滿聲浪很大。' },
+        { who: '行政機關', icon: '🏛', type: 'union', text: '誰來審核？審核標準怎麼定？<strong>目前連證照制度本身都沒有統一</strong>，更遑論建立在此之上的教學認證。' }
+      ],
+      impacts: [
+        { text: '消費安全 +15', cls: 'up-good' },
+        { text: '民意支持 -15', cls: 'up-bad' },
+        { text: '可執行性 -20', cls: 'down-bad' },
+      ],
+      reality: '全世界極少有國家對美甲培訓設有強制教學資格。這是理想但幾乎無法落地的選項。'
+    },
+    {
+      stance: 'moderate', label: '溫和改良',
+      text: '建立授課者自願登錄制度，公開資歷供學員查詢',
+      sub: '工會維護一份「授課者資歷公開資料庫」，列出年資、證照、學員評價',
+      effects: { support: 5, safety: 10, enforce: 0 },
+      reactions: [
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '有能力的人會主動登錄以取得優勢。<strong>市場透明化有助於良性競爭。</strong>' },
+        { who: '工會', icon: '🏛', type: 'union', text: '工會可擴大影響力——但也需要人力和資源維護平台。<strong>誰出錢、誰營運</strong>是關鍵問題。' },
+        { who: '學員', icon: '💅', type: 'consumer', text: '至少有地方可以查。但<strong>自願制意味著最需要被審查的人，可能根本不會登錄。</strong>' }
+      ],
+      impacts: [
+        { text: '消費安全 +10', cls: 'up-good' },
+        { text: '民意支持 +5', cls: 'up-good' },
+        { text: '可執行性 ±0', cls: 'neutral' },
+      ],
+      reality: '類似「師資公開」的機制在補教業曾被討論，但實際推動的進度緩慢。自願參與的平台效果取決於參與率。'
+    },
+    {
+      stance: 'free', label: '維持自由',
+      text: '不設門檻，學員自行判斷',
+      sub: '授課自由是市場一部分，學員應自行做功課',
+      effects: { support: 10, safety: -10, enforce: 5 },
+      reactions: [
+        { who: '資深美甲師', icon: '✦', type: 'artist', text: 'Wendy 擔心：<strong>專業未成熟就開課，學生不僅難以建立正確基礎，也可能浪費時間與學費。</strong>但市場不在意她的擔心。' },
+        { who: '新進業者', icon: '✦', type: 'artist', text: '教學收入是重要的第二曲線。<strong>從 17 期到 110 期的爆發，靠的就是零門檻。</strong>設限就是扼殺機會。' }
+      ],
+      impacts: [
+        { text: '民意支持 +10', cls: 'up-good' },
+        { text: '消費安全 -10', cls: 'down-bad' },
+        { text: '可執行性 +5', cls: 'up-good' },
+      ],
+      reality: '現狀。培訓品質靠口碑篩選，初學者最容易成為低品質教學的受害者——但他們往往是最無法辨別品質的人。'
+    }
+  ]
+},
+// ─── 5: 糾紛處理 ───
+{
+  title: '美甲消費糾紛該怎麼處理更有效？',
+  desc: '台北市每年僅約 30–40 件美甲爭議進入消保程序。消費者倪倪為了 2,000 元的糾紛不願跑流程；美甲師吳宜融被放鳥也只能自行吸收。<strong>雙方都覺得制度幫不上忙。</strong>',
+  statusQuo: '《消費者保護法》與民法皆可適用，但程序耗時、金額小，雙方多選擇私下解決或放棄。',
+  options: [
+    {
+      stance: 'strict', label: '嚴格管制',
+      text: '建立美容消費專屬快速調解機制',
+      sub: '設立美容消費線上調解平台，7天內完成調解，費用由敗訴方負擔',
+      effects: { support: -5, safety: 20, enforce: -15 },
+      reactions: [
+        { who: '消費者', icon: '💅', type: 'consumer', text: '倪倪說：<strong>「如果有方便的管道，我當然願意走。」</strong>問題一直不是沒有法律，而是程序太繁瑣。' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '吳宜融也歡迎——他被放鳥的損失也想有地方討。但擔心<strong>會不會變成「消費者隨便投訴」的武器？</strong>' },
+        { who: '行政機關', icon: '🏛', type: 'union', text: '新設平台需要預算、人力、法源。<strong>光是美甲就設專屬機制，其他微型服務業怎麼辦？</strong>可能引發政策不公的質疑。' }
+      ],
+      impacts: [
+        { text: '消費安全 +20', cls: 'up-good' },
+        { text: '民意支持 -5', cls: 'up-bad' },
+        { text: '可執行性 -15', cls: 'down-bad' },
+      ],
+      reality: '台灣目前有線上消費申訴平台（1950），但處理速度與效果因案而異。針對特定產業設立快速通道在制度上無前例。'
+    },
+    {
+      stance: 'moderate', label: '溫和改良',
+      text: '推動業者事前預防機制：標準化預約須知與同意書',
+      sub: '由工會制定範本，鼓勵業者使用，減少糾紛發生',
+      effects: { support: 10, safety: 10, enforce: 10 },
+      reactions: [
+        { who: '法律專家', icon: '⚖', type: 'official', text: '邱毓哲最推薦這個做法：<strong>「服務過程之中，若能在事前預防糾紛，便能提升交易過程中對美甲師的保障。」</strong>' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '預約須知可以幫助雙方事先對齊期待。<strong>取消政策、施作範圍、風險告知</strong>都能寫進去。低成本、高效益。' },
+        { who: '消費者', icon: '💅', type: 'consumer', text: '知道簽了什麼，出問題時也有依據。但<strong>如果美甲師不用這個範本呢？</strong>自願推廣的力度是關鍵。' }
+      ],
+      impacts: [
+        { text: '消費安全 +10', cls: 'up-good' },
+        { text: '民意支持 +10', cls: 'up-good' },
+        { text: '可執行性 +10', cls: 'up-good' },
+      ],
+      reality: '邱毓哲在報導中明確建議的方向。這是最「務實」的改善——不需要修法、不需要新機構，只需要一份好的範本和推廣意願。'
+    },
+    {
+      stance: 'free', label: '維持自由',
+      text: '不另設機制，依現行法律處理',
+      sub: '消保法與民法已有規範，問題在認知不足，應加強法律教育',
+      effects: { support: 5, safety: -5, enforce: 5 },
+      reactions: [
+        { who: '法律專家', icon: '⚖', type: 'official', text: '邱毓哲同意法律本身並未缺席。<strong>「現在缺乏的是從業人員對於法律的認知。」</strong>教育可能比立法更迫切。' },
+        { who: '消費者', icon: '💅', type: 'consumer', text: '倪倪的反應很直接：<strong>「為了 2000 元的糾紛跑流程太麻煩了。」</strong>知道有法律和願意使用法律是兩回事。' },
+        { who: '美甲師群體', icon: '✦', type: 'artist', text: '吳宜融承認自己查過相關資料，知道有保障。<strong>但「耗費的時間與心力往往得不償失」</strong>是他最終放棄的原因。' }
+      ],
+      impacts: [
+        { text: '民意支持 +5', cls: 'up-good' },
+        { text: '消費安全 -5', cls: 'down-bad' },
+        { text: '可執行性 +5', cls: 'up-good' },
+      ],
+      reality: '現狀。法律存在但不被使用。糾紛在社群上爆發、在私訊裡和解、在沈默中消散。結構性的「不划算」讓制度形同虛設。'
+    }
+  ]
+}
+];
+
+// ── ENGINE ──
+function startGame(){
+  document.getElementById('intro').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  document.getElementById('gameArea').style.display='block';
+  round = 0;
+  renderRound();
+}
+
+function renderRound(){
+  const r = ROUNDS[round];
+  document.getElementById('roundLabel').textContent = `議題 ${round+1} / ${ROUNDS.length}`;
+  const area = document.getElementById('gameArea');
+  area.innerHTML = `
+    <div class="policy-card">
+      <div class="policy-num">Policy Brief #${round+1}</div>
+      <h2 class="policy-title">${r.title}</h2>
+      <div class="policy-desc">${r.desc}</div>
+      <div class="status-quo">
+        <div class="status-quo-label">▍現狀</div>
+        <p>${r.statusQuo}</p>
+      </div>
+      <div class="options" id="options">
+        ${r.options.map((o,i) => `
+          <button class="option-btn" data-stance="${o.stance}" onclick="choose(${i})">
+            <div class="opt-label">${o.label}</div>
+            <div class="opt-text">${o.text}</div>
+            <div class="opt-sub">${o.sub}</div>
+          </button>
+        `).join('')}
+      </div>
+      <div class="reactions" id="reactions"></div>
+    </div>
+  `;
+  area.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function choose(idx){
+  const r = ROUNDS[round];
+  const o = r.options[idx];
+  log.push({ round, idx, label: o.label, text: o.text, title: r.title });
+
+  // disable
+  document.querySelectorAll('.option-btn').forEach((btn,i) => {
+    if(i===idx){
+      btn.style.borderColor = o.stance==='strict'?'var(--red)':o.stance==='moderate'?'var(--amber)':'var(--blue)';
+      btn.style.background = o.stance==='strict'?'var(--red-bg)':o.stance==='moderate'?'var(--amber-bg)':'var(--blue-bg)';
+    } else {
+      btn.style.opacity='0.25';btn.style.pointerEvents='none';
+    }
+  });
+
+  // apply
+  STATE.support = clamp(STATE.support + o.effects.support);
+  STATE.safety = clamp(STATE.safety + o.effects.safety);
+  STATE.enforce = clamp(STATE.enforce + o.effects.enforce);
+  updateDash();
+
+  // show reactions
+  const isLast = round >= ROUNDS.length - 1;
+  const reactDiv = document.getElementById('reactions');
+  reactDiv.innerHTML = `
+    <div class="impact-line">
+      ${o.impacts.map(im => `<span class="impact-tag ${im.cls}">${im.text}</span>`).join('')}
+    </div>
+    <div class="reaction-grid">
+      ${o.reactions.map(rx => `
+        <div class="reaction r-${rx.type}">
+          <div class="reaction-icon">${rx.icon}</div>
+          <div>
+            <div class="reaction-who">${rx.who}</div>
+            <div class="reaction-text">${rx.text}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    <div class="reality-note">⊹ 現實對照：${o.reality}</div>
+    <button class="next-btn" onclick="${isLast?'showFinal()':'nextRound()'}">${isLast?'查看你的政策成績單':'下一道議題 →'}</button>
+  `;
+  reactDiv.classList.add('show');
+  setTimeout(() => reactDiv.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+}
+
+function clamp(v){ return Math.max(0, Math.min(100, v)) }
+
+function updateDash(){
+  const els = [
+    ['vSupport','bSupport', STATE.support],
+    ['vSafety','bSafety', STATE.safety],
+    ['vEnforce','bEnforce', STATE.enforce],
+  ];
+  els.forEach(([vid, bid, val]) => {
+    const ve = document.getElementById(vid);
+    const be = document.getElementById(bid);
+    ve.textContent = Math.round(val);
+    be.style.width = val + '%';
+    ve.classList.remove('flash');void ve.offsetWidth;ve.classList.add('flash');
+  });
+}
+
+function nextRound(){ round++; renderRound(); }
+
+function showFinal(){
+  document.getElementById('gameArea').style.display='none';
+  document.getElementById('dashboard').style.display='none';
+  const f = document.getElementById('final');
+  f.style.display='block';
+
+  const sup = Math.round(STATE.support);
+  const saf = Math.round(STATE.safety);
+  const enf = Math.round(STATE.enforce);
+
+  // archetype
+  let arch, archDesc;
+  const strictCount = log.filter(l => l.label === '嚴格管制').length;
+  const freeCount = log.filter(l => l.label === '維持自由').length;
+  const modCount = log.filter(l => l.label === '溫和改良').length;
+
+  if(strictCount >= 3){
+    arch = '理想主義改革者';
+    archDesc = '你相信制度應該走在市場前面。你的政策方向正確，但在台灣的行政現實中，推動難度極高。每一條你寫下的規則，都需要數年的立法與執行才能落地——而市場不會等你。';
+  } else if(freeCount >= 3){
+    arch = '自由市場信徒';
+    archDesc = '你認為政府不該過度干預。在台灣的政治現實中，這是最不會得罪人的路線——但也意味著，消費者繼續自求多福，品質落差繼續存在，糾紛繼續在社群上爆發。';
+  } else if(modCount >= 3){
+    arch = '務實漸進主義者';
+    archDesc = '你選擇了最多人能接受、最容易落地的路線。這些改良不需要修法，不需要新機構——只需要資訊透明、事前預防和自願參與。問題是：溫和的改良，速度追得上暴漲的市場嗎？';
+  } else {
+    arch = '矛盾的決策者';
+    archDesc = '你在嚴格與自由之間搖擺——這不是弱點，而是真實的政策處境。每一道議題的利害關係不同，沒有人能用同一把尺量到底。這正是為什麼，這些規則至今還沒被寫出來。';
+  }
+
+  f.innerHTML = `
+    <div class="final-header">
+      <h2>你的政策成績單</h2>
+      <p>五道議題、五個選擇，這是你留下的規則</p>
+    </div>
+
+    <div class="verdict-card">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div class="doc-stamp" style="transform:rotate(-2deg);margin-bottom:0.8rem">${arch}</div>
+        <p style="font-size:0.88rem;color:var(--ink2);max-width:420px;margin:0 auto;line-height:1.85">${archDesc}</p>
+      </div>
+
+      <div class="final-meter-row">
+        <span class="final-meter-label">民意支持</span>
+        <span class="final-meter-val" style="color:var(--blue)">${sup}</span>
+      </div>
+      <div class="final-meter"><div class="final-meter-fill" style="background:var(--blue)" data-w="${sup}"></div></div>
+
+      <div class="final-meter-row">
+        <span class="final-meter-label">消費安全</span>
+        <span class="final-meter-val" style="color:var(--green)">${saf}</span>
+      </div>
+      <div class="final-meter"><div class="final-meter-fill" style="background:var(--green)" data-w="${saf}"></div></div>
+
+      <div class="final-meter-row">
+        <span class="final-meter-label">可執行性</span>
+        <span class="final-meter-val" style="color:var(--amber)">${enf}</span>
+      </div>
+      <div class="final-meter"><div class="final-meter-fill" style="background:var(--amber)" data-w="${enf}"></div></div>
+    </div>
+
+    <div class="verdict-card">
+      <h3>你的每一步</h3>
+      <div class="choice-log">
+        ${log.map((l,i) => `
+          <div class="choice-log-item">
+            <div class="cl-num">${i+1}</div>
+            <div>
+              <div class="cl-q">${l.title}</div>
+              <div class="cl-a">${l.label}：${l.text}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="comparison-box">
+      <h4>▍台灣的現狀是什麼？</h4>
+      <p>🔹 <strong>證照</strong>：不強制。雙軌並行，持照率約七分之一。</p>
+      <p>🔹 <strong>產業分類</strong>：仍歸於美容美髮業下，無獨立專法。</p>
+      <p>🔹 <strong>耗材管理</strong>：無強制檢驗，業者自律為主。</p>
+      <p>🔹 <strong>培訓門檻</strong>：零門檻。17 期到 110 期，爆發式成長。</p>
+      <p>🔹 <strong>糾紛處理</strong>：法律存在但鮮少被使用。年均不到 40 件進入消保程序。</p>
+      <p style="margin-top:1rem;color:var(--ink);font-weight:500">五題全選「維持自由」，就是今天的台灣。<br>你做了不同的選擇嗎？那些選擇為什麼在現實中沒有發生？</p>
+      <p style="margin-top:0.5rem;font-size:0.78rem;color:var(--ink3)">也許答案就在你剛才看到的那些反應裡——每一條規則都有贏家和輸家，每一次改革都有成本和阻力。政策的兩難，從來不是因為沒人想到解法，而是因為<strong>每個解法都有代價</strong>。</p>
+    </div>
+
+    <button class="restart-btn" onclick="location.reload()">重新制定政策</button>
+    <p class="credit">原始報導：政大大學報《指尖上的產業擴張：美甲熱潮下的制度隱憂》<br>記者／李若水、劉倚瑄、蔡孟安</p>
+  `;
+
+  f.scrollIntoView({behavior:'smooth'});
+  setTimeout(() => {
+    document.querySelectorAll('.final-meter-fill').forEach(el => { el.style.width = el.dataset.w + '%'; });
+  }, 400);
+}
+</script>
+</body>
+</html>

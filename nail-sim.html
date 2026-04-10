@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>開一間美甲工作室</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&family=Noto+Sans+TC:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#1A1614;
+  --bg2:#231F1C;
+  --bg3:#2D2724;
+  --surface:#352F2B;
+  --ink:#EDE6DE;
+  --ink2:#A89E94;
+  --ink3:#6E6359;
+  --rose:#D4707A;
+  --rose-dim:rgba(212,112,122,0.15);
+  --gold:#C9A96E;
+  --gold-dim:rgba(201,169,110,0.12);
+  --teal:#6BA3A0;
+  --teal-dim:rgba(107,163,160,0.12);
+  --peach:#E8B89C;
+  --danger:#C75D5D;
+  --safe:#7BAF7B;
+}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans TC',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.8;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── TEXTURE OVERLAY ── */
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:9999;opacity:0.5;
+}
+
+/* ── LAYOUT ── */
+.game-wrap{
+  max-width:560px;margin:0 auto;padding:1.5rem;
+  min-height:100vh;display:flex;flex-direction:column;
+}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  position:sticky;top:0;z-index:100;
+  background:var(--bg);
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  padding:0.8rem 0;margin-bottom:1.5rem;
+  display:none;
+}
+.stats-bar.visible{display:block}
+.stats-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;
+}
+.stat-item{text-align:center}
+.stat-label{font-size:0.6rem;color:var(--ink3);letter-spacing:0.15em;text-transform:uppercase}
+.stat-val{
+  font-family:'Playfair Display',serif;font-weight:700;font-size:1.3rem;
+  transition:all 0.5s;
+}
+.stat-val.bump{animation:bump 0.5s}
+@keyframes bump{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+.stat-val[data-type="income"]{color:var(--gold)}
+.stat-val[data-type="reputation"]{color:var(--teal)}
+.stat-val[data-type="risk"]{color:var(--rose)}
+.stat-val[data-type="skill"]{color:var(--peach)}
+
+.month-indicator{
+  text-align:center;font-size:0.65rem;color:var(--ink3);
+  margin-top:0.4rem;letter-spacing:0.2em;
+}
+
+/* ── SCREENS ── */
+.screen{
+  display:none;flex:1;
+  flex-direction:column;justify-content:center;
+  animation:screenIn 0.6s ease;
+}
+.screen.active{display:flex}
+@keyframes screenIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── INTRO ── */
+.intro-eyebrow{
+  font-size:0.7rem;letter-spacing:0.4em;color:var(--ink3);
+  text-align:center;margin-bottom:1.5rem;
+}
+.intro-title{
+  font-family:'Noto Serif TC',serif;font-weight:900;
+  font-size:clamp(2rem,7vw,3.2rem);text-align:center;line-height:1.25;
+  margin-bottom:0.8rem;
+}
+.intro-title em{
+  font-style:normal;
+  background:linear-gradient(135deg,var(--gold),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.intro-sub{
+  text-align:center;color:var(--ink2);font-size:0.92rem;
+  max-width:400px;margin:0 auto 2.5rem;
+}
+.start-btn{
+  display:block;margin:0 auto;
+  padding:1rem 3rem;
+  background:linear-gradient(135deg,var(--gold),var(--rose));
+  border:none;border-radius:99px;
+  color:var(--bg);font-family:inherit;font-size:0.95rem;font-weight:700;
+  cursor:pointer;transition:transform 0.3s,box-shadow 0.3s;
+  letter-spacing:0.05em;
+}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(201,169,110,0.3)}
+
+.intro-note{
+  text-align:center;font-size:0.72rem;color:var(--ink3);
+  margin-top:1.5rem;line-height:1.6;
+}
+
+/* ── DECISION CARD ── */
+.decision-card{
+  background:var(--bg2);border-radius:20px;
+  padding:2rem 1.8rem;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.round-tag{
+  display:inline-block;
+  background:var(--surface);border-radius:99px;
+  padding:0.25rem 0.9rem;font-size:0.7rem;color:var(--ink2);
+  letter-spacing:0.12em;margin-bottom:1.2rem;
+}
+.decision-title{
+  font-family:'Noto Serif TC',serif;font-weight:700;
+  font-size:clamp(1.2rem,4vw,1.6rem);line-height:1.4;
+  margin-bottom:1rem;
+}
+.decision-narrative{
+  color:var(--ink2);font-size:0.9rem;margin-bottom:1.8rem;
+  line-height:1.9;
+}
+.decision-narrative strong{color:var(--ink);font-weight:500}
+
+.choices{display:flex;flex-direction:column;gap:0.7rem}
+.choice-btn{
+  background:var(--surface);border:1px solid rgba(255,255,255,0.05);
+  border-radius:14px;padding:1.1rem 1.3rem;
+  cursor:pointer;text-align:left;font-family:inherit;
+  color:var(--ink);transition:all 0.3s;position:relative;overflow:hidden;
+}
+.choice-btn::before{
+  content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+  background:linear-gradient(135deg,var(--gold-dim),var(--rose-dim));
+  opacity:0;transition:opacity 0.3s;
+}
+.choice-btn:hover{border-color:var(--gold);transform:translateX(4px)}
+.choice-btn:hover::before{opacity:1}
+.choice-btn .choice-text{position:relative;z-index:1;font-size:0.95rem;font-weight:500}
+.choice-btn .choice-hint{
+  position:relative;z-index:1;
+  font-size:0.72rem;color:var(--ink3);margin-top:0.3rem;
+}
+
+/* ── CONSEQUENCE ── */
+.consequence{
+  margin-top:1.5rem;padding:1.3rem 1.4rem;
+  border-radius:14px;
+  background:var(--bg3);
+  border-left:3px solid var(--gold);
+  display:none;
+  animation:slideIn 0.4s ease;
+}
+.consequence.show{display:block}
+@keyframes slideIn{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:translateX(0)}}
+.consequence p{font-size:0.88rem;color:var(--ink2);margin-bottom:0.6rem;line-height:1.8}
+.consequence p:last-child{margin-bottom:0}
+.consequence .stat-change{
+  display:inline-block;font-size:0.75rem;font-weight:700;
+  padding:0.15rem 0.5rem;border-radius:6px;margin:0 0.15rem;
+}
+.stat-change.up{background:rgba(123,175,123,0.15);color:var(--safe)}
+.stat-change.down{background:rgba(199,93,93,0.15);color:var(--danger)}
+.stat-change.neutral{background:rgba(255,255,255,0.05);color:var(--ink2)}
+
+.next-btn{
+  display:block;margin:1.5rem auto 0;
+  padding:0.8rem 2.2rem;
+  background:transparent;border:1px solid var(--ink3);border-radius:99px;
+  color:var(--ink);font-family:inherit;font-size:0.85rem;
+  cursor:pointer;transition:all 0.3s;
+}
+.next-btn:hover{border-color:var(--gold);color:var(--gold)}
+
+/* ── FINAL REPORT ── */
+.report-header{text-align:center;margin-bottom:2.5rem}
+.report-header h2{
+  font-family:'Noto Serif TC',serif;font-weight:900;
+  font-size:clamp(1.5rem,5vw,2.2rem);margin-bottom:0.5rem;
+}
+.report-header p{color:var(--ink2);font-size:0.88rem}
+
+.report-card{
+  background:var(--bg2);border-radius:20px;
+  padding:2rem 1.8rem;margin-bottom:1.5rem;
+  border:1px solid rgba(255,255,255,0.04);
+}
+.report-stat-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0.9rem 0;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+}
+.report-stat-row:last-child{border-bottom:none}
+.report-stat-name{font-size:0.85rem;color:var(--ink2)}
+.report-stat-value{
+  font-family:'Playfair Display',serif;font-weight:700;font-size:1.4rem;
+}
+.report-meter{
+  width:100%;height:6px;background:var(--surface);border-radius:99px;
+  margin-top:0.4rem;overflow:hidden;
+}
+.report-meter-fill{
+  height:100%;border-radius:99px;transition:width 1.5s cubic-bezier(0.22,1,0.36,1);
+  width:0;
+}
+
+.report-section{margin-top:2rem}
+.report-section h3{
+  font-family:'Noto Serif TC',serif;font-weight:700;
+  font-size:1.05rem;margin-bottom:1rem;
+  padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);
+}
+
+.choice-recap{
+  display:flex;gap:1rem;align-items:flex-start;
+  margin-bottom:1.2rem;padding-bottom:1.2rem;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+}
+.choice-recap:last-child{border-bottom:none;padding-bottom:0;margin-bottom:0}
+.recap-num{
+  flex-shrink:0;width:28px;height:28px;
+  background:var(--surface);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.7rem;color:var(--ink3);font-weight:700;
+}
+.recap-text{font-size:0.82rem;color:var(--ink2);line-height:1.7}
+.recap-text strong{color:var(--ink);font-weight:500}
+
+.reality-box{
+  background:var(--surface);border-radius:14px;
+  padding:1.4rem 1.5rem;margin-top:1.5rem;
+}
+.reality-box h4{
+  font-size:0.75rem;letter-spacing:0.2em;color:var(--gold);
+  margin-bottom:0.8rem;
+}
+.reality-box p{font-size:0.82rem;color:var(--ink2);line-height:1.8;margin-bottom:0.5rem}
+.reality-box p:last-child{margin-bottom:0}
+
+.restart-btn{
+  display:block;margin:2rem auto;
+  padding:0.9rem 2.5rem;
+  background:var(--ink);color:var(--bg);
+  border:none;border-radius:99px;font-family:inherit;font-size:0.88rem;
+  cursor:pointer;transition:background 0.3s;font-weight:500;
+}
+.restart-btn:hover{background:var(--rose)}
+
+.credit{
+  text-align:center;font-size:0.68rem;color:var(--ink3);
+  margin-top:1rem;padding-bottom:3rem;line-height:1.6;
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:480px){
+  .game-wrap{padding:1rem}
+  .decision-card{padding:1.5rem 1.2rem}
+  .stats-grid{grid-template-columns:repeat(4,1fr);gap:0.3rem}
+  .stat-val{font-size:1.1rem}
+}
+</style>
+</head>
+<body>
+<div class="game-wrap">
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">月收入</div>
+        <div class="stat-val" data-type="income" id="sIncome">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">口碑</div>
+        <div class="stat-val" data-type="reputation" id="sRep">50</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">風險</div>
+        <div class="stat-val" data-type="risk" id="sRisk">20</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">專業</div>
+        <div class="stat-val" data-type="skill" id="sSkill">30</div>
+      </div>
+    </div>
+    <div class="month-indicator" id="monthLabel">第 1 個月</div>
+  </div>
+
+  <!-- INTRO SCREEN -->
+  <div class="screen active" id="screenIntro">
+    <div class="intro-eyebrow">互動模擬</div>
+    <h1 class="intro-title">開一間<em>美甲工作室</em></h1>
+    <p class="intro-sub">你即將進入美甲產業，從零開始經營自己的工作室。每一個決策都會影響你的收入、口碑、風險與專業度。</p>
+    <button class="start-btn" onclick="startGame()">開始創業</button>
+    <p class="intro-note">基於政大大學報《指尖上的產業擴張》報導<br>所有數據與情境取材自真實採訪</p>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div class="screen" id="screenGame"></div>
+
+  <!-- REPORT SCREEN -->
+  <div class="screen" id="screenReport"></div>
+
+</div>
+
+<script>
+// ── GAME STATE ──
+const S = { income: 0, reputation: 50, risk: 20, skill: 30 };
+let currentRound = 0;
+const choiceLog = [];
+
+// ── ROUNDS DATA ──
+const rounds = [
+{
+  month: 0, tag: '起點',
+  title: '你是誰？',
+  narrative: '在正式開始之前——你帶著什麼背景走進這一行？',
+  choices: [
+    {
+      text: '美容科畢業，手上有一張丙級證照',
+      hint: '基礎穩固，但實戰經驗有限',
+      effect: { income: 0, reputation: 5, risk: -5, skill: 20 },
+      consequence: '你有基本的指甲構造知識和護理技能。證照讓你比多數同行多了一層底氣——儘管市場上，<strong>只有約七分之一</strong>的美甲師持有證照。',
+      label: '美容科＋證照'
+    },
+    {
+      text: '完全自學轉行，沒有證照',
+      hint: '起步快，但知識體系需要自己補',
+      effect: { income: 0, reputation: 0, risk: 5, skill: 10 },
+      consequence: '你靠著網路教學和不斷練習入行，跟美甲師吳宜融一樣從學徒做起。沒有證照不影響接案——<strong>法律並未規定美甲師必須持證</strong>。但你的基礎知識需要靠自己持續補足。',
+      label: '自學轉行'
+    }
+  ]
+},
+{
+  month: 1, tag: '第 1 個月',
+  title: '工作室開在哪？',
+  narrative: '你手上有大約 <strong>10 萬元</strong>的啟動資金。一張桌子、LED 燈、基本膠材——硬體不是問題。問題是空間。',
+  choices: [
+    {
+      text: '先在家裡客廳做，省下房租',
+      hint: '成本最低，但專業感較弱',
+      effect: { income: 5000, reputation: -5, risk: 5, skill: 0 },
+      consequence: '零房租，利潤全歸你。但客人走進住宅大樓、坐在你家客廳，第一印象會打折。而且——<strong>美甲目前歸類於美容美髮業</strong>，理論上有營業場所限制，在住宅區經營存在法規灰色地帶。',
+      label: '在家接案'
+    },
+    {
+      text: '租一間小型獨立工作室',
+      hint: '月租約 8,000–15,000，但空間專業',
+      effect: { income: -5000, reputation: 10, risk: -5, skill: 0 },
+      consequence: '獨立空間讓客人感受到專業度，拍作品照也更好看。Wendy 的工作室就是從自宅一步步搬到獨立空間，口碑也隨之提升。但你的固定支出多了一筆。',
+      label: '獨立工作室'
+    }
+  ]
+},
+{
+  month: 2, tag: '第 2 個月',
+  title: '要做營業登記嗎？',
+  narrative: '你已經開始有收入了，雖然每個月還不穩定。朋友說「先做再說，很多人都沒登記」。但你有點不確定。',
+  choices: [
+    {
+      text: '先不登記，收入還不穩定',
+      hint: '省事省錢，但有潛在風險',
+      effect: { income: 2000, reputation: 0, risk: 15, skill: 0 },
+      consequence: '你省下了稅務和行政成本。但美容法律協會理事長邱毓哲指出：<strong>只要有營利行為即須登記</strong>，否則可能面臨補稅或罰鍰。很多美甲師跟小恩一樣，不確定「一個月一兩千元算不算需要登記」——答案是：算。',
+      label: '暫不登記'
+    },
+    {
+      text: '去登記，合法經營',
+      hint: '多了稅務成本，但安心',
+      effect: { income: -2000, reputation: 5, risk: -10, skill: 5 },
+      consequence: '你花了一些時間跑流程、處理稅務，但從此接案都有法律基礎。如果未來遇到糾紛，你的立場也更站得住腳。',
+      label: '合法登記'
+    }
+  ]
+},
+{
+  month: 3, tag: '第 3 個月',
+  title: '耗材怎麼選？',
+  narrative: '你在網路上看到兩種甲膠——一種便宜一半以上，另一種有台灣檢驗合格標章。價差很大。',
+  choices: [
+    {
+      text: '選便宜的，客人看不出差別',
+      hint: '成本壓低，利潤空間大',
+      effect: { income: 5000, reputation: -5, risk: 15, skill: 0 },
+      consequence: '短期省了不少。但你不確定重金屬、塑化劑、甲醛含量是否合格。消費者倪倪分享，她會主動詢問美甲師使用的<strong>品牌與產地</strong>，確認是否有合格標章。越來越多客人開始在意這些事。',
+      label: '低價耗材'
+    },
+    {
+      text: '用有認證的品牌，公開成分資訊',
+      hint: '成本較高，但建立信任',
+      effect: { income: -3000, reputation: 15, risk: -10, skill: 5 },
+      consequence: '你在工作室公開耗材品牌和檢驗報告，拍成限時動態。有些客人特別因此選了你。倪倪說過：<strong>「法規應明文規範禁用未合格的甲膠，店家也應主動公開耗材成分與品牌。」</strong>你正在做的，就是她理想中的樣子。',
+      label: '認證耗材'
+    }
+  ]
+},
+{
+  month: 5, tag: '第 5 個月',
+  title: '定價策略',
+  narrative: '你的 IG 開始有流量了。現在要決定定價——這會影響你吸引到什麼樣的客人。',
+  choices: [
+    {
+      text: '低價衝量，單次 600–800 元',
+      hint: '客人多，但每位耗時差不多',
+      effect: { income: 8000, reputation: -5, risk: 10, skill: -5 },
+      consequence: '客源快速增加，行程排得滿滿的。但你每位客人只能花兩小時，品質很難兼顧。時間壓力下，你開始省略某些前置步驟。這正是<strong>「學成即可創業」風氣下品質落差</strong>的成因之一。',
+      label: '低價衝量'
+    },
+    {
+      text: '中高價路線，單次 1,500–2,500 元',
+      hint: '客人較少但品質可控',
+      effect: { income: 3000, reputation: 10, risk: -5, skill: 10 },
+      consequence: '客人量成長較慢，但每一位都能好好做。你有時間做完整的前置保養、仔細修甲、耐心封層。美甲師小恩提到，業界厲害的美甲師光做基礎款就會花四小時——<strong>那不是技術不佳，而是對細節的追求</strong>。',
+      label: '中高定價'
+    }
+  ]
+},
+{
+  month: 7, tag: '第 7 個月',
+  title: '客人放鳥了',
+  narrative: '週六下午，你備好材料，空出兩小時等客人。時間到了——對方沒出現。訊息已讀不回。<br><br>這已經是這個月第二次了。',
+  choices: [
+    {
+      text: '自認倒楣，下次記得收訂金就好',
+      hint: '快速止損，但問題可能重複',
+      effect: { income: -2000, reputation: 0, risk: 0, skill: 0 },
+      consequence: '吳宜融也是這樣過來的。<strong>「法律在消費糾紛保障上程序繁雜，很多時候只能自己承擔損失。」</strong>你損失了兩個小時和材料費，但至少學會了：以後要收訂金。',
+      label: '自行吸收'
+    },
+    {
+      text: '擬一份預約須知，所有客人都要簽',
+      hint: '前置工作多，但長期保障',
+      effect: { income: -500, reputation: 5, risk: -10, skill: 5 },
+      consequence: '你花了一個晚上寫預約須知——取消政策、遲到規則、雙方權責。邱毓哲建議的正是這個做法：<strong>「在事前預防糾紛，便能提升交易過程中對美甲師的保障。」</strong>後來放鳥的情況大幅減少。',
+      label: '建立預約制度'
+    }
+  ]
+},
+{
+  month: 9, tag: '第 9 個月',
+  title: '客訴來了',
+  narrative: '一位客人做完指甲後傳訊息來，說封層有氣泡、跟參考圖差很多。她在 IG 限時動態發了對比照，雖然沒指名，但你的粉絲看得出來是你。',
+  choices: [
+    {
+      text: '私訊道歉，提供免費重做',
+      hint: '損失一次收入，但止住擴散',
+      effect: { income: -2000, reputation: 5, risk: -5, skill: 5 },
+      consequence: '你主動聯繫，承認封層確實沒做好。客人接受了重做，也刪除了限動。這一次你特別注意每一層的氣泡檢查。有時候，一次失誤反而讓你學到最多。',
+      label: '主動重做'
+    },
+    {
+      text: '回覆「注意事項有寫不保證 100% 還原」',
+      hint: '守住底線，但可能激化對方',
+      effect: { income: 0, reputation: -15, risk: 15, skill: 0 },
+      consequence: '這正是倪倪遭遇過的回應方式——<strong>「注意事項有寫不接完美主義者」</strong>。客人覺得被推卸責任，截圖發文，引發一波討論。邱毓哲提醒：施作過程中造成的瑕疵，在法律上屬於<strong>美甲師應負的責任</strong>。',
+      label: '堅持立場'
+    }
+  ]
+},
+{
+  month: 12, tag: '第 12 個月',
+  title: '有人找你開課',
+  narrative: '一年了。你的 IG 有了固定粉絲，有人私訊問你：「可以教我做美甲嗎？學費多少？」<br><br>你心動了。培訓是另一個收入來源。',
+  choices: [
+    {
+      text: '開始收學生，邊做邊教',
+      hint: '多一份收入，但你準備好了嗎？',
+      effect: { income: 10000, reputation: -5, risk: 15, skill: -5 },
+      consequence: '你開始一對一授課。但老實說，有些問題學生問了你答不上來——指甲構造、化學成分、過敏處理。Wendy 擔心的就是這個：<strong>「如果我是一個初學者，根本不會知道老師需要具備多少知識才能教會自己。」</strong>台灣美甲開課數量從 2018 年的 17 期增至 2023 年的 110 期，但授課品質誰來把關？',
+      label: '立即開課'
+    },
+    {
+      text: '先不急，再進修一年再說',
+      hint: '放棄眼前收入，但累積深度',
+      effect: { income: -5000, reputation: 10, risk: -10, skill: 20 },
+      consequence: '你報名了進階技術課程和指甲健康知識研習。吳宜融即使獨立創業後也持續進修——<strong>這份投資不會馬上回本，但你未來教出的學生，會真正學到東西</strong>。Wendy 建議：授課資格應由工會審核把關，降低「開業即開課」的情形。',
+      label: '繼續進修'
+    }
+  ]
+}
+];
+
+// ── GAME LOGIC ──
+function startGame(){
+  document.getElementById('screenIntro').classList.remove('active');
+  document.getElementById('screenGame').classList.add('active');
+  document.getElementById('statsBar').classList.add('visible');
+  currentRound = 0;
+  renderRound();
+}
+
+function renderRound(){
+  const r = rounds[currentRound];
+  const container = document.getElementById('screenGame');
+  document.getElementById('monthLabel').textContent = r.tag;
+
+  container.innerHTML = `
+    <div class="decision-card">
+      <span class="round-tag">${r.tag}・決策 ${currentRound+1}/${rounds.length}</span>
+      <h2 class="decision-title">${r.title}</h2>
+      <div class="decision-narrative">${r.narrative}</div>
+      <div class="choices" id="choices">
+        ${r.choices.map((c,i) => `
+          <button class="choice-btn" onclick="choose(${i})">
+            <div class="choice-text">${c.text}</div>
+            ${c.hint ? `<div class="choice-hint">${c.hint}</div>` : ''}
+          </button>
+        `).join('')}
+      </div>
+      <div class="consequence" id="consequence"></div>
+    </div>
+  `;
+  container.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function choose(idx){
+  const r = rounds[currentRound];
+  const c = r.choices[idx];
+  choiceLog.push({ round: currentRound, choice: idx, label: c.label });
+
+  // disable buttons
+  document.querySelectorAll('.choice-btn').forEach((btn,i) => {
+    if(i === idx){
+      btn.style.borderColor = 'var(--gold)';
+      btn.style.background = 'var(--gold-dim)';
+    } else {
+      btn.style.opacity = '0.3';
+      btn.style.pointerEvents = 'none';
+    }
+  });
+
+  // apply effects
+  for(const [k,v] of Object.entries(c.effect)){
+    S[k] = Math.max(0, Math.min(100, S[k] + v));
+    if(k === 'income') S[k] = Math.max(-10000, S[k] + v); // income can be negative-ish
+  }
+  // recalc income to be non-negative display
+  updateStats();
+
+  // show consequence
+  const conseq = document.getElementById('consequence');
+  const isLast = currentRound >= rounds.length - 1;
+  conseq.innerHTML = `
+    <p>${c.consequence}</p>
+    <p>
+      ${fmtChange('月收入', c.effect.income)}
+      ${fmtChange('口碑', c.effect.reputation)}
+      ${fmtChange('風險', c.effect.risk)}
+      ${fmtChange('專業', c.effect.skill)}
+    </p>
+    <button class="next-btn" onclick="${isLast ? 'showReport()' : 'nextRound()'}">
+      ${isLast ? '查看你的成績單' : '下一個月 →'}
+    </button>
+  `;
+  conseq.classList.add('show');
+  conseq.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function fmtChange(name, val){
+  if(val === 0) return '';
+  const cls = name === '風險' ? (val > 0 ? 'down' : 'up') : (val > 0 ? 'up' : 'down');
+  const sign = val > 0 ? '+' : '';
+  const display = name === '月收入' ? `${sign}${val.toLocaleString()}` : `${sign}${val}`;
+  return `<span class="stat-change ${cls}">${name} ${display}</span>`;
+}
+
+function updateStats(){
+  const elI = document.getElementById('sIncome');
+  const elR = document.getElementById('sRep');
+  const elRi = document.getElementById('sRisk');
+  const elS = document.getElementById('sSkill');
+  const display = Math.max(0, S.income);
+  elI.textContent = display >= 10000 ? (display/10000).toFixed(1)+'萬' : display.toLocaleString();
+  elR.textContent = Math.round(S.reputation);
+  elRi.textContent = Math.round(S.risk);
+  elS.textContent = Math.round(S.skill);
+  [elI,elR,elRi,elS].forEach(el => {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  });
+}
+
+function nextRound(){
+  currentRound++;
+  renderRound();
+}
+
+// ── REPORT ──
+function showReport(){
+  document.getElementById('screenGame').classList.remove('active');
+  document.getElementById('screenReport').classList.add('active');
+  document.getElementById('statsBar').classList.remove('visible');
+
+  const income = Math.max(0, S.income);
+  const rep = Math.round(S.reputation);
+  const risk = Math.round(S.risk);
+  const skill = Math.round(S.skill);
+
+  // grade
+  const score = rep + skill - risk;
+  let grade, gradeColor, gradeMsg;
+  if(score >= 80){ grade='A'; gradeColor='var(--safe)'; gradeMsg='你建立了一間有口碑、有制度的工作室。在這個產業裡，你是少數。'; }
+  else if(score >= 40){ grade='B'; gradeColor='var(--gold)'; gradeMsg='你活了下來，也學到了一些教訓。在門檻模糊的市場裡，這已經不容易。'; }
+  else { grade='C'; gradeColor='var(--rose)'; gradeMsg='你的工作室還在，但風險正在累積。這不是你的錯——是制度還沒準備好接住你。'; }
+
+  const container = document.getElementById('screenReport');
+  container.innerHTML = `
+    <div class="report-header">
+      <h2>你的工作室成績單</h2>
+      <p>經營 12 個月後</p>
+    </div>
+
+    <div class="report-card">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="font-family:'Playfair Display',serif;font-size:4rem;font-weight:700;color:${gradeColor}">${grade}</div>
+        <div style="font-size:0.85rem;color:var(--ink2);max-width:320px;margin:0.5rem auto 0">${gradeMsg}</div>
+      </div>
+
+      <div class="report-stat-row">
+        <span class="report-stat-name">月收入</span>
+        <span class="report-stat-value" style="color:var(--gold)">${income >= 10000 ? (income/10000).toFixed(1)+'萬' : income.toLocaleString()}</span>
+      </div>
+      <div class="report-stat-row">
+        <span class="report-stat-name">口碑</span>
+        <span class="report-stat-value" style="color:var(--teal)">${rep}</span>
+      </div>
+      <div class="report-meter"><div class="report-meter-fill" style="background:var(--teal)" data-w="${rep}"></div></div>
+
+      <div class="report-stat-row">
+        <span class="report-stat-name">風險指數</span>
+        <span class="report-stat-value" style="color:var(--rose)">${risk}</span>
+      </div>
+      <div class="report-meter"><div class="report-meter-fill" style="background:var(--rose)" data-w="${risk}"></div></div>
+
+      <div class="report-stat-row">
+        <span class="report-stat-name">專業度</span>
+        <span class="report-stat-value" style="color:var(--peach)">${skill}</span>
+      </div>
+      <div class="report-meter"><div class="report-meter-fill" style="background:var(--peach)" data-w="${skill}"></div></div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-section">
+        <h3>你的每一步</h3>
+        ${choiceLog.map((c,i) => `
+          <div class="choice-recap">
+            <div class="recap-num">${i+1}</div>
+            <div class="recap-text"><strong>${rounds[c.round].title}</strong>：${c.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="reality-box">
+      <h4>▍真實數據對照</h4>
+      <p>🔹 台灣美甲美睫業：5 年從 1,587 家成長至 3,523 家，翻倍成長</p>
+      <p>🔹 持照比例：同業中約七分之一持有美甲證照</p>
+      <p>🔹 消費糾紛：台北市每年僅約 30–40 件進入消保程序</p>
+      <p>🔹 培訓課程：從 2018 年 17 期暴增至 2023 年 110 期</p>
+      <p>🔹 法律現況：美甲無獨立專法，仍歸於美容美髮業下</p>
+      <p style="margin-top:0.8rem;color:var(--ink);font-weight:500">你在遊戲中遇到的每一個困境，都是真實美甲師正在經歷的日常。</p>
+    </div>
+
+    <button class="restart-btn" onclick="location.reload()">再玩一次，做不同的選擇</button>
+    <p class="credit">原始報導：政大大學報《指尖上的產業擴張：美甲熱潮下的制度隱憂》<br>記者／李若水、劉倚瑄、蔡孟安</p>
+  `;
+
+  container.scrollIntoView({behavior:'smooth'});
+
+  // animate meters
+  setTimeout(() => {
+    document.querySelectorAll('.report-meter-fill').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 300);
+}
+</script>
+</body>
+</html>
