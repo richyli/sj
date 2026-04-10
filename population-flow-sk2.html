@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>台灣人口流動 — 出生地 × 居住地</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#faf9f7;--surface:#fff;--border:#e5e2dc;--text:#1a1916;--muted:#888078;
+  --accent:#c0392b;--accent-light:#f8ece9;--blue:#2471a3;--blue-light:#e8f1f8;
+  --mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif;
+  --h1:#fde8e6;--h2:#f9b8b2;--h3:#f08070;--h4:#d95035;--h5:#9b1a0f;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh}
+
+header{background:var(--text);color:#fff;padding:1.2rem 2rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap}
+.header-title{font-size:1.05rem;font-weight:700}
+.header-sub{font-family:var(--mono);font-size:0.62rem;color:rgba(255,255,255,.45);margin-top:.15rem}
+.header-controls{display:flex;align-items:center;gap:1rem;margin-left:auto;flex-wrap:wrap}
+
+.year-tabs{display:flex;gap:2px}
+.year-tab{font-family:var(--mono);font-size:.68rem;padding:.4rem .8rem;background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s}
+.year-tab.active{background:var(--accent);color:#fff}
+.year-tab:hover:not(.active){background:rgba(255,255,255,.2);color:#fff}
+
+.mode-toggle{display:flex;border:1px solid rgba(255,255,255,.25);overflow:hidden}
+.mode-btn{font-family:var(--mono);font-size:.65rem;padding:.4rem .8rem;background:transparent;border:none;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;white-space:nowrap}
+.mode-btn.active{background:var(--blue);color:#fff}
+.mode-btn:hover:not(.active){background:rgba(255,255,255,.15);color:#fff}
+
+.info-strip{display:flex;gap:2rem;padding:.65rem 2rem;background:var(--blue-light);border-bottom:1px solid #c8dff0;font-size:.68rem;color:var(--blue);font-family:var(--mono);flex-wrap:wrap}
+.info-strip strong{font-weight:600}
+
+#loading{text-align:center;padding:5rem;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #d0ccc4;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:.5rem;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#app{display:none}
+
+.tab-nav{display:flex;border-bottom:2px solid var(--border);padding:0 2rem;background:var(--surface)}
+.tab-btn{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;padding:.8rem 1.4rem;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab-btn.active{color:var(--text);border-bottom-color:var(--accent);font-weight:500}
+.tab-btn:hover:not(.active){color:var(--text)}
+
+.view-panel{display:none;padding:1.5rem 2rem}
+.view-panel.active{display:block}
+
+/* ── SANKEY ── */
+#sankey-wrap{background:var(--surface);border:1px solid var(--border);padding:1.2rem}
+.sankey-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
+.sankey-title{font-weight:700;font-size:.9rem}
+.sankey-note{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+#sankey-svg{width:100%;display:block}
+
+/* ── MATRIX ── */
+.matrix-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--border)}
+.panel-header{padding:.9rem 1.2rem .8rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
+.panel-title{font-weight:700;font-size:.88rem}
+.panel-meta{font-family:var(--mono);font-size:.62rem;color:var(--muted)}
+.matrix-wrap{padding:1rem 1.2rem 1.2rem;overflow-x:auto}
+.matrix-note{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5}
+.matrix-grid{display:grid;gap:1px}
+.matrix-corner{display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 3px 0}
+.axis-arrow{font-family:var(--mono);font-size:.5rem;color:#bbb;text-align:right;line-height:1.3}
+.col-header{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-family:var(--mono);font-size:.58rem;color:var(--muted);padding:4px 2px;text-align:left;cursor:pointer;transition:color .15s}
+.col-header:hover,.col-header.active{color:var(--accent);font-weight:500}
+.row-header{font-family:var(--mono);font-size:.58rem;color:var(--muted);padding:2px 6px 2px 0;white-space:nowrap;display:flex;align-items:center;cursor:pointer;transition:color .15s}
+.row-header:hover,.row-header.active{color:var(--accent);font-weight:500}
+.cell{width:22px;height:22px;cursor:pointer;transition:transform .1s,box-shadow .1s;position:relative}
+.cell:hover{transform:scale(1.3);z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.cell.diagonal{outline:1.5px solid rgba(0,0,0,.15);outline-offset:-1.5px}
+.cell.selected{outline:2px solid var(--blue);outline-offset:-2px;z-index:20}
+.legend{display:flex;align-items:center;gap:.5rem;margin-top:.8rem;font-family:var(--mono);font-size:.58rem;color:var(--muted)}
+.legend-bar{display:flex;height:8px;flex:1;max-width:160px}
+.legend-seg{flex:1}
+
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;padding:1rem 1.2rem}
+.stat-box{text-align:center}
+.stat-num{font-family:var(--mono);font-size:1.4rem;font-weight:500;line-height:1}
+.stat-label{font-size:.65rem;color:var(--muted);margin-top:.25rem}
+.bars-wrap{padding:.5rem 1.2rem 1.2rem}
+.bar-row{display:grid;grid-template-columns:62px 1fr 50px;align-items:center;gap:.5rem;margin-bottom:.55rem}
+.bar-label{font-family:var(--mono);font-size:.6rem;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{background:var(--border);height:14px;overflow:hidden}
+.bar-fill{height:100%;transition:width .4s ease}
+.bar-val{font-family:var(--mono);font-size:.58rem;color:var(--muted);text-align:right}
+.no-selection{text-align:center;padding:2.5rem 1.5rem;color:var(--muted);font-size:.78rem;font-style:italic;border-top:1px solid var(--border)}
+
+#tooltip{position:fixed;background:var(--text);color:#fff;padding:.5rem .75rem;font-family:var(--mono);font-size:.65rem;pointer-events:none;z-index:1000;display:none;max-width:220px;line-height:1.6}
+.scope-toggle{display:flex;border:1px solid rgba(255,255,255,.25);overflow:hidden}
+.scope-btn{font-family:var(--mono);font-size:.65rem;padding:.4rem .85rem;background:transparent;border:none;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;white-space:nowrap}
+.scope-btn.active{background:#4a7048;color:#fff}
+.scope-btn:hover:not(.active){background:rgba(255,255,255,.15);color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-title">台灣人口流動分析</div>
+    <div class="header-sub">出生地 × 現居縣市 · 縣市層級 · od_county.csv</div>
+  </div>
+  <div class="header-controls">
+    <div class="year-tabs" id="yearTabs"></div>
+    <div class="scope-toggle">
+      <button class="scope-btn" id="scopeAll" onclick="setScope('all')">包含同縣市</button>
+      <button class="scope-btn active" id="scopeCross" onclick="setScope('cross')">跨縣市</button>
+    </div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeFrom" onclick="setMode('from')">出生地視角</button>
+      <button class="mode-btn" id="modeTo" onclick="setMode('to')">居住地視角</button>
+    </div>
+  </div>
+</header>
+
+<div class="info-strip">
+  <span id="modeDesc">Sankey：左 = 出生地，右 = 現居地（依遷入人口排序）</span>
+  <strong>· 點擊節點可篩選單一縣市流向</strong>
+  <span>· OD 矩陣：對角線 = 留在出生縣市</span>
+</div>
+
+<div id="loading"><span class="spinner"></span>載入 od_county.csv 中…</div>
+
+<div id="app">
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('sankey',this)">Sankey 流向圖</button>
+    <button class="tab-btn" onclick="switchTab('matrix',this)">OD 矩陣熱圖</button>
+  </div>
+
+  <div class="view-panel active" id="panel-sankey">
+    <div id="sankey-wrap">
+      <div class="sankey-header">
+        <div class="sankey-title" id="sankeyTitle">人口流動 Sankey</div>
+        <div class="sankey-note">僅顯示跨縣市移動人口 · 右側依現居地遷入量排序 · 點擊節點篩選</div>
+      </div>
+      <svg id="sankey-svg"></svg>
+    </div>
+  </div>
+
+  <div class="view-panel" id="panel-matrix">
+    <div class="matrix-layout">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="matrixTitle">人口流動 OD 矩陣</div>
+          <div class="panel-meta" id="matrixMeta"></div>
+        </div>
+        <div class="matrix-wrap">
+          <div class="matrix-note" id="matrixNote"></div>
+          <div id="matrixGrid" class="matrix-grid"></div>
+          <div class="legend">
+            <span>少</span>
+            <div class="legend-bar">
+              <div class="legend-seg" style="background:var(--h1)"></div>
+              <div class="legend-seg" style="background:var(--h2)"></div>
+              <div class="legend-seg" style="background:var(--h3)"></div>
+              <div class="legend-seg" style="background:var(--h4)"></div>
+              <div class="legend-seg" style="background:var(--h5)"></div>
+            </div>
+            <span>多（對數尺度）</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title" id="sideTitle">請選擇縣市</div>
+        </div>
+        <div id="sideContent"><div class="no-selection">點擊縣市名稱或格子<br>查看詳細流向</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ── STATE ──
+let allData={}, years=[], counties=[], currentYear=null, currentMode='from', selectedCounty=null, sankeyFiltered=null, showSelf=false;
+
+const COLORS_RED=['#f7f7f7','#fde8e6','#f9b8b2','#f08070','#d95035','#9b1a0f'];
+const PALETTE=['#e07b54','#5b9bd5','#6abf8a','#f0c050','#9b71c4','#e06080','#50b0c0','#c08050','#70a060','#8090c0','#d0705a','#5080a0','#80b870','#c09030','#7060b0','#c05070','#409090','#b07040','#609050','#7080b0','#a06050','#4070a0'];
+
+// ── FETCH ──
+async function init() {
+  try {
+    const res = await fetch('od_county.csv');
+    if (!res.ok) throw new Error();
+    const text = await res.text();
+    processData(Papa.parse(text,{header:true,skipEmptyLines:true}).data);
+  } catch(e) {
+    document.getElementById('loading').innerHTML='⚠️ 找不到 od_county.csv，請將檔案放在同一目錄。';
+  }
+}
+
+function processData(rows) {
+  const tmp={}, yset=new Set(), cset=new Set();
+  rows.forEach(r=>{
+    const yr=(r['year']||'').trim(), frm=(r['from']||'').trim(), to=(r['to']||'').trim(), pop=parseInt(r['pop']||0,10);
+    if(!yr||!frm||!to||isNaN(pop)) return;
+    if(!tmp[yr]) tmp[yr]={};
+    if(!tmp[yr][frm]) tmp[yr][frm]={};
+    tmp[yr][frm][to]=(tmp[yr][frm][to]||0)+pop;
+    yset.add(yr); cset.add(frm); cset.add(to);
+  });
+  allData=tmp; years=[...yset].sort(); counties=[...cset].sort();
+  currentYear=years[years.length-1];
+  buildYearTabs();
+  document.getElementById('loading').style.display='none';
+  document.getElementById('app').style.display='block';
+  renderSankey(); renderMatrix();
+}
+
+// ── TABS ──
+function switchTab(name,btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='sankey') renderSankey();
+  if(name==='matrix') renderMatrix();
+}
+
+function buildYearTabs() {
+  document.getElementById('yearTabs').innerHTML=years.map(y=>
+    `<button class="year-tab${y===currentYear?' active':''}" onclick="setYear('${y}')">${y}</button>`
+  ).join('');
+}
+
+function setYear(y) {
+  currentYear=y; sankeyFiltered=null;
+  document.querySelectorAll('.year-tab').forEach(b=>b.classList.toggle('active',b.textContent===y));
+  renderSankey(); renderMatrix();
+  if(selectedCounty) renderSide(selectedCounty);
+}
+
+function setMode(m) {
+  currentMode=m;
+  document.getElementById('modeFrom').classList.toggle('active',m==='from');
+  document.getElementById('modeTo').classList.toggle('active',m==='to');
+  renderMatrix();
+  if(selectedCounty) renderSide(selectedCounty);
+}
+
+function setScope(s) {
+  showSelf = (s==='all');
+  document.getElementById('scopeAll').classList.toggle('active', showSelf);
+  document.getElementById('scopeCross').classList.toggle('active', !showSelf);
+  renderSankey();
+}
+
+// ════════════════════════════════════════════
+// SANKEY
+// ════════════════════════════════════════════
+function renderSankey() {
+  const yr=allData[currentYear]||{};
+  const colorMap={};
+  counties.forEach((c,i)=>{ colorMap[c]=PALETTE[i%PALETTE.length]; });
+
+  // Build flows: cross-county always; self-flows when showSelf
+  let flows=[];
+  counties.forEach(frm=>counties.forEach(to=>{
+    if(frm===to && !showSelf) return;
+    const v=(yr[frm]?.[to])||0;
+    if(v>0) flows.push({from:frm,to,self:frm===to,value:v});
+  }));
+
+  if(sankeyFiltered) flows=flows.filter(f=>f.from===sankeyFiltered||f.to===sankeyFiltered);
+
+  // Aggregate totals
+  const inflowTot={}, outflowTot={};
+  flows.forEach(f=>{
+    inflowTot[f.to]=(inflowTot[f.to]||0)+f.value;
+    outflowTot[f.from]=(outflowTot[f.from]||0)+f.value;
+  });
+
+  // Right: sorted by inflow desc; Left: sorted by outflow desc
+  const rightOrder=[...new Set(flows.map(f=>f.to))].sort((a,b)=>(inflowTot[b]||0)-(inflowTot[a]||0));
+  const leftOrder=[...new Set(flows.map(f=>f.from))].sort((a,b)=>(outflowTot[b]||0)-(outflowTot[a]||0));
+
+  const wrap=document.getElementById('sankey-wrap');
+  const W=wrap.clientWidth-24;
+  const GAP=5, LABEL_W=70, NODE_W=14;
+  const nL=leftOrder.length, nR=rightOrder.length;
+  const minH=Math.max(nL,nR)*22;
+  const H=Math.max(minH,420);
+  const contentH=H-20;
+
+  const svg=d3.select('#sankey-svg').attr('height',H).attr('viewBox',`0 0 ${W} ${H}`);
+  svg.selectAll('*').remove();
+
+  const leftX=LABEL_W, rightX=W-LABEL_W-NODE_W;
+
+  function nodeSizes(order, totalFn) {
+    const tots=order.map(c=>totalFn(c)||0);
+    const sum=tots.reduce((a,b)=>a+b,0)||1;
+    const avail=contentH-GAP*(order.length-1);
+    return tots.map(t=>Math.max(14,(t/sum)*avail));
+  }
+
+  function yPos(sizes) {
+    const pos=[]; let y=10;
+    sizes.forEach(s=>{pos.push(y);y+=s+GAP;});
+    return pos;
+  }
+
+  const lSizes=nodeSizes(leftOrder,c=>outflowTot[c]);
+  const rSizes=nodeSizes(rightOrder,c=>inflowTot[c]);
+  const lY=yPos(lSizes), rY=yPos(rSizes);
+
+  const lMap={}, rMap={};
+  leftOrder.forEach((c,i)=>{ lMap[c]={y:lY[i],h:lSizes[i]}; });
+  rightOrder.forEach((c,i)=>{ rMap[c]={y:rY[i],h:rSizes[i]}; });
+
+  const lFill={}, rFill={};
+  leftOrder.forEach(c=>{ lFill[c]=0; });
+  rightOrder.forEach(c=>{ rFill[c]=0; });
+
+  // Sort flows: left node order → right node order
+  const sorted=[...flows].sort((a,b)=>{
+    const d=leftOrder.indexOf(a.from)-leftOrder.indexOf(b.from);
+    return d||rightOrder.indexOf(a.to)-rightOrder.indexOf(b.to);
+  });
+
+  // Ribbons
+  const rG=svg.append('g');
+  sorted.forEach(flow=>{
+    const ln=lMap[flow.from], rn=rMap[flow.to];
+    if(!ln||!rn) return;
+    const lH=(flow.value/(outflowTot[flow.from]||1))*ln.h;
+    const rH=(flow.value/(inflowTot[flow.to]||1))*rn.h;
+    const y0=ln.y+lFill[flow.from], y1=rn.y+rFill[flow.to];
+    lFill[flow.from]+=lH; rFill[flow.to]+=rH;
+    const x0=leftX+NODE_W, x1=rightX, cx=(x0+x1)/2;
+    const path=`M${x0},${y0} C${cx},${y0} ${cx},${y1} ${x1},${y1} L${x1},${y1+rH} C${cx},${y1+rH} ${cx},${y0+lH} ${x0},${y0+lH} Z`;
+    rG.append('path').attr('d',path)
+      .attr('fill', flow.self ? '#aaaaaa' : colorMap[flow.from])
+      .attr('opacity', flow.self ? 0.22 : 0.32)
+      .attr('stroke', flow.self ? '#999' : colorMap[flow.from])
+      .attr('stroke-width',.3).attr('stroke-opacity',.6)
+      .style('cursor','pointer')
+      .on('mouseenter',function(ev){
+        d3.select(this).attr('opacity', flow.self ? 0.45 : 0.7);
+        showTip(ev, flow.self
+          ? `<strong>${flow.from}</strong><br>留在出生縣市<br>${fmt(flow.value)} 人`
+          : `出生地：<strong>${flow.from}</strong><br>現居地：<strong>${flow.to}</strong><br>${fmt(flow.value)} 人`);
+      })
+      .on('mousemove',moveTip)
+      .on('mouseleave',function(){d3.select(this).attr('opacity', flow.self ? 0.22 : 0.32);hideTip();});
+  });
+
+  // Left nodes
+  const lG=svg.append('g');
+  leftOrder.forEach(c=>{
+    const n=lMap[c];
+    const g=lG.append('g').style('cursor','pointer')
+      .on('click',()=>{ sankeyFiltered=sankeyFiltered===c?null:c; renderSankey(); });
+    g.append('rect').attr('x',leftX).attr('y',n.y).attr('width',NODE_W).attr('height',n.h).attr('fill',colorMap[c]).attr('rx',2);
+    g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2).attr('text-anchor','end').attr('dominant-baseline','middle')
+      .attr('font-family','var(--sans)').attr('font-size',11).attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)').text(c);
+    if(n.h>24) g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2+13).attr('text-anchor','end').attr('dominant-baseline','middle')
+      .attr('font-family','var(--mono)').attr('font-size',9.5).attr('fill','var(--muted)').text(fmt(outflowTot[c]||0));
+  });
+
+  // Right nodes
+  const rgN=svg.append('g');
+  rightOrder.forEach(c=>{
+    const n=rMap[c];
+    const g=rgN.append('g').style('cursor','pointer')
+      .on('click',()=>{ sankeyFiltered=sankeyFiltered===c?null:c; renderSankey(); });
+    g.append('rect').attr('x',rightX).attr('y',n.y).attr('width',NODE_W).attr('height',n.h).attr('fill',colorMap[c]).attr('rx',2);
+    g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2).attr('text-anchor','start').attr('dominant-baseline','middle')
+      .attr('font-family','var(--sans)').attr('font-size',11).attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)').text(c);
+    if(n.h>24) g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2+13).attr('text-anchor','start').attr('dominant-baseline','middle')
+      .attr('font-family','var(--mono)').attr('font-size',9.5).attr('fill','var(--muted)').text(fmt(inflowTot[c]||0));
+  });
+
+  // Axis labels
+  svg.append('text').attr('x',leftX+NODE_W/2).attr('y',6).attr('text-anchor','middle')
+    .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('出生地');
+  svg.append('text').attr('x',rightX+NODE_W/2).attr('y',6).attr('text-anchor','middle')
+    .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('現居地');
+
+  if(sankeyFiltered) {
+    svg.append('text').attr('x',W/2).attr('y',6).attr('text-anchor','middle')
+      .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--accent)')
+      .text(`篩選：${sankeyFiltered}　（點擊節點取消）`);
+  }
+
+  document.getElementById('sankeyTitle').textContent=`${currentYear} 年 ${showSelf?'全部（含留在出生縣市）':'跨縣市'}人口流動`;
+  document.querySelector('.sankey-note').textContent=showSelf
+    ?'灰色帶 = 留在出生縣市 · 右側依現居地總人口排序 · 點擊節點篩選'
+    :'僅顯示跨縣市移動人口 · 右側依現居地遷入量排序 · 點擊節點篩選';
+}
+
+// ════════════════════════════════════════════
+// MATRIX
+// ════════════════════════════════════════════
+function getCellValue(rowC,colC) {
+  const yr=allData[currentYear]||{};
+  return currentMode==='from'?(yr[rowC]?.[colC]||0):(yr[colC]?.[rowC]||0);
+}
+
+function renderMatrix() {
+  const n=counties.length, grid=document.getElementById('matrixGrid');
+  const vals=[];
+  counties.forEach(r=>counties.forEach(c=>{if(r!==c){const v=getCellValue(r,c);if(v>0) vals.push(v);}}));
+  vals.sort((a,b)=>a-b);
+  const logMin=vals.length?Math.log(vals[0]||1):0, logMax=vals.length?Math.log(vals[vals.length-1]):1;
+
+  function cs(v,isDiag) {
+    if(isDiag) return '#f0f0ee';
+    if(!v) return '#f7f7f7';
+    const t=(Math.log(v)-logMin)/(logMax-logMin||1);
+    return COLORS_RED[Math.min(Math.floor(t*(COLORS_RED.length-1)),COLORS_RED.length-2)+1];
+  }
+
+  grid.style.cssText=`display:grid;grid-template-columns:62px repeat(${n},22px);grid-template-rows:62px repeat(${n},22px);gap:1px;`;
+  let html=`<div class="matrix-corner"><div class="axis-arrow">${currentMode==='from'?'出生地↓':'居住地↓'}<br>${currentMode==='from'?'→居住地':'→出生地'}</div></div>`;
+  counties.forEach(c=>{html+=`<div class="col-header${selectedCounty===c?' active':''}" onclick="selectCounty('${c}')" title="${c}">${c}</div>`;});
+  counties.forEach(r=>{
+    html+=`<div class="row-header${selectedCounty===r?' active':''}" onclick="selectCounty('${r}')">${r}</div>`;
+    counties.forEach(c=>{
+      const isDiag=r===c, v=getCellValue(r,c);
+      const frm=currentMode==='from'?r:c, to=currentMode==='from'?c:r;
+      const sel=(selectedCounty===r||selectedCounty===c)?' selected':'';
+      html+=`<div class="cell${isDiag?' diagonal':''}${sel}" style="background:${cs(v,isDiag)}" data-from="${frm}" data-to="${to}" data-val="${v}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()" onclick="cellClick('${r}','${c}')"></div>`;
+    });
+  });
+  grid.innerHTML=html;
+  document.getElementById('matrixMeta').textContent=`${currentYear} 年・${counties.length} 縣市`;
+  document.getElementById('matrixNote').textContent=currentMode==='from'
+    ?'縱軸（列）= 出生地，橫軸（欄）= 現居縣市。對角線 = 留在出生縣市。'
+    :'縱軸（列）= 現居縣市，橫軸（欄）= 出生地。對角線 = 留在出生縣市。';
+}
+
+function cellClick(r,c){selectCounty(r===c?r:(currentMode==='from'?r:c));}
+function selectCounty(name){selectedCounty=name;renderMatrix();renderSide(name);}
+
+function renderSide(name) {
+  document.getElementById('sideTitle').textContent=name;
+  const yr=allData[currentYear]||{}, outData=yr[name]||{};
+  const stayVal=outData[name]||0;
+  const totalOut=Object.values(outData).reduce((s,v)=>s+v,0);
+  const movedOut=totalOut-stayVal;
+  const movedIn=counties.reduce((s,c)=>s+(yr[c]?.[name]||0),0)-stayVal;
+  const outFlows=counties.filter(c=>c!==name).map(c=>({county:c,val:outData[c]||0})).sort((a,b)=>b.val-a.val).slice(0,10);
+  const inFlows=counties.filter(c=>c!==name).map(c=>({county:c,val:yr[c]?.[name]||0})).sort((a,b)=>b.val-a.val).slice(0,10);
+  const outMax=outFlows[0]?.val||1, inMax=inFlows[0]?.val||1;
+  document.getElementById('sideContent').innerHTML=`
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num" style="color:var(--accent)">${fmt(movedOut)}</div><div class="stat-label">離開出生地</div></div>
+      <div class="stat-box"><div class="stat-num" style="color:var(--blue)">${fmt(movedIn)}</div><div class="stat-label">外縣市遷入</div></div>
+    </div>
+    <div class="stat-row" style="padding-top:0">
+      <div class="stat-box"><div class="stat-num">${fmt(stayVal)}</div><div class="stat-label">留在出生縣市</div></div>
+      <div class="stat-box"><div class="stat-num">${pct(stayVal,totalOut)}</div><div class="stat-label">留鄉率</div></div>
+    </div>
+    <div class="panel-header" style="border-top:1px solid var(--border)"><div class="panel-title" style="font-size:.78rem;color:var(--accent)">▸ 出生在 ${name}，移居至…</div></div>
+    <div class="bars-wrap">${outFlows.map(f=>barRow(f.county,f.val,outMax,'var(--accent)')).join('')}</div>
+    <div class="panel-header" style="border-top:1px solid var(--border)"><div class="panel-title" style="font-size:.78rem;color:var(--blue)">▸ 現居 ${name}，出生於…</div></div>
+    <div class="bars-wrap">${inFlows.map(f=>barRow(f.county,f.val,inMax,'var(--blue)')).join('')}</div>`;
+}
+
+function barRow(label,val,max,color){
+  return `<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${max>0?(val/max*100).toFixed(1):0}%;background:${color}"></div></div><div class="bar-val">${fmt(val)}</div></div>`;
+}
+
+// ── TOOLTIP ──
+const tip=document.getElementById('tooltip');
+function showTip(event,htmlOrEl){
+  if(typeof htmlOrEl==='string'){tip.innerHTML=htmlOrEl;}
+  else{
+    const el=htmlOrEl,from=el.dataset.from,to=el.dataset.to,v=parseInt(el.dataset.val);
+    tip.innerHTML=from===to?`<strong>${from}</strong><br>留在出生縣市<br>${fmt(v)} 人`:`出生地：<strong>${from}</strong><br>現居地：<strong>${to}</strong><br>${fmt(v)} 人`;
+  }
+  tip.style.display='block'; moveTip(event);
+}
+document.addEventListener('mousemove',moveTip);
+function moveTip(e){if(tip.style.display==='none') return;tip.style.left=Math.min(e.clientX+14,window.innerWidth-230)+'px';tip.style.top=(e.clientY-10)+'px';}
+function hideTip(){tip.style.display='none';}
+
+function fmt(n){return n>=10000?(n/10000).toFixed(1)+'萬':n.toLocaleString();}
+function pct(a,b){return b?(a/b*100).toFixed(1)+'%':'—';}
+
+init();
+</script>
+</body>
+</html>
