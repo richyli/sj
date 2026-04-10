@@ -72,7 +72,7 @@ header{background:var(--text);color:#fff;padding:1.2rem 2rem;display:flex;align-
 .row-header{font-family:var(--mono);font-size:.58rem;color:var(--muted);padding:2px 6px 2px 0;white-space:nowrap;display:flex;align-items:center;cursor:pointer;transition:color .15s}
 .row-header:hover,.row-header.active{color:var(--accent);font-weight:500}
 .cell{width:22px;height:22px;cursor:pointer;transition:transform .1s,box-shadow .1s;position:relative}
-.cell:hover{transform:scale(1.3);z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.cell:hover{transform:scale(2);z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .cell.diagonal{outline:1.5px solid rgba(0,0,0,.15);outline-offset:-1.5px}
 .cell.selected{outline:2px solid var(--blue);outline-offset:-2px;z-index:20}
 .legend{display:flex;align-items:center;gap:.5rem;margin-top:.8rem;font-family:var(--mono);font-size:.58rem;color:var(--muted)}
@@ -284,32 +284,39 @@ function renderSankey() {
   const wrap=document.getElementById('sankey-wrap');
   const W=wrap.clientWidth-24;
   const GAP=8, LABEL_W=70, NODE_W=14;
-  const nL=leftOrder.length, nR=rightOrder.length;
-  // give each node at least 36px so labels are readable; page scrolls naturally
-  const minPerNode=36;
-  const H=Math.max(nL,nR)*(minPerNode+GAP)+60;
-  const contentH=H-40;
+  const MIN_NODE = sankeyFiltered ? 32 : 24; // larger min when filtered (fewer nodes, more space)
+
+  // Use sqrt-proportional sizing to reduce extreme skew (新北市 vs 連江縣)
+  // then clamp to MIN_NODE; compute actual H from real sizes
+  function computeSizes(order, totalFn) {
+    if(!order.length) return [];
+    const tots = order.map(c => totalFn(c)||0);
+    const sqrts = tots.map(t => Math.sqrt(t));
+    const sqrtSum = sqrts.reduce((a,b)=>a+b,0)||1;
+    // proportionally spread over 700px reference before clamping
+    return sqrts.map(s => Math.max(MIN_NODE, (s/sqrtSum)*700));
+  }
+
+  const lSizes = computeSizes(leftOrder, c=>outflowTot[c]);
+  const rSizes = computeSizes(rightOrder, c=>inflowTot[c]);
+
+  // H = tallest side's actual total + padding (page scrolls naturally)
+  const lTotalH = lSizes.reduce((a,b)=>a+b,0) + GAP*(leftOrder.length-1);
+  const rTotalH = rSizes.reduce((a,b)=>a+b,0) + GAP*(rightOrder.length-1);
+  const H = Math.max(lTotalH, rTotalH) + 60;
+  const contentH = H - 40; // unused but kept for compat
 
   const svg=d3.select('#sankey-svg').attr('height',H).attr('viewBox',`0 0 ${W} ${H}`);
   svg.selectAll('*').remove();
 
   const leftX=LABEL_W, rightX=W-LABEL_W-NODE_W;
 
-  function nodeSizes(order, totalFn) {
-    const tots=order.map(c=>totalFn(c)||0);
-    const sum=tots.reduce((a,b)=>a+b,0)||1;
-    const avail=contentH-GAP*(order.length-1);
-    return tots.map(t=>Math.max(24,(t/sum)*avail));
-  }
-
   function yPos(sizes) {
-    const pos=[]; let y=10;
+    const pos=[]; let y=20;
     sizes.forEach(s=>{pos.push(y);y+=s+GAP;});
     return pos;
   }
 
-  const lSizes=nodeSizes(leftOrder,c=>outflowTot[c]);
-  const rSizes=nodeSizes(rightOrder,c=>inflowTot[c]);
   const lY=yPos(lSizes), rY=yPos(rSizes);
 
   const lMap={}, rMap={};
@@ -362,7 +369,7 @@ function renderSankey() {
     g.append('rect').attr('x',leftX).attr('y',n.y).attr('width',NODE_W).attr('height',n.h).attr('fill',colorMap[c]).attr('rx',2);
     g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2).attr('text-anchor','end').attr('dominant-baseline','middle')
       .attr('font-family','var(--sans)').attr('font-size',11).attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)').text(c);
-    if(n.h>24) g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2+13).attr('text-anchor','end').attr('dominant-baseline','middle')
+    if(n.h>20) g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2+13).attr('text-anchor','end').attr('dominant-baseline','middle')
       .attr('font-family','var(--mono)').attr('font-size',9.5).attr('fill','var(--muted)').text(fmt(outflowTot[c]||0));
   });
 
@@ -375,7 +382,7 @@ function renderSankey() {
     g.append('rect').attr('x',rightX).attr('y',n.y).attr('width',NODE_W).attr('height',n.h).attr('fill',colorMap[c]).attr('rx',2);
     g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2).attr('text-anchor','start').attr('dominant-baseline','middle')
       .attr('font-family','var(--sans)').attr('font-size',11).attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)').text(c);
-    if(n.h>24) g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2+13).attr('text-anchor','start').attr('dominant-baseline','middle')
+    if(n.h>20) g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2+13).attr('text-anchor','start').attr('dominant-baseline','middle')
       .attr('font-family','var(--mono)').attr('font-size',9.5).attr('fill','var(--muted)').text(fmt(inflowTot[c]||0));
   });
 
