@@ -90,17 +90,26 @@ header{background:var(--text);color:#fff;padding:.85rem 1.4rem}
 .legend-bar{display:flex;height:7px;flex:1;max-width:120px}
 .legend-seg{flex:1}
 
-.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;padding:.8rem 1.1rem}
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:.5rem;padding:.8rem 1rem}
 .stat-box{text-align:center}
 .stat-num{font-family:var(--mono);font-size:1.25rem;font-weight:500;line-height:1}
 .stat-label{font-size:.6rem;color:var(--muted);margin-top:.2rem}
 .bars-wrap{padding:.4rem 1.1rem .9rem}
-.bar-row{display:grid;grid-template-columns:60px 1fr 48px;align-items:center;gap:.4rem;margin-bottom:.45rem}
+/* bar-row redefined in dual-bars section */
 .bar-label{font-family:var(--mono);font-size:.58rem;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-track{background:var(--border);height:12px;overflow:hidden}
 .bar-fill{height:100%;transition:width .4s ease}
 .bar-val{font-family:var(--mono);font-size:.56rem;color:var(--muted);text-align:right}
 .no-selection{text-align:center;padding:1.8rem 1.2rem;color:var(--muted);font-size:.73rem;font-style:italic;border-top:1px solid var(--border)}
+.dual-bars{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--border)}
+.dual-col{padding:.5rem .7rem .8rem}
+.dual-col-title{font-family:var(--mono);font-size:.6rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.45rem}
+.bar-row{display:grid;grid-template-columns:1fr 36px;align-items:center;gap:.3rem;margin-bottom:.4rem}
+.bar-label{font-family:var(--mono);font-size:.57rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track-wrap{display:flex;flex-direction:column;gap:1px}
+.bar-track{background:var(--border);height:10px;overflow:hidden}
+.bar-fill{height:100%;transition:width .35s ease}
+.bar-val{font-family:var(--mono);font-size:.55rem;color:var(--muted);text-align:right}
 
 /* MAP */
 .map-layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
@@ -532,151 +541,156 @@ function renderSankey() {
   const colorMap={};
   counties.forEach((c,i)=>{ colorMap[c]=PALETTE[i%PALETTE.length]; });
 
-  // Build flows: cross-county always; self-flows when showSelf
   let flows=[];
   counties.forEach(frm=>counties.forEach(to=>{
     if(frm===to && !showSelf) return;
     const v=(yr[frm]?.[to])||0;
     if(v>0) flows.push({from:frm,to,self:frm===to,value:v});
   }));
-
   if(sankeyFiltered) flows=flows.filter(f=>f.from===sankeyFiltered||f.to===sankeyFiltered);
 
-  // Aggregate totals
   const inflowTot={}, outflowTot={};
   flows.forEach(f=>{
     inflowTot[f.to]=(inflowTot[f.to]||0)+f.value;
     outflowTot[f.from]=(outflowTot[f.from]||0)+f.value;
   });
 
-  // Right: sorted by inflow desc; Left: sorted by outflow desc
-  const rightOrder=[...new Set(flows.map(f=>f.to))].sort((a,b)=>(inflowTot[b]||0)-(inflowTot[a]||0));
-  const leftOrder=[...new Set(flows.map(f=>f.from))].sort((a,b)=>(outflowTot[b]||0)-(outflowTot[a]||0));
+  // VERTICAL: top=出生地, bottom=現居地
+  // top row sorted by outflow desc; bottom row sorted by inflow desc
+  const topOrder=[...new Set(flows.map(f=>f.from))].sort((a,b)=>(outflowTot[b]||0)-(outflowTot[a]||0));
+  const botOrder=[...new Set(flows.map(f=>f.to))].sort((a,b)=>(inflowTot[b]||0)-(inflowTot[a]||0));
 
   const wrap=document.getElementById('sankey-wrap');
-  const W=wrap.clientWidth-24;
-  const GAP=8, LABEL_W=70, NODE_W=14;
-  const MIN_NODE = sankeyFiltered ? 32 : 24; // larger min when filtered (fewer nodes, more space)
+  const W=wrap.clientWidth-8;  // no side padding needed now
+  const MIN_NODE=sankeyFiltered?20:14;
+  const GAP=5, LABEL_H=28, NODE_H=16;
+  const BAND_H=80; // ribbon zone height
 
-  // Use sqrt-proportional sizing to reduce extreme skew (新北市 vs 連江縣)
-  // then clamp to MIN_NODE; compute actual H from real sizes
-  function computeSizes(order, totalFn) {
+  // Node widths proportional to sqrt(value), clamped to MIN_NODE
+  function computeWidths(order, totalFn) {
     if(!order.length) return [];
-    const tots = order.map(c => totalFn(c)||0);
-    const sqrts = tots.map(t => Math.sqrt(t));
-    const sqrtSum = sqrts.reduce((a,b)=>a+b,0)||1;
-    // proportionally spread over 700px reference before clamping
-    return sqrts.map(s => Math.max(MIN_NODE, (s/sqrtSum)*700));
+    const tots=order.map(c=>totalFn(c)||0);
+    const sqrts=tots.map(t=>Math.sqrt(t));
+    const sqrtSum=sqrts.reduce((a,b)=>a+b,0)||1;
+    const available=W - GAP*(order.length-1);
+    return sqrts.map(s=>Math.max(MIN_NODE,(s/sqrtSum)*available));
   }
 
-  const lSizes = computeSizes(leftOrder, c=>outflowTot[c]);
-  const rSizes = computeSizes(rightOrder, c=>inflowTot[c]);
+  const tSizes=computeWidths(topOrder,c=>outflowTot[c]);
+  const bSizes=computeWidths(botOrder,c=>inflowTot[c]);
 
-  // H = tallest side's actual total + padding (page scrolls naturally)
-  const lTotalH = lSizes.reduce((a,b)=>a+b,0) + GAP*(leftOrder.length-1);
-  const rTotalH = rSizes.reduce((a,b)=>a+b,0) + GAP*(rightOrder.length-1);
-  const H = Math.max(lTotalH, rTotalH) + 60;
-  const contentH = H - 40; // unused but kept for compat
-
-  const svg=d3.select('#sankey-svg').attr('height',H).attr('viewBox',`0 0 ${W} ${H}`);
-  svg.selectAll('*').remove();
-
-  const leftX=LABEL_W, rightX=W-LABEL_W-NODE_W;
-
-  function yPos(sizes) {
-    const pos=[]; let y=20;
-    sizes.forEach(s=>{pos.push(y);y+=s+GAP;});
+  // x positions
+  function xPos(sizes) {
+    const pos=[]; let x=0;
+    sizes.forEach(s=>{ pos.push(x); x+=s+GAP; });
     return pos;
   }
 
-  const lY=yPos(lSizes), rY=yPos(rSizes);
+  const tX=xPos(tSizes), bX=xPos(bSizes);
+  const tMap={}, bMap={};
+  topOrder.forEach((c,i)=>{ tMap[c]={x:tX[i],w:tSizes[i]}; });
+  botOrder.forEach((c,i)=>{ bMap[c]={x:bX[i],w:bSizes[i]}; });
 
-  const lMap={}, rMap={};
-  leftOrder.forEach((c,i)=>{ lMap[c]={y:lY[i],h:lSizes[i]}; });
-  rightOrder.forEach((c,i)=>{ rMap[c]={y:rY[i],h:rSizes[i]}; });
+  const topY=LABEL_H, nodeY=topY+NODE_H, ribbonY=nodeY+NODE_H, botNodeY=ribbonY+BAND_H;
+  const H=botNodeY+NODE_H+LABEL_H+6;
 
-  const lFill={}, rFill={};
-  leftOrder.forEach(c=>{ lFill[c]=0; });
-  rightOrder.forEach(c=>{ rFill[c]=0; });
+  const svg=d3.select('#sankey-svg')
+    .attr('width',W).attr('height',H)
+    .attr('viewBox',`0 0 ${W} ${H}`)
+    .style('max-width','100%');
+  svg.selectAll('*').remove();
 
-  // Sort flows: left node order → right node order
+  // Fill tracking
+  const tFill={}, bFill={};
+  topOrder.forEach(c=>{ tFill[c]=0; });
+  botOrder.forEach(c=>{ bFill[c]=0; });
+
+  // Sort flows for stacking
   const sorted=[...flows].sort((a,b)=>{
-    const d=leftOrder.indexOf(a.from)-leftOrder.indexOf(b.from);
-    return d||rightOrder.indexOf(a.to)-rightOrder.indexOf(b.to);
+    const d=topOrder.indexOf(a.from)-topOrder.indexOf(b.from);
+    return d||botOrder.indexOf(a.to)-botOrder.indexOf(b.to);
   });
 
   // Ribbons
   const rG=svg.append('g');
   sorted.forEach(flow=>{
-    const ln=lMap[flow.from], rn=rMap[flow.to];
-    if(!ln||!rn) return;
-    const lH=(flow.value/(outflowTot[flow.from]||1))*ln.h;
-    const rH=(flow.value/(inflowTot[flow.to]||1))*rn.h;
-    const y0=ln.y+lFill[flow.from], y1=rn.y+rFill[flow.to];
-    lFill[flow.from]+=lH; rFill[flow.to]+=rH;
-    const x0=leftX+NODE_W, x1=rightX, cx=(x0+x1)/2;
-    const path=`M${x0},${y0} C${cx},${y0} ${cx},${y1} ${x1},${y1} L${x1},${y1+rH} C${cx},${y1+rH} ${cx},${y0+lH} ${x0},${y0+lH} Z`;
+    const tn=tMap[flow.from], bn=bMap[flow.to];
+    if(!tn||!bn) return;
+    const tW=(flow.value/(outflowTot[flow.from]||1))*tn.w;
+    const bW=(flow.value/(inflowTot[flow.to]||1))*bn.w;
+    const x0=tn.x+tFill[flow.from], x1=bn.x+bFill[flow.to];
+    tFill[flow.from]+=tW; bFill[flow.to]+=bW;
+    const y0=ribbonY, y1=botNodeY, cy=(y0+y1)/2;
+    const path=`M${x0},${y0} C${x0},${cy} ${x1},${cy} ${x1},${y1}
+                L${x1+bW},${y1} C${x1+bW},${cy} ${x0+tW},${cy} ${x0+tW},${y0} Z`;
+
+    const fromPct=((flow.value/(outflowTot[flow.from]||1))*100).toFixed(1);
+    const toPct=((flow.value/(inflowTot[flow.to]||1))*100).toFixed(1);
+    const tipHtml=flow.self
+      ?`<strong>${flow.from}</strong><br>留在出生縣市<br>${fmt(flow.value)} 人 (${fromPct}%)`
+      :`出生地：<strong>${flow.from}</strong><br>現居地：<strong>${flow.to}</strong><br>${fmt(flow.value)} 人<br>佔出生地 ${fromPct}%・佔現居地 ${toPct}%`;
+
     rG.append('path').attr('d',path)
-      .attr('fill', flow.self ? '#aaaaaa' : colorMap[flow.from])
-      .attr('opacity', flow.self ? 0.22 : 0.32)
-      .attr('stroke', flow.self ? '#999' : colorMap[flow.from])
-      .attr('stroke-width',.3).attr('stroke-opacity',.6)
+      .attr('fill',flow.self?'#aaa':colorMap[flow.from])
+      .attr('opacity',flow.self?.2:.28)
+      .attr('stroke',flow.self?'#999':colorMap[flow.from])
+      .attr('stroke-width',.3)
       .style('cursor','pointer')
-      .on('mouseenter',function(ev){
-        d3.select(this).attr('opacity', flow.self ? 0.45 : 0.7);
-        const fromPct = ((flow.value/(outflowTot[flow.from]||1))*100).toFixed(1);
-        const toPct   = ((flow.value/(inflowTot[flow.to]  ||1))*100).toFixed(1);
-        showTip(ev, flow.self
-          ? `<strong>${flow.from}</strong><br>留在出生縣市<br>${fmt(flow.value)} 人<br>${fromPct}% 的出生人口留鄉`
-          : `出生地：<strong>${flow.from}</strong><br>現居地：<strong>${flow.to}</strong><br>${fmt(flow.value)} 人<br>佔出生地 ${fromPct}%・佔現居地 ${toPct}%`);
-      })
+      .on('mouseenter',function(ev){ d3.select(this).attr('opacity',flow.self?.45:.65); showTip(ev,tipHtml); })
       .on('mousemove',moveTip)
-      .on('mouseleave',function(){d3.select(this).attr('opacity', flow.self ? 0.22 : 0.32);hideTip();});
+      .on('mouseleave',function(){ d3.select(this).attr('opacity',flow.self?.2:.28); hideTip(); });
   });
 
-  // Left nodes
-  const lG=svg.append('g');
-  leftOrder.forEach(c=>{
-    const n=lMap[c];
-    const g=lG.append('g').style('cursor','pointer')
+  // Top nodes (出生地)
+  topOrder.forEach(c=>{
+    const n=tMap[c];
+    const g=svg.append('g').style('cursor','pointer')
       .on('click',()=>{ sankeyFiltered=sankeyFiltered===c?null:c; renderSankey(); });
-    g.append('rect').attr('x',leftX).attr('y',n.y).attr('width',NODE_W).attr('height',n.h).attr('fill',colorMap[c]).attr('rx',2);
-    g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2).attr('text-anchor','end').attr('dominant-baseline','middle')
-      .attr('font-family','var(--sans)').attr('font-size',11).attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)').text(c);
-    if(n.h>20) g.append('text').attr('x',leftX-5).attr('y',n.y+n.h/2+13).attr('text-anchor','end').attr('dominant-baseline','middle')
-      .attr('font-family','var(--mono)').attr('font-size',9.5).attr('fill','var(--muted)').text(fmt(outflowTot[c]||0));
+    g.append('rect').attr('x',n.x).attr('y',nodeY).attr('width',n.w).attr('height',NODE_H)
+      .attr('fill',colorMap[c]).attr('rx',2);
+    // Label above
+    if(n.w>20){
+      const labelG=g.append('g').attr('transform',`translate(${n.x+n.w/2},${topY+14})`);
+      labelG.append('text').attr('text-anchor','middle')
+        .attr('font-family','var(--sans)').attr('font-size',10)
+        .attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)')
+        .text(c.replace(/[縣市]/,''));
+    }
   });
 
-  // Right nodes
-  const rgN=svg.append('g');
-  rightOrder.forEach(c=>{
-    const n=rMap[c];
-    const g=rgN.append('g').style('cursor','pointer')
+  // Bottom nodes (現居地)
+  botOrder.forEach(c=>{
+    const n=bMap[c];
+    const g=svg.append('g').style('cursor','pointer')
       .on('click',()=>{ sankeyFiltered=sankeyFiltered===c?null:c; renderSankey(); });
-    g.append('rect').attr('x',rightX).attr('y',n.y).attr('width',NODE_W).attr('height',n.h).attr('fill',colorMap[c]).attr('rx',2);
-    g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2).attr('text-anchor','start').attr('dominant-baseline','middle')
-      .attr('font-family','var(--sans)').attr('font-size',11).attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)').text(c);
-    if(n.h>20) g.append('text').attr('x',rightX+NODE_W+5).attr('y',n.y+n.h/2+13).attr('text-anchor','start').attr('dominant-baseline','middle')
-      .attr('font-family','var(--mono)').attr('font-size',9.5).attr('fill','var(--muted)').text(fmt(inflowTot[c]||0));
+    g.append('rect').attr('x',n.x).attr('y',botNodeY).attr('width',n.w).attr('height',NODE_H)
+      .attr('fill',colorMap[c]).attr('rx',2);
+    // Label below
+    if(n.w>20){
+      g.append('text').attr('x',n.x+n.w/2).attr('y',botNodeY+NODE_H+13)
+        .attr('text-anchor','middle')
+        .attr('font-family','var(--sans)').attr('font-size',10)
+        .attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)')
+        .text(c.replace(/[縣市]/,''));
+    }
   });
 
   // Axis labels
-  svg.append('text').attr('x',leftX+NODE_W/2).attr('y',6).attr('text-anchor','middle')
-    .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('出生地');
-  svg.append('text').attr('x',rightX+NODE_W/2).attr('y',6).attr('text-anchor','middle')
-    .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('現居地');
+  svg.append('text').attr('x',0).attr('y',topY-4)
+    .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('出生地 ↓');
+  svg.append('text').attr('x',0).attr('y',botNodeY+NODE_H+28)
+    .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('現居地 ↑');
 
-  if(sankeyFiltered) {
-    svg.append('text').attr('x',W/2).attr('y',6).attr('text-anchor','middle')
-      .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--accent)')
-      .text(`篩選：${sankeyFiltered}　（點擊節點取消）`);
+  if(sankeyFiltered){
+    svg.append('text').attr('x',W/2).attr('y',ribbonY+BAND_H/2)
+      .attr('text-anchor','middle').attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--accent)')
+      .text(`篩選：${sankeyFiltered}　（點擊取消）`);
   }
 
-  document.getElementById('sankeyTitle').textContent=`${currentYear} 年 ${showSelf?'全部（含留在出生縣市）':'跨縣市'}人口流動`;
-  document.querySelector('.sankey-note').textContent=showSelf
-    ?'灰色帶 = 留在出生縣市 · 右側依現居地總人口排序 · 點擊節點篩選'
-    :'僅顯示跨縣市移動人口 · 右側依現居地遷入量排序 · 點擊節點篩選';
+  document.getElementById('sankeyTitle').textContent=`${currentYear} 年 ${showSelf?'全部（含留鄉）':'跨縣市'}人口流動`;
+  document.getElementById('sankeyHint').textContent=showSelf?'灰色帶 = 留在出生縣市 · 點擊節點篩選':'僅顯示跨縣市移動 · 點擊節點篩選';
 }
+
 
 // ════════════════════════════════════════════
 // MATRIX
@@ -688,23 +702,26 @@ function getCellValue(rowC,colC) {
 
 function renderMatrix() {
   const n=counties.length, grid=document.getElementById('matrixGrid');
-  // Include ALL values (including diagonal) in color scale
-  const vals=[];
-  counties.forEach(r=>counties.forEach(c=>{const v=getCellValue(r,c);if(v>0) vals.push(v);}));
-  vals.sort((a,b)=>a-b);
-  const logMin=vals.length?Math.log(vals[0]||1):0, logMax=vals.length?Math.log(vals[vals.length-1]):1;
+  const yr=allData[currentYear]||{};
 
-  // Diagonal gets blue scale; off-diagonal gets red scale
-  const BLUES=['#e8f1f8','#b3d0e8','#6ea8cf','#2e7db8','#1a4d7a'];
+  // Row totals for % calculation
+  const rowTotals={};
+  counties.forEach(r=>{
+    rowTotals[r]=counties.reduce((s,c)=>s+getCellValue(r,c),0)||1;
+  });
 
-  function cs(v, isDiag) {
-    if(!v) return '#f7f7f7';
-    const t=(Math.log(v)-logMin)/(logMax-logMin||1);
+  // colour by % of row total (each cell = share of that county's total)
+  const BLUES=['#f0f5fb','#c6dcf0','#7eb5d9','#2e7db8','#0d4a7a'];
+  function cs(v, isDiag, rowC) {
+    if(!v) return '#f5f5f5';
+    const pct=v/rowTotals[rowC];  // 0–1
+    // use sqrt for gentler steps
+    const t=Math.sqrt(pct);
     if(isDiag) {
-      const idx=Math.min(Math.floor(t*(BLUES.length-1)), BLUES.length-2);
-      return BLUES[idx+1];
+      const idx=Math.min(Math.floor(t*BLUES.length), BLUES.length-1);
+      return BLUES[idx];
     }
-    return COLORS_RED[Math.min(Math.floor(t*(COLORS_RED.length-1)),COLORS_RED.length-2)+1];
+    return COLORS_RED[Math.min(Math.floor(t*COLORS_RED.length), COLORS_RED.length-1)];
   }
 
   grid.style.cssText=`display:grid;grid-template-columns:62px repeat(${n},22px);grid-template-rows:62px repeat(${n},22px);gap:1px;`;
@@ -716,7 +733,7 @@ function renderMatrix() {
       const isDiag=r===c, v=getCellValue(r,c);
       const frm=currentMode==='from'?r:c, to=currentMode==='from'?c:r;
       const sel=(selectedCounty===r||selectedCounty===c)?' selected':'';
-      html+=`<div class="cell${isDiag?' diagonal':''}${sel}" style="background:${cs(v,isDiag)}" data-from="${frm}" data-to="${to}" data-val="${v}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()" onclick="cellClick('${r}','${c}')"></div>`;
+      html+=`<div class="cell${isDiag?' diagonal':''}${sel}" style="background:${cs(v,isDiag,r)}" data-from="${frm}" data-to="${to}" data-val="${v}" onmouseenter="showTip(event,this)" onmouseleave="hideTip()" onclick="cellClick('${r}','${c}')"></div>`;
     });
   });
   grid.innerHTML=html;
@@ -743,19 +760,24 @@ function renderSide(name) {
     <div class="stat-row">
       <div class="stat-box"><div class="stat-num" style="color:var(--accent)">${fmt(movedOut)}</div><div class="stat-label">離開出生地</div></div>
       <div class="stat-box"><div class="stat-num" style="color:var(--blue)">${fmt(movedIn)}</div><div class="stat-label">外縣市遷入</div></div>
-    </div>
-    <div class="stat-row" style="padding-top:0">
       <div class="stat-box"><div class="stat-num">${fmt(stayVal)}</div><div class="stat-label">留在出生縣市</div></div>
       <div class="stat-box"><div class="stat-num">${pct(stayVal,totalOut)}</div><div class="stat-label">留鄉率</div></div>
     </div>
-    <div class="panel-header" style="border-top:1px solid var(--border)"><div class="panel-title" style="font-size:.78rem;color:var(--accent)">▸ 出生在 ${name}，移居至…</div></div>
-    <div class="bars-wrap">${outFlows.map(f=>barRow(f.county,f.val,outMax,'var(--accent)')).join('')}</div>
-    <div class="panel-header" style="border-top:1px solid var(--border)"><div class="panel-title" style="font-size:.78rem;color:var(--blue)">▸ 現居 ${name}，出生於…</div></div>
-    <div class="bars-wrap">${inFlows.map(f=>barRow(f.county,f.val,inMax,'var(--blue)')).join('')}</div>`;
+    <div class="dual-bars">
+      <div class="dual-col">
+        <div class="dual-col-title" style="color:var(--accent)">移居至…</div>
+        ${outFlows.map(f=>barRow(f.county,f.val,outMax,'var(--accent)')).join('')}
+      </div>
+      <div class="dual-col">
+        <div class="dual-col-title" style="color:var(--blue)">出生於…</div>
+        ${inFlows.map(f=>barRow(f.county,f.val,inMax,'var(--blue)')).join('')}
+      </div>
+    </div>`;
 }
 
 function barRow(label,val,max,color){
-  return `<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${max>0?(val/max*100).toFixed(1):0}%;background:${color}"></div></div><div class="bar-val">${fmt(val)}</div></div>`;
+  const w=max>0?(val/max*100).toFixed(1):0;
+  return `<div class="bar-row"><div class="bar-label">${label}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${color}"></div></div><div class="bar-val">${fmt(val)}</div></div>`;
 }
 
 // ── TOOLTIP ──
@@ -764,7 +786,13 @@ function showTip(event,htmlOrEl){
   if(typeof htmlOrEl==='string'){tip.innerHTML=htmlOrEl;}
   else{
     const el=htmlOrEl,from=el.dataset.from,to=el.dataset.to,v=parseInt(el.dataset.val);
-    tip.innerHTML=from===to?`<strong>${from}</strong><br>留在出生縣市<br>${fmt(v)} 人`:`出生地：<strong>${from}</strong><br>現居地：<strong>${to}</strong><br>${fmt(v)} 人`;
+    const el2=htmlOrEl,from2=el2.dataset.from,to2=el2.dataset.to,v2=parseInt(el2.dataset.val);
+    const rowKey2=currentMode==='from'?from2:to2;
+    const rowTot2=counties.reduce((s,c)=>s+getCellValue(rowKey2,c),0)||1;
+    const p2=(v2/rowTot2*100).toFixed(1);
+    tip.innerHTML=from2===to2
+      ?`<strong>${from2}</strong><br>留鄉：${fmt(v2)} 人（${p2}%）`
+      :`出生地：<strong>${from2}</strong><br>現居地：<strong>${to2}</strong><br>${fmt(v2)} 人（${p2}%）`;
   }
   tip.style.display='block'; moveTip(event);
 }
