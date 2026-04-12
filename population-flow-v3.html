@@ -212,7 +212,7 @@ header{background:var(--text);color:#fff;padding:1.2rem 2rem;display:flex;align-
           <div class="map-panel-sub" id="mapLeftSub">點擊縣市查看流向</div>
         </div>
         <div class="map-svg-wrap">
-          <svg id="map-left-svg" viewBox="0 0 340 460"></svg>
+          <svg id="map-left-svg" viewBox="0 0 380 500"></svg>
         </div>
         <div class="map-legend">
           <span>少</span>
@@ -233,8 +233,8 @@ header{background:var(--text);color:#fff;padding:1.2rem 2rem;display:flex;align-
           <div class="map-panel-sub" id="mapRightSub">請先選擇左側出生地</div>
         </div>
         <div class="map-svg-wrap">
-          <svg id="map-right-svg" viewBox="0 0 340 460">
-            <text x="170" y="230" text-anchor="middle" font-family="var(--sans)" font-size="13" fill="#bbb">← 點擊左側縣市</text>
+          <svg id="map-right-svg" viewBox="0 0 380 500">
+            <text x="190" y="250" text-anchor="middle" font-family="var(--sans)" font-size="13" fill="#bbb">← 點擊左側縣市</text>
           </svg>
         </div>
         <div class="map-legend">
@@ -324,18 +324,17 @@ function renderMapTab() {
 }
 
 // ── core map draw ──
-// side: 'left' = colour by born-total (green), 'right' = colour by flow from fromCounty (blue)
 function drawMap(svgId, fromCounty, side) {
-  const W=340, H=460;
+  const W=380, H=500;
+  const PAD_LEFT=52; // room for island insets
   const svg = d3.select('#'+svgId).attr('viewBox',`0 0 ${W} ${H}`);
   svg.selectAll('*').remove();
 
   const yr = allData['2025']||{};
 
-  // Precompute values for colour scale
-  let valueOf; // county normName → number
+  // Colour value lookup
+  let valueOf;
   if(side==='left'){
-    // total born in each county
     const bornTot={};
     counties.forEach(c=>{ bornTot[normName(c)]=Object.values(yr[c]||{}).reduce((a,b)=>a+b,0); });
     valueOf = cn => bornTot[normName(cn)]||0;
@@ -347,77 +346,71 @@ function drawMap(svgId, fromCounty, side) {
     valueOf = cn => flowLookup[normName(cn)]||0;
   }
 
-  // Separate main island and island features
   const mainF   = TW_GEO.features.filter(f=>!ISLANDS.has(featureCounty(f)));
   const islandF = TW_GEO.features.filter(f=> ISLANDS.has(featureCounty(f)));
 
-  // Projection fitted to main island with right-side padding for insets (50px left)
-  const proj = d3.geoMercator().fitSize([W-52, H-8], {type:'FeatureCollection',features:mainF});
+  // fitExtent: [[left,top],[right,bottom]] — leave PAD_LEFT for island insets
+  const proj = d3.geoMercator()
+    .fitExtent([[PAD_LEFT+4, 8],[W-4, H-8]], {type:'FeatureCollection',features:mainF});
   const pathFn = d3.geoPath().projection(proj);
 
-  // Colour scale
   const maxVal = d3.max(TW_GEO.features.map(f=>valueOf(featureCounty(f))))||1;
   const colScale = side==='left'
     ? d3.scaleSequential(d3.interpolateGreens).domain([0, maxVal])
     : d3.scaleSequential(d3.interpolateBlues).domain([0, maxVal]);
 
-  // ── Draw main island counties ──
-  const g = svg.append('g').attr('transform','translate(52,0)'); // offset right to leave room for insets
-
-  g.selectAll('path')
+  // ── Main island counties ──
+  svg.selectAll('.county-path')
     .data(mainF)
     .join('path')
     .attr('class', d=>{
       const cn=featureCounty(d);
-      const isSelected = side==='left'
+      const isSel = side==='left'
         ? mapSelectedCounty && normName(mapSelectedCounty)===normName(cn)
         : fromCounty && normName(fromCounty)===normName(cn);
-      return 'county-path'+(isSelected?' selected':'');
+      return 'county-path'+(isSel?' selected':'');
     })
     .attr('d', pathFn)
-    .attr('fill', d=>{ const v=valueOf(featureCounty(d)); return v?colScale(v):'#e8e8e8'; })
+    .attr('fill', d=>{ const v=valueOf(featureCounty(d)); return v?colScale(v):'#e0e0e0'; })
+    .attr('stroke','#fff').attr('stroke-width',.6)
     .on('mouseenter',(ev,d)=>{ mapTip(ev,d,side,fromCounty,valueOf,yr); })
     .on('mousemove', moveTip)
     .on('mouseleave', hideTip)
     .on('click',(ev,d)=>{
-      if(side==='left'){
-        mapSelectedCounty = featureCounty(d);
-        drawMap('map-left-svg', null, 'left');
-        drawMap('map-right-svg', mapSelectedCounty, 'right');
-        document.getElementById('mapLeftSub').textContent='已選：'+mapSelectedCounty;
-        const fromKey=counties.find(c=>normName(c)===normName(mapSelectedCounty))||mapSelectedCounty;
-        const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
-        document.getElementById('mapRightSub').textContent=`出生於 ${mapSelectedCounty}：${fmt(tot)} 人`;
-      }
+      if(side!=='left') return;
+      mapSelectedCounty = featureCounty(d);
+      drawMap('map-left-svg', null, 'left');
+      drawMap('map-right-svg', mapSelectedCounty, 'right');
+      document.getElementById('mapLeftSub').textContent='已選：'+mapSelectedCounty;
+      const fromKey=counties.find(c=>normName(c)===normName(mapSelectedCounty))||mapSelectedCounty;
+      const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
+      document.getElementById('mapRightSub').textContent=`出生於 ${mapSelectedCounty}：${fmt(tot)} 人`;
     })
     .style('cursor', side==='left'?'pointer':'default');
 
-  // County name labels on main island
+  // County name labels
   mainF.forEach(f=>{
-    const cn=featureCounty(f);
     const c=pathFn.centroid(f);
-    if(isNaN(c[0])) return;
-    g.append('text')
+    if(isNaN(c[0])||isNaN(c[1])) return;
+    const cn=featureCounty(f);
+    svg.append('text')
       .attr('x',c[0]).attr('y',c[1]+1)
       .attr('text-anchor','middle').attr('dominant-baseline','middle')
       .attr('font-family','var(--sans)').attr('font-size',9)
-      .attr('fill','#222').attr('pointer-events','none')
+      .attr('fill','#1a1916').attr('pointer-events','none')
       .text(cn.replace(/[縣市]/,''));
   });
 
-  // ── Island insets (top-left strip) ──
+  // ── Island insets (left strip) ──
   islandF.forEach(f=>{
     const cn=featureCounty(f);
     const cfg=ISLAND_CFG[cn]; if(!cfg) return;
-    const BW=44, BH=56;
+    const BW=44, BH=54;
 
-    // Local projection for each island
-    const [[x0,y0],[x1,y1]]=d3.geoBounds(f);
-    const cx=(x0+x1)/2, cy=(y0+y1)/2;
-    const span=Math.max(x1-x0,y1-y0)||0.3;
-    const sc=Math.min(BW,BH)*0.7/span*0.0174533; // rough deg→px
-    const islandProj=d3.geoMercator().center([cx,cy]).scale(3600/span).translate([cfg.bx+BW/2, cfg.by+BH/2-6]);
-    const islandPath=d3.geoPath().projection(islandProj);
+    // Fit island to its inset box
+    const islandProj = d3.geoMercator()
+      .fitExtent([[cfg.bx+2, cfg.by+2],[cfg.bx+BW-2, cfg.by+BH-10]], f);
+    const islandPath = d3.geoPath().projection(islandProj);
 
     const ig=svg.append('g')
       .style('cursor', side==='left'?'pointer':'default')
@@ -425,34 +418,31 @@ function drawMap(svgId, fromCounty, side) {
       .on('mousemove',moveTip)
       .on('mouseleave',hideTip)
       .on('click',()=>{
-        if(side==='left'){
-          mapSelectedCounty=cn;
-          drawMap('map-left-svg',null,'left');
-          drawMap('map-right-svg',cn,'right');
-          document.getElementById('mapLeftSub').textContent='已選：'+cn;
-          const fromKey=counties.find(c2=>normName(c2)===normName(cn))||cn;
-          const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
-          document.getElementById('mapRightSub').textContent=`出生於 ${cn}：${fmt(tot)} 人`;
-        }
+        if(side!=='left') return;
+        mapSelectedCounty=cn;
+        drawMap('map-left-svg',null,'left');
+        drawMap('map-right-svg',cn,'right');
+        document.getElementById('mapLeftSub').textContent='已選：'+cn;
+        const fromKey=counties.find(c2=>normName(c2)===normName(cn))||cn;
+        const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
+        document.getElementById('mapRightSub').textContent=`出生於 ${cn}：${fmt(tot)} 人`;
       });
 
-    // Box
     ig.append('rect').attr('x',cfg.bx).attr('y',cfg.by)
       .attr('width',BW).attr('height',BH)
-      .attr('fill','#f0f0f0').attr('stroke','#ccc').attr('stroke-width',.6).attr('rx',3);
+      .attr('fill','#f5f5f5').attr('stroke','#d0d0d0').attr('stroke-width',.5).attr('rx',3);
 
-    // Island shape
     const v=valueOf(cn);
-    const isSelected = side==='left'
+    const isSel = side==='left'
       ? mapSelectedCounty && normName(mapSelectedCounty)===normName(cn)
       : fromCounty && normName(fromCounty)===normName(cn);
+
     ig.append('path').attr('d',islandPath(f))
       .attr('fill', v?colScale(v):'#ddd')
-      .attr('stroke', isSelected?'#1a1916':'#fff')
-      .attr('stroke-width', isSelected?2:.6);
+      .attr('stroke', isSel?'#1a1916':'#fff')
+      .attr('stroke-width', isSel?2:.6);
 
-    // Label
-    ig.append('text').attr('x',cfg.bx+BW/2).attr('y',cfg.by+BH-4)
+    ig.append('text').attr('x',cfg.bx+BW/2).attr('y',cfg.by+BH-2)
       .attr('text-anchor','middle')
       .attr('font-family','var(--sans)').attr('font-size',9).attr('fill','#555')
       .text(cfg.label);
