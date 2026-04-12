@@ -10,64 +10,75 @@
 <style>
 :root {
   --bg:#faf9f7;--surface:#fff;--border:#e5e2dc;--text:#1a1916;--muted:#888078;
-  --accent:#c0392b;--accent-light:#f8ece9;--blue:#2471a3;--blue-light:#e8f1f8;
+  --accent:#c0392b;--blue:#2471a3;--blue-light:#e8f1f8;
   --mono:'DM Mono',monospace;--sans:'Noto Sans TC',sans-serif;
   --h1:#fde8e6;--h2:#f9b8b2;--h3:#f08070;--h4:#d95035;--h5:#9b1a0f;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px}
 
-header{background:var(--text);color:#fff;padding:1.2rem 2rem;display:flex;align-items:center;gap:2rem;flex-wrap:wrap}
-.header-title{font-size:1.05rem;font-weight:700}
-.header-sub{font-family:var(--mono);font-size:0.62rem;color:rgba(255,255,255,.45);margin-top:.15rem}
-.header-controls{display:flex;align-items:center;gap:1rem;margin-left:auto;flex-wrap:wrap}
+header{background:var(--text);color:#fff;padding:.85rem 1.4rem}
+.header-title{font-size:.95rem;font-weight:700}
+.header-sub{font-family:var(--mono);font-size:.58rem;color:rgba(255,255,255,.4);margin-top:.1rem}
 
-.year-tabs{display:flex;gap:2px}
-.year-tab{font-family:var(--mono);font-size:.68rem;padding:.4rem .8rem;background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s}
-.year-tab.active{background:var(--accent);color:#fff}
-.year-tab:hover:not(.active){background:rgba(255,255,255,.2);color:#fff}
-
-.mode-toggle{display:flex;border:1px solid rgba(255,255,255,.25);overflow:hidden}
-.mode-btn{font-family:var(--mono);font-size:.65rem;padding:.4rem .8rem;background:transparent;border:none;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;white-space:nowrap}
-.mode-btn.active{background:var(--blue);color:#fff}
-.mode-btn:hover:not(.active){background:rgba(255,255,255,.15);color:#fff}
-
-.info-strip{display:flex;gap:2rem;padding:.65rem 2rem;background:var(--blue-light);border-bottom:1px solid #c8dff0;font-size:.68rem;color:var(--blue);font-family:var(--mono);flex-wrap:wrap}
-.info-strip strong{font-weight:600}
-
-#loading{text-align:center;padding:5rem;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
+#loading{text-align:center;padding:4rem;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid #d0ccc4;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:.5rem;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
-
 #app{display:none}
 
-.tab-nav{display:flex;border-bottom:2px solid var(--border);padding:0 2rem;background:var(--surface)}
-.tab-btn{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;padding:.8rem 1.4rem;background:transparent;border:none;color:var(--muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-2px}
-.tab-btn.active{color:var(--text);border-bottom-color:var(--accent);font-weight:500}
-.tab-btn:hover:not(.active){color:var(--text)}
-
-.view-panel{display:none;padding:1.5rem 2rem}
+/* APP SHELL */
+.app-shell{display:flex}
+.app-content{flex:1;min-width:0}
+.view-panel{display:none;padding:1rem 1.2rem}
 .view-panel.active{display:block}
 
-/* ── SANKEY ── */
-#sankey-wrap{background:var(--surface);border:1px solid var(--border);padding:1.2rem}
-.sankey-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem}
-.sankey-title{font-weight:700;font-size:.9rem}
-.sankey-note{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+/* VERTICAL NAV */
+.v-nav{
+  width:64px;flex-shrink:0;
+  background:var(--text);
+  display:flex;flex-direction:column;
+  padding:.4rem 0;gap:1px;
+  position:sticky;top:0;align-self:flex-start;
+  min-height:calc(100vh - 44px);
+}
+.v-btn{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.2rem;padding:.75rem .2rem;
+  background:transparent;border:none;
+  color:rgba(255,255,255,.45);cursor:pointer;
+  transition:all .15s;font-family:var(--mono);
+  font-size:.56rem;letter-spacing:.04em;text-align:center;
+}
+.v-icon{font-size:1rem;line-height:1}
+.v-btn.active{background:var(--accent);color:#fff}
+.v-btn:hover:not(.active){background:rgba(255,255,255,.1);color:#fff}
+
+/* PANEL TOOLBAR */
+.panel-toolbar{display:flex;align-items:center;gap:.8rem;margin-bottom:.9rem;padding-bottom:.7rem;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.toolbar-title{font-weight:700;font-size:.88rem;flex-shrink:0}
+.toolbar-hint{font-family:var(--mono);font-size:.59rem;color:var(--muted);margin-left:auto}
+.ctl-group{display:flex;border:1px solid var(--border);overflow:hidden;border-radius:3px}
+.ctl-btn{font-family:var(--mono);font-size:.63rem;padding:.3rem .75rem;background:var(--surface);border:none;border-right:1px solid var(--border);color:var(--muted);cursor:pointer;transition:all .15s;white-space:nowrap}
+.ctl-btn:last-child{border-right:none}
+.ctl-btn.active{background:var(--text);color:#fff}
+.ctl-btn:hover:not(.active){background:var(--border);color:var(--text)}
+
+/* SANKEY */
+#sankey-wrap{background:var(--surface);border:1px solid var(--border);padding:.9rem}
 #sankey-svg{width:100%;display:block}
 
-/* ── MATRIX ── */
-.matrix-layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;align-items:start}
+/* MATRIX */
+.matrix-layout{display:grid;grid-template-columns:1fr 290px;gap:1rem;align-items:start}
 .panel{background:var(--surface);border:1px solid var(--border)}
-.panel-header{padding:.9rem 1.2rem .8rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
-.panel-title{font-weight:700;font-size:.88rem}
-.panel-meta{font-family:var(--mono);font-size:.62rem;color:var(--muted)}
-.matrix-wrap{padding:1rem 1.2rem 1.2rem;overflow-x:auto}
-.matrix-note{font-family:var(--mono);font-size:.6rem;color:var(--muted);margin-bottom:.8rem;line-height:1.5}
+.panel-header{padding:.75rem 1.1rem .65rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
+.panel-title{font-weight:700;font-size:.85rem}
+.panel-meta{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
+.matrix-wrap{padding:.8rem 1rem;overflow-x:auto}
+.matrix-note{font-family:var(--mono);font-size:.59rem;color:var(--muted);margin-bottom:.65rem;line-height:1.5}
 .matrix-grid{display:grid;gap:1px}
 .matrix-corner{display:flex;align-items:flex-end;justify-content:flex-end;padding:0 4px 3px 0}
 .axis-arrow{font-family:var(--mono);font-size:.5rem;color:#bbb;text-align:right;line-height:1.3}
-.col-header{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-family:var(--mono);font-size:.58rem;color:var(--muted);padding:4px 2px;text-align:left;cursor:pointer;transition:color .15s}
+.col-header{writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);font-family:var(--mono);font-size:.58rem;color:var(--muted);padding:4px 2px;cursor:pointer;transition:color .15s}
 .col-header:hover,.col-header.active{color:var(--accent);font-weight:500}
 .row-header{font-family:var(--mono);font-size:.58rem;color:var(--muted);padding:2px 6px 2px 0;white-space:nowrap;display:flex;align-items:center;cursor:pointer;transition:color .15s}
 .row-header:hover,.row-header.active{color:var(--accent);font-weight:500}
@@ -75,182 +86,184 @@ header{background:var(--text);color:#fff;padding:1.2rem 2rem;display:flex;align-
 .cell:hover{transform:scale(2);z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .cell.diagonal{outline:1.5px solid rgba(0,0,0,.15);outline-offset:-1.5px}
 .cell.selected{outline:2px solid var(--blue);outline-offset:-2px;z-index:20}
-.legend{display:flex;align-items:center;gap:.5rem;margin-top:.8rem;font-family:var(--mono);font-size:.58rem;color:var(--muted)}
-.legend-bar{display:flex;height:8px;flex:1;max-width:160px}
+.legend{display:flex;align-items:center;gap:.45rem;margin-top:.6rem;font-family:var(--mono);font-size:.56rem;color:var(--muted)}
+.legend-bar{display:flex;height:7px;flex:1;max-width:120px}
 .legend-seg{flex:1}
 
-.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;padding:1rem 1.2rem}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;padding:.8rem 1.1rem}
 .stat-box{text-align:center}
-.stat-num{font-family:var(--mono);font-size:1.4rem;font-weight:500;line-height:1}
-.stat-label{font-size:.65rem;color:var(--muted);margin-top:.25rem}
-.bars-wrap{padding:.5rem 1.2rem 1.2rem}
-.bar-row{display:grid;grid-template-columns:62px 1fr 50px;align-items:center;gap:.5rem;margin-bottom:.55rem}
-.bar-label{font-family:var(--mono);font-size:.6rem;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar-track{background:var(--border);height:14px;overflow:hidden}
+.stat-num{font-family:var(--mono);font-size:1.25rem;font-weight:500;line-height:1}
+.stat-label{font-size:.6rem;color:var(--muted);margin-top:.2rem}
+.bars-wrap{padding:.4rem 1.1rem .9rem}
+.bar-row{display:grid;grid-template-columns:60px 1fr 48px;align-items:center;gap:.4rem;margin-bottom:.45rem}
+.bar-label{font-family:var(--mono);font-size:.58rem;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{background:var(--border);height:12px;overflow:hidden}
 .bar-fill{height:100%;transition:width .4s ease}
-.bar-val{font-family:var(--mono);font-size:.58rem;color:var(--muted);text-align:right}
-.no-selection{text-align:center;padding:2.5rem 1.5rem;color:var(--muted);font-size:.78rem;font-style:italic;border-top:1px solid var(--border)}
+.bar-val{font-family:var(--mono);font-size:.56rem;color:var(--muted);text-align:right}
+.no-selection{text-align:center;padding:1.8rem 1.2rem;color:var(--muted);font-size:.73rem;font-style:italic;border-top:1px solid var(--border)}
 
-#tooltip{position:fixed;background:var(--text);color:#fff;padding:.5rem .75rem;font-family:var(--mono);font-size:.65rem;pointer-events:none;z-index:1000;display:none;max-width:220px;line-height:1.6}
-.scope-toggle{display:flex;border:1px solid rgba(255,255,255,.25);overflow:hidden}
-.scope-btn{font-family:var(--mono);font-size:.65rem;padding:.4rem .85rem;background:transparent;border:none;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;white-space:nowrap}
-.scope-btn.active{background:#4a7048;color:#fff}
-.scope-btn:hover:not(.active){background:rgba(255,255,255,.15);color:#fff}
-
-/* ── MAP TAB ── */
-.map-layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start}
+/* MAP */
+.map-layout{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 .map-panel{background:var(--surface);border:1px solid var(--border)}
-.map-panel-header{padding:.9rem 1.2rem .7rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:.5rem}
-.map-panel-title{font-weight:700;font-size:.85rem}
-.map-panel-sub{font-family:var(--mono);font-size:.6rem;color:var(--muted)}
-.map-svg-wrap{padding:.8rem;position:relative}
+.map-panel-header{padding:.65rem 1rem .55rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:.5rem}
+.map-panel-title{font-weight:700;font-size:.8rem}
+.map-panel-sub{font-family:var(--mono);font-size:.56rem;color:var(--muted)}
+.map-svg-wrap{padding:.4rem}
 .map-svg-wrap svg{width:100%;display:block}
-.county-path{stroke:#fff;stroke-width:.5;cursor:pointer;transition:opacity .15s}
-.county-path:hover{opacity:.75;stroke-width:1.5;stroke:#333}
+.county-path{stroke:#fff;stroke-width:.5;cursor:pointer;transition:opacity .12s}
+.county-path:hover{opacity:.72;stroke-width:1.5;stroke:#333}
 .county-path.selected{stroke:#1a1916;stroke-width:2;opacity:1}
-.county-path.dimmed{opacity:.2}
-.map-hint{text-align:center;font-size:.72rem;color:var(--muted);padding:.5rem 1rem .8rem;font-style:italic}
-.map-legend{display:flex;align-items:center;gap:.5rem;padding:.2rem 1rem .8rem;font-family:var(--mono);font-size:.58rem;color:var(--muted)}
-.map-legend-bar{display:flex;height:8px;flex:1;max-width:140px}
+.map-legend{display:flex;align-items:center;gap:.4rem;padding:.15rem .8rem .5rem;font-family:var(--mono);font-size:.55rem;color:var(--muted)}
+.map-legend-bar{display:flex;height:6px;flex:1;max-width:100px}
 .map-legend-seg{flex:1}
-.map-no-select{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:.78rem;font-style:italic}
-/* island insets */
-.island-group{cursor:pointer}
-.island-label{font-family:var(--sans);font-size:9px;fill:#666;pointer-events:none}
+
+#tooltip{position:fixed;background:var(--text);color:#fff;padding:.45rem .7rem;font-family:var(--mono);font-size:.63rem;pointer-events:none;z-index:1000;display:none;max-width:220px;line-height:1.6}
 </style>
 </head>
 <body>
 
 <header>
-  <div>
-    <div class="header-title">台灣人口流動分析</div>
-    <div class="header-sub">出生地 × 現居縣市 · 縣市層級 · 2025 年資料</div>
-  </div>
-  <div class="header-controls">
-    <div class="scope-toggle">
-      <button class="scope-btn active" id="scopeAll" onclick="setScope('all')">包含同縣市</button>
-      <button class="scope-btn" id="scopeCross" onclick="setScope('cross')">跨縣市</button>
-    </div>
-    <div class="mode-toggle">
-      <button class="mode-btn active" id="modeFrom" onclick="setMode('from')">出生地視角</button>
-      <button class="mode-btn" id="modeTo" onclick="setMode('to')">居住地視角</button>
-    </div>
-  </div>
+  <div class="header-title">台灣人口流動分析</div>
+  <div class="header-sub">出生地 × 現居縣市 · 縣市層級 · 2025 年資料</div>
 </header>
-
-<div class="info-strip">
-  <span id="modeDesc">Sankey：左 = 出生地，右 = 現居地（依遷入人口排序）</span>
-  <strong>· 點擊節點可篩選單一縣市流向</strong>
-  <span>· OD 矩陣：對角線 = 留在出生縣市</span>
-</div>
 
 <div id="loading"><span class="spinner"></span>載入 od_county.csv 中…</div>
 
 <div id="app">
-  <div class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('sankey',this)">Sankey 流向圖</button>
-    <button class="tab-btn" onclick="switchTab('matrix',this)">OD 矩陣熱圖</button>
-    <button class="tab-btn" onclick="switchTab('map',this)">雙地圖流向</button>
-  </div>
+  <div class="app-shell">
 
-  <div class="view-panel active" id="panel-sankey">
-    <div id="sankey-wrap">
-      <div class="sankey-header">
-        <div class="sankey-title" id="sankeyTitle">人口流動 Sankey</div>
-        <div class="sankey-note">僅顯示跨縣市移動人口 · 右側依現居地遷入量排序 · 點擊節點篩選</div>
-      </div>
-      <svg id="sankey-svg"></svg>
-    </div>
-  </div>
+    <!-- ── VERTICAL NAV ── -->
+    <nav class="v-nav">
+      <button class="v-btn active" id="vbtn-sankey" onclick="switchTab('sankey',this)">
+        <span class="v-icon">⟋</span>Sankey
+      </button>
+      <button class="v-btn" id="vbtn-matrix" onclick="switchTab('matrix',this)">
+        <span class="v-icon">⊞</span>矩陣
+      </button>
+      <button class="v-btn" id="vbtn-map" onclick="switchTab('map',this)">
+        <span class="v-icon">◎</span>地圖
+      </button>
+    </nav>
 
-  <div class="view-panel" id="panel-matrix">
-    <div class="matrix-layout">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title" id="matrixTitle">人口流動 OD 矩陣</div>
-          <div class="panel-meta" id="matrixMeta"></div>
-        </div>
-        <div class="matrix-wrap">
-          <div class="matrix-note" id="matrixNote"></div>
-          <div id="matrixGrid" class="matrix-grid"></div>
-          <div class="legend">
-            <span style="color:var(--blue)">▪ 留鄉</span>
-            <div class="legend-bar">
-              <div class="legend-seg" style="background:#e8f1f8"></div>
-              <div class="legend-seg" style="background:#b3d0e8"></div>
-              <div class="legend-seg" style="background:#6ea8cf"></div>
-              <div class="legend-seg" style="background:#2e7db8"></div>
-              <div class="legend-seg" style="background:#1a4d7a"></div>
+    <!-- ── CONTENT ── -->
+    <div class="app-content">
+
+      <!-- SANKEY -->
+      <div class="view-panel active" id="panel-sankey">
+        <div class="panel-toolbar">
+          <div class="toolbar-title" id="sankeyTitle">人口流動 Sankey</div>
+          <div class="toolbar-controls">
+            <div class="ctl-group">
+              <button class="ctl-btn active" id="scopeAll" onclick="setScope('all')">含同縣市</button>
+              <button class="ctl-btn" id="scopeCross" onclick="setScope('cross')">跨縣市</button>
             </div>
-            <span style="color:var(--accent)">▪ 跨縣市</span>
-            <div class="legend-bar">
-              <div class="legend-seg" style="background:var(--h1)"></div>
-              <div class="legend-seg" style="background:var(--h2)"></div>
-              <div class="legend-seg" style="background:var(--h3)"></div>
-              <div class="legend-seg" style="background:var(--h4)"></div>
-              <div class="legend-seg" style="background:var(--h5)"></div>
-            </div>
-            <span>多（對數尺度）</span>
           </div>
+          <div class="toolbar-hint" id="sankeyHint">右側依現居地遷入量排序 · 點擊節點篩選</div>
         </div>
+        <div id="sankey-wrap"><svg id="sankey-svg"></svg></div>
       </div>
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title" id="sideTitle">請選擇縣市</div>
-        </div>
-        <div id="sideContent"><div class="no-selection">點擊縣市名稱或格子<br>查看詳細流向</div></div>
-      </div>
-    </div>
-  </div><!-- end panel-matrix -->
 
-  <div class="view-panel" id="panel-map">
-    <div class="map-layout">
-      <!-- LEFT: 出生地 -->
-      <div class="map-panel">
-        <div class="map-panel-header">
-          <div class="map-panel-title">出生地</div>
-          <div class="map-panel-sub" id="mapLeftSub">點擊縣市查看流向</div>
-        </div>
-        <div class="map-svg-wrap">
-          <svg id="map-left-svg" viewBox="0 0 380 500"></svg>
-        </div>
-        <div class="map-legend">
-          <span>少</span>
-          <div class="map-legend-bar" id="mapLeftLegend">
-            <div class="map-legend-seg" style="background:#e8f5e9"></div>
-            <div class="map-legend-seg" style="background:#a5d6a7"></div>
-            <div class="map-legend-seg" style="background:#66bb6a"></div>
-            <div class="map-legend-seg" style="background:#388e3c"></div>
-            <div class="map-legend-seg" style="background:#1b5e20"></div>
+      <!-- MATRIX -->
+      <div class="view-panel" id="panel-matrix">
+        <div class="panel-toolbar">
+          <div class="toolbar-title">OD 矩陣熱圖</div>
+          <div class="toolbar-controls">
+            <div class="ctl-group">
+              <button class="ctl-btn active" id="modeFrom" onclick="setMode('from')">出生地視角</button>
+              <button class="ctl-btn" id="modeTo" onclick="setMode('to')">居住地視角</button>
+            </div>
           </div>
-          <span>多（出生人口總數）</span>
+          <div class="toolbar-hint" id="matrixMeta"></div>
+        </div>
+        <div class="matrix-layout">
+          <div class="panel">
+            <div class="matrix-wrap">
+              <div class="matrix-note" id="matrixNote"></div>
+              <div id="matrixGrid" class="matrix-grid"></div>
+              <div class="legend">
+                <span style="color:var(--blue)">▪ 留鄉</span>
+                <div class="legend-bar">
+                  <div class="legend-seg" style="background:#e8f1f8"></div>
+                  <div class="legend-seg" style="background:#b3d0e8"></div>
+                  <div class="legend-seg" style="background:#6ea8cf"></div>
+                  <div class="legend-seg" style="background:#2e7db8"></div>
+                  <div class="legend-seg" style="background:#1a4d7a"></div>
+                </div>
+                <span style="color:var(--accent)">▪ 跨縣市</span>
+                <div class="legend-bar">
+                  <div class="legend-seg" style="background:var(--h1)"></div>
+                  <div class="legend-seg" style="background:var(--h2)"></div>
+                  <div class="legend-seg" style="background:var(--h3)"></div>
+                  <div class="legend-seg" style="background:var(--h4)"></div>
+                  <div class="legend-seg" style="background:var(--h5)"></div>
+                </div>
+                <span>多（對數尺度）</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title" id="sideTitle">請選擇縣市</div>
+            </div>
+            <div id="sideContent"><div class="no-selection">點擊縣市名稱或格子<br>查看詳細流向</div></div>
+          </div>
         </div>
       </div>
-      <!-- RIGHT: 現居地 -->
-      <div class="map-panel">
-        <div class="map-panel-header">
-          <div class="map-panel-title">現居地</div>
-          <div class="map-panel-sub" id="mapRightSub">請先選擇左側出生地</div>
+
+      <!-- MAP -->
+      <div class="view-panel" id="panel-map">
+        <div class="panel-toolbar">
+          <div class="toolbar-title">雙地圖流向</div>
+          <div class="toolbar-hint">點擊左圖（出生地）或右圖（現居地）縣市查看雙向流動</div>
         </div>
-        <div class="map-svg-wrap">
-          <svg id="map-right-svg" viewBox="0 0 380 500">
-            <text x="190" y="250" text-anchor="middle" font-family="var(--sans)" font-size="13" fill="#bbb">← 點擊左側縣市</text>
-          </svg>
-        </div>
-        <div class="map-legend">
-          <span>少</span>
-          <div class="map-legend-bar">
-            <div class="map-legend-seg" style="background:#e3eef7"></div>
-            <div class="map-legend-seg" style="background:#9ecae1"></div>
-            <div class="map-legend-seg" style="background:#4292c6"></div>
-            <div class="map-legend-seg" style="background:#2171b5"></div>
-            <div class="map-legend-seg" style="background:#08306b"></div>
+        <div class="map-layout">
+          <div class="map-panel">
+            <div class="map-panel-header">
+              <div class="map-panel-title">出生地</div>
+              <div class="map-panel-sub" id="mapLeftSub">點擊縣市查看流向</div>
+            </div>
+            <div class="map-svg-wrap">
+              <svg id="map-left-svg" viewBox="0 0 380 380"></svg>
+            </div>
+            <div class="map-legend">
+              <span>少</span>
+              <div class="map-legend-bar">
+                <div class="map-legend-seg" style="background:#e8f5e9"></div>
+                <div class="map-legend-seg" style="background:#a5d6a7"></div>
+                <div class="map-legend-seg" style="background:#66bb6a"></div>
+                <div class="map-legend-seg" style="background:#388e3c"></div>
+                <div class="map-legend-seg" style="background:#1b5e20"></div>
+              </div>
+              <span>多（√ 根號壓縮）</span>
+            </div>
           </div>
-          <span>多（流入人口數）</span>
+          <div class="map-panel">
+            <div class="map-panel-header">
+              <div class="map-panel-title">現居地</div>
+              <div class="map-panel-sub" id="mapRightSub">請先選擇出生地或現居地</div>
+            </div>
+            <div class="map-svg-wrap">
+              <svg id="map-right-svg" viewBox="0 0 380 380">
+                <text x="190" y="190" text-anchor="middle" font-family="var(--sans)" font-size="13" fill="#bbb">← 點擊左側縣市</text>
+              </svg>
+            </div>
+            <div class="map-legend">
+              <span>少</span>
+              <div class="map-legend-bar">
+                <div class="map-legend-seg" style="background:#e3eef7"></div>
+                <div class="map-legend-seg" style="background:#9ecae1"></div>
+                <div class="map-legend-seg" style="background:#4292c6"></div>
+                <div class="map-legend-seg" style="background:#2171b5"></div>
+                <div class="map-legend-seg" style="background:#08306b"></div>
+              </div>
+              <span>多（√ 根號壓縮）</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
+
+    </div><!-- app-content -->
+  </div><!-- app-shell -->
 
 <div id="tooltip"></div>
 
@@ -291,7 +304,7 @@ function processData(rows) {
 
 // ── TABS ──
 function switchTab(name,btn) {
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.v-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.view-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
@@ -374,7 +387,7 @@ function drawBothMaps() {
 }
 
 function drawMap(svgId, side, valueOf, thisSel) {
-  const W=380, H=500, PAD_LEFT=52;
+  const W=380, H=380, PAD_LEFT=52;
   const svg = d3.select('#'+svgId).attr('viewBox',`0 0 ${W} ${H}`);
   svg.selectAll('*').remove();
 
@@ -391,11 +404,11 @@ function drawMap(svgId, side, valueOf, thisSel) {
   const proj    = d3.geoMercator().fitExtent([[PAD_LEFT+4,8],[W-4,H-8]],{type:'FeatureCollection',features:mainF});
   const pathFn  = d3.geoPath().projection(proj);
 
-  // Log1p colour scale — reduces extreme skew between 臺北 and 連江
+  // Sqrt colour scale — moderate compression, preserves visual contrast
   const allVals = TW_GEO.features.map(f=>valueOf(featureCounty(f))).filter(v=>v>0);
-  const logMax  = allVals.length ? Math.log1p(Math.max(...allVals)) : 1;
+  const sqrtMax = allVals.length ? Math.sqrt(Math.max(...allVals)) : 1;
   const interp  = side==='left' ? d3.interpolateGreens : d3.interpolateBlues;
-  const colFn   = v => v ? interp(Math.log1p(v)/logMax*0.82+0.1) : '#e4e4e4';
+  const colFn   = v => v ? interp(Math.sqrt(v)/sqrtMax*0.88+0.06) : '#e4e4e4';
 
   const yr = allData['2025']||{};
 
