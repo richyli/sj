@@ -6,7 +6,6 @@
 <title>台灣人口流動 — 出生地 × 居住地</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -302,281 +301,175 @@ function switchTab(name,btn) {
 }
 
 // ════════════════════════════════════════════
-// MAP TAB
+// MAP TAB  — embedded GeoJSON, no CDN needed
 // ════════════════════════════════════════════
-let geoFeatures = null;       // array of GeoJSON features with normalized names
-let mapSelectedCounty = null; // selected county on left map
+const TW_GEO = {"type":"FeatureCollection","features":[{"type":"Feature","properties":{"COUNTYNAME":"臺北市"},"geometry":{"type":"Polygon","coordinates":[[[121.44,25.205],[121.65,25.205],[121.67,25.09],[121.54,24.98],[121.44,24.98],[121.44,25.205]]]}},{"type":"Feature","properties":{"COUNTYNAME":"新北市"},"geometry":{"type":"Polygon","coordinates":[[[121.37,25.28],[121.62,25.28],[121.8,25.16],[121.78,25.02],[121.65,25.0],[121.65,24.87],[121.55,24.83],[121.41,24.88],[121.33,25.0],[121.19,25.1],[121.3,25.2],[121.37,25.28]]]}},{"type":"Feature","properties":{"COUNTYNAME":"基隆市"},"geometry":{"type":"Polygon","coordinates":[[[121.65,25.22],[121.82,25.22],[121.82,25.07],[121.65,25.09],[121.65,25.22]]]}},{"type":"Feature","properties":{"COUNTYNAME":"桃園市"},"geometry":{"type":"Polygon","coordinates":[[[120.96,25.12],[121.35,25.12],[121.4,24.88],[121.19,24.73],[120.98,24.78],[120.88,24.96],[120.96,25.12]]]}},{"type":"Feature","properties":{"COUNTYNAME":"新竹市"},"geometry":{"type":"Polygon","coordinates":[[[120.87,24.84],[121.0,24.84],[121.0,24.72],[120.87,24.72],[120.87,24.84]]]}},{"type":"Feature","properties":{"COUNTYNAME":"新竹縣"},"geometry":{"type":"Polygon","coordinates":[[[120.87,24.92],[121.0,24.92],[121.19,24.75],[121.22,24.58],[121.1,24.48],[120.88,24.53],[120.78,24.62],[120.79,24.82],[120.87,24.92]]]}},{"type":"Feature","properties":{"COUNTYNAME":"苗栗縣"},"geometry":{"type":"Polygon","coordinates":[[[120.62,24.68],[120.79,24.68],[120.88,24.53],[120.9,24.33],[120.73,24.22],[120.53,24.28],[120.48,24.52],[120.55,24.62],[120.62,24.68]]]}},{"type":"Feature","properties":{"COUNTYNAME":"臺中市"},"geometry":{"type":"Polygon","coordinates":[[[120.38,24.47],[120.62,24.52],[120.8,24.42],[120.93,24.23],[120.97,23.98],[121.02,23.78],[120.73,23.72],[120.53,23.83],[120.43,24.03],[120.32,24.22],[120.38,24.47]]]}},{"type":"Feature","properties":{"COUNTYNAME":"彰化縣"},"geometry":{"type":"Polygon","coordinates":[[[120.17,24.22],[120.43,24.22],[120.55,24.07],[120.38,23.93],[120.13,23.93],[120.08,24.1],[120.17,24.22]]]}},{"type":"Feature","properties":{"COUNTYNAME":"南投縣"},"geometry":{"type":"Polygon","coordinates":[[[120.53,24.52],[120.8,24.42],[120.93,24.23],[121.03,24.08],[121.12,23.88],[121.17,23.62],[120.97,23.48],[120.68,23.48],[120.52,23.63],[120.42,23.83],[120.43,24.03],[120.53,24.52]]]}},{"type":"Feature","properties":{"COUNTYNAME":"雲林縣"},"geometry":{"type":"Polygon","coordinates":[[[120.08,23.97],[120.38,23.97],[120.53,23.87],[120.43,23.68],[120.18,23.62],[119.93,23.68],[119.9,23.85],[120.08,23.97]]]}},{"type":"Feature","properties":{"COUNTYNAME":"嘉義市"},"geometry":{"type":"Polygon","coordinates":[[[120.38,23.52],[120.52,23.52],[120.52,23.43],[120.38,23.43],[120.38,23.52]]]}},{"type":"Feature","properties":{"COUNTYNAME":"嘉義縣"},"geometry":{"type":"Polygon","coordinates":[[[119.92,23.78],[120.18,23.78],[120.43,23.68],[120.55,23.52],[120.48,23.28],[120.28,23.12],[120.08,23.18],[119.93,23.38],[119.88,23.6],[119.92,23.78]]]}},{"type":"Feature","properties":{"COUNTYNAME":"臺南市"},"geometry":{"type":"Polygon","coordinates":[[[119.88,23.4],[120.1,23.4],[120.28,23.22],[120.42,23.0],[120.3,22.78],[120.08,22.68],[119.88,22.78],[119.77,22.98],[119.82,23.22],[119.88,23.4]]]}},{"type":"Feature","properties":{"COUNTYNAME":"高雄市"},"geometry":{"type":"Polygon","coordinates":[[[120.08,22.68],[120.42,22.77],[120.72,22.67],[120.87,22.38],[120.87,22.18],[120.65,22.08],[120.38,22.12],[120.18,22.28],[120.03,22.48],[120.05,22.65],[120.08,22.68]]]}},{"type":"Feature","properties":{"COUNTYNAME":"屏東縣"},"geometry":{"type":"Polygon","coordinates":[[[120.38,22.77],[120.72,22.67],[120.92,22.52],[120.92,22.08],[120.7,21.88],[120.47,21.93],[120.28,22.12],[120.18,22.38],[120.38,22.77]]]}},{"type":"Feature","properties":{"COUNTYNAME":"臺東縣"},"geometry":{"type":"Polygon","coordinates":[[[120.97,23.5],[121.17,23.65],[121.42,23.38],[121.58,22.93],[121.53,22.48],[121.22,22.18],[120.92,22.18],[120.92,22.52],[120.87,22.82],[121.02,23.22],[120.97,23.5]]]}},{"type":"Feature","properties":{"COUNTYNAME":"花蓮縣"},"geometry":{"type":"Polygon","coordinates":[[[121.17,23.93],[121.52,24.02],[121.67,23.77],[121.72,23.38],[121.57,23.08],[121.42,22.97],[121.2,22.92],[121.17,23.25],[121.02,23.5],[121.17,23.93]]]}},{"type":"Feature","properties":{"COUNTYNAME":"宜蘭縣"},"geometry":{"type":"Polygon","coordinates":[[[121.4,24.92],[121.77,24.92],[121.92,24.72],[121.87,24.43],[121.72,24.28],[121.52,24.23],[121.3,24.48],[121.2,24.65],[121.4,24.92]]]}},{"type":"Feature","properties":{"COUNTYNAME":"澎湖縣"},"geometry":{"type":"Polygon","coordinates":[[[119.48,23.57],[119.62,23.75],[119.72,23.6],[119.65,23.43],[119.5,23.42],[119.48,23.57]]]}},{"type":"Feature","properties":{"COUNTYNAME":"金門縣"},"geometry":{"type":"Polygon","coordinates":[[[118.2,24.38],[118.5,24.52],[118.55,24.32],[118.22,24.28],[118.2,24.38]]]}},{"type":"Feature","properties":{"COUNTYNAME":"連江縣"},"geometry":{"type":"Polygon","coordinates":[[[119.87,26.1],[120.05,26.28],[120.08,26.1],[119.9,26.05],[119.87,26.1]]]}}]};
 
-// Name normaliser: 台 ↔ 臺, trim
-function normName(s){ return (s||'').trim().replace(/台/g,'臺'); }
-
-// Match geojson feature name to our county list
-function featureCounty(f){
-  const raw = f.properties.COUNTYNAME || f.properties.name || f.properties.NAME || '';
-  return normName(raw);
-}
-
-async function loadGeo() {
-  if(geoFeatures) return geoFeatures;
-  // taiwan-atlas topojson (counties)
-  const url = 'https://cdn.jsdelivr.net/npm/taiwan-atlas@0.0.4/counties-10k.json';
-  const topo = await d3.json(url);
-  const key = Object.keys(topo.objects)[0]; // 'counties' or similar
-  const geo = topojson.feature(topo, topo.objects[key]);
-  geoFeatures = geo.features;
-  return geoFeatures;
-}
-
-function renderMapTab() {
-  loadGeo().then(features => {
-    drawLeftMap(features);
-    if(mapSelectedCounty) drawRightMap(features, mapSelectedCounty);
-  }).catch(()=>{
-    document.getElementById('map-left-svg').innerHTML=
-      '<text x="170" y="230" text-anchor="middle" font-size="12" fill="#c0392b">地圖載入失敗，請確認網路連線</text>';
-  });
-}
-
-// ── colour helpers ──
-const GREEN_SCALE = d3.scaleSequential(d3.interpolateGreens);
-const BLUE_SCALE  = d3.scaleSequential(d3.interpolateBlues);
-
-function makeProjPath(features, svgW, svgH) {
-  // Filter to mainland + major islands for projection fit
-  // Use all features to get overall bounds
-  const proj = d3.geoMercator().fitSize([svgW, svgH],
-    {type:'FeatureCollection', features});
-  return [proj, d3.geoPath().projection(proj)];
-}
-
-// Islands that fall far from main island — we place them as small insets
-const ISLAND_INSETS = {
-  '連江縣': { x: 18, y: 30, scale: 3.5, label: '連江' },
-  '金門縣': { x: 18, y: 100, scale: 2.2, label: '金門' },
-  '澎湖縣': { x: 18, y: 185, scale: 1.8, label: '澎湖' },
+// Island counties — rendered as inset boxes bottom-left of each map
+const ISLANDS = new Set(['澎湖縣','金門縣','連江縣']);
+const ISLAND_CFG = {
+  '連江縣': {bx:8,  by:10,  label:'連江'},
+  '金門縣': {bx:8,  by:72,  label:'金門'},
+  '澎湖縣': {bx:8,  by:134, label:'澎湖'},
 };
 
-function drawLeftMap(features) {
-  const svg = d3.select('#map-left-svg');
-  svg.selectAll('*').remove();
+let mapSelectedCounty = null;
 
-  const W=340, H=460;
-  const yr = allData['2025']||{};
+function normName(s){ return (s||'').trim().replace(/台/g,'臺'); }
+function featureCounty(f){ return f.properties.COUNTYNAME || ''; }
 
-  // Total born in each county
-  const bornTot = {};
-  counties.forEach(c=>{
-    bornTot[normName(c)] = Object.values(yr[c]||{}).reduce((a,b)=>a+b,0);
-  });
-  const maxBorn = d3.max(Object.values(bornTot))||1;
-
-  // Split: main island features vs island insets
-  const mainFeatures = features.filter(f=>!ISLAND_INSETS[featureCounty(f)]);
-  const islandFeatures = features.filter(f=> ISLAND_INSETS[featureCounty(f)]);
-
-  // Projection fitted to main island features
-  const proj = d3.geoMercator().fitSize([W-50, H-10], {type:'FeatureCollection',features:mainFeatures});
-  const path = d3.geoPath().projection(proj);
-
-  // Draw main island counties
-  svg.selectAll('.county-path')
-    .data(mainFeatures)
-    .join('path')
-    .attr('class', d => {
-      const cn = featureCounty(d);
-      const sel = mapSelectedCounty && normName(mapSelectedCounty)===cn ? ' selected' : '';
-      return 'county-path'+sel;
-    })
-    .attr('d', path)
-    .attr('fill', d => {
-      const cn = featureCounty(d);
-      const v = bornTot[cn]||0;
-      GREEN_SCALE.domain([0, maxBorn]);
-      return v ? GREEN_SCALE(v) : '#e8e8e8';
-    })
-    .on('mouseenter', (ev,d)=>{
-      const cn = featureCounty(d);
-      const v = bornTot[cn]||0;
-      showTip(ev,`<strong>${cn}</strong><br>出生人口：${fmt(v)} 人`);
-    })
-    .on('mousemove', moveTip)
-    .on('mouseleave', hideTip)
-    .on('click', (ev,d)=>{
-      const cn = featureCounty(d);
-      mapSelectedCounty = cn;
-      drawLeftMap(features);
-      drawRightMap(features, cn);
-    });
-
-  // Draw island insets in bottom-left corner
-  islandFeatures.forEach(f=>{
-    const cn = featureCounty(f);
-    const inset = ISLAND_INSETS[cn];
-    if(!inset) return;
-
-    // Get centroid + bounds of the feature to centre it in inset box
-    const [[x0,y0],[x1,y1]] = d3.geoBounds(f);
-    const islandProj = d3.geoMercator()
-      .center([(x0+x1)/2,(y0+y1)/2])
-      .scale(4000*inset.scale)
-      .translate([inset.x+22, inset.y+18]);
-    const islandPath = d3.geoPath().projection(islandProj);
-
-    const g = svg.append('g').attr('class','island-group')
-      .style('cursor','pointer')
-      .on('mouseenter', ev=>{
-        const v = bornTot[cn]||0;
-        showTip(ev,`<strong>${cn}</strong><br>出生人口：${fmt(v)} 人`);
-      })
-      .on('mousemove', moveTip)
-      .on('mouseleave', hideTip)
-      .on('click', ()=>{
-        mapSelectedCounty = cn;
-        drawLeftMap(features);
-        drawRightMap(features, cn);
-      });
-
-    // Inset box border
-    g.append('rect').attr('x',inset.x).attr('y',inset.y)
-      .attr('width',44).attr('height',36)
-      .attr('fill','#f5f5f5').attr('stroke','#ccc').attr('stroke-width',.5).attr('rx',2);
-
-    GREEN_SCALE.domain([0, maxBorn]);
-    g.append('path')
-      .attr('d', islandPath(f))
-      .attr('fill', bornTot[cn] ? GREEN_SCALE(bornTot[cn]) : '#e8e8e8')
-      .attr('stroke', mapSelectedCounty && normName(mapSelectedCounty)===cn ? '#1a1916' : '#fff')
-      .attr('stroke-width', mapSelectedCounty && normName(mapSelectedCounty)===cn ? 2 : .5);
-
-    g.append('text').attr('class','island-label')
-      .attr('x', inset.x+22).attr('y', inset.y+37)
-      .attr('text-anchor','middle').text(inset.label);
-  });
-
-  // County labels for main island (only larger counties)
-  mainFeatures.forEach(f=>{
-    const cn = featureCounty(f);
-    const centroid = path.centroid(f);
-    if(isNaN(centroid[0])) return;
-    const shortName = cn.replace(/[縣市]/,'');
-    svg.append('text')
-      .attr('x', centroid[0]).attr('y', centroid[1]+1)
-      .attr('text-anchor','middle').attr('dominant-baseline','middle')
-      .attr('font-family','var(--sans)').attr('font-size', 9)
-      .attr('fill', '#333').attr('pointer-events','none')
-      .text(shortName);
-  });
-
-  // Selected label
-  if(mapSelectedCounty) {
-    document.getElementById('mapLeftSub').textContent = `已選：${mapSelectedCounty}`;
-  } else {
-    document.getElementById('mapLeftSub').textContent = '點擊縣市查看流向';
-  }
+function renderMapTab() {
+  drawMap('map-left-svg',  null,        'left');
+  if(mapSelectedCounty) drawMap('map-right-svg', mapSelectedCounty, 'right');
 }
 
-function drawRightMap(features, fromCounty) {
-  const svg = d3.select('#map-right-svg');
+// ── core map draw ──
+// side: 'left' = colour by born-total (green), 'right' = colour by flow from fromCounty (blue)
+function drawMap(svgId, fromCounty, side) {
+  const W=340, H=460;
+  const svg = d3.select('#'+svgId).attr('viewBox',`0 0 ${W} ${H}`);
   svg.selectAll('*').remove();
 
-  const W=340, H=460;
   const yr = allData['2025']||{};
 
-  // Flow from fromCounty to each destination
-  const normFrom = normName(fromCounty);
-  // Find original key in data
-  const fromKey = counties.find(c=>normName(c)===normFrom) || fromCounty;
-  const flowData = yr[fromKey] || {};
+  // Precompute values for colour scale
+  let valueOf; // county normName → number
+  if(side==='left'){
+    // total born in each county
+    const bornTot={};
+    counties.forEach(c=>{ bornTot[normName(c)]=Object.values(yr[c]||{}).reduce((a,b)=>a+b,0); });
+    valueOf = cn => bornTot[cn]||0;
+  } else {
+    const fromKey = counties.find(c=>normName(c)===normName(fromCounty))||fromCounty;
+    const flowData = yr[fromKey]||{};
+    const flowLookup={};
+    Object.entries(flowData).forEach(([to,v])=>{ flowLookup[normName(to)]=v; });
+    valueOf = cn => flowLookup[cn]||0;
+  }
 
-  // Build lookup: normName → flow value
-  const flowLookup = {};
-  Object.entries(flowData).forEach(([to, v])=>{
-    flowLookup[normName(to)] = v;
-  });
-  const maxFlow = d3.max(Object.values(flowLookup))||1;
+  // Separate main island and island features
+  const mainF   = TW_GEO.features.filter(f=>!ISLANDS.has(featureCounty(f)));
+  const islandF = TW_GEO.features.filter(f=> ISLANDS.has(featureCounty(f)));
 
-  const mainFeatures = features.filter(f=>!ISLAND_INSETS[featureCounty(f)]);
-  const islandFeatures = features.filter(f=> ISLAND_INSETS[featureCounty(f)]);
+  // Projection fitted to main island with right-side padding for insets (50px left)
+  const proj = d3.geoMercator().fitSize([W-52, H-8], {type:'FeatureCollection',features:mainF});
+  const pathFn = d3.geoPath().projection(proj);
 
-  const proj = d3.geoMercator().fitSize([W-50, H-10], {type:'FeatureCollection',features:mainFeatures});
-  const path = d3.geoPath().projection(proj);
+  // Colour scale
+  const maxVal = d3.max(TW_GEO.features.map(f=>valueOf(featureCounty(f))))||1;
+  const colScale = side==='left'
+    ? d3.scaleSequential(d3.interpolateGreens).domain([0, maxVal])
+    : d3.scaleSequential(d3.interpolateBlues).domain([0, maxVal]);
 
-  BLUE_SCALE.domain([0, maxFlow]);
+  // ── Draw main island counties ──
+  const g = svg.append('g').attr('transform','translate(52,0)'); // offset right to leave room for insets
 
-  svg.selectAll('.county-path')
-    .data(mainFeatures)
+  g.selectAll('path')
+    .data(mainF)
     .join('path')
     .attr('class', d=>{
-      const cn = featureCounty(d);
-      return 'county-path' + (cn===normFrom?' selected':'');
+      const cn=featureCounty(d);
+      const isSelected = side==='left'
+        ? mapSelectedCounty && normName(mapSelectedCounty)===normName(cn)
+        : fromCounty && normName(fromCounty)===normName(cn);
+      return 'county-path'+(isSelected?' selected':'');
     })
-    .attr('d', path)
-    .attr('fill', d=>{
-      const cn = featureCounty(d);
-      const v = flowLookup[cn]||0;
-      return v ? BLUE_SCALE(v) : '#eeeeee';
-    })
-    .on('mouseenter', (ev,d)=>{
-      const cn = featureCounty(d);
-      const v = flowLookup[cn]||0;
-      const totalOut = Object.values(flowData).reduce((a,b)=>a+b,0)||1;
-      const p = v ? ((v/totalOut)*100).toFixed(1)+'%' : '0%';
-      showTip(ev,`出生地：<strong>${fromCounty}</strong><br>現居：<strong>${cn}</strong><br>${fmt(v)} 人（${p}）`);
-    })
+    .attr('d', pathFn)
+    .attr('fill', d=>{ const v=valueOf(featureCounty(d)); return v?colScale(v):'#e8e8e8'; })
+    .on('mouseenter',(ev,d)=>{ mapTip(ev,d,side,fromCounty,valueOf,yr); })
     .on('mousemove', moveTip)
-    .on('mouseleave', hideTip);
+    .on('mouseleave', hideTip)
+    .on('click',(ev,d)=>{
+      if(side==='left'){
+        mapSelectedCounty = featureCounty(d);
+        drawMap('map-left-svg', null, 'left');
+        drawMap('map-right-svg', mapSelectedCounty, 'right');
+        document.getElementById('mapLeftSub').textContent='已選：'+mapSelectedCounty;
+        const fromKey=counties.find(c=>normName(c)===normName(mapSelectedCounty))||mapSelectedCounty;
+        const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
+        document.getElementById('mapRightSub').textContent=`出生於 ${mapSelectedCounty}：${fmt(tot)} 人`;
+      }
+    })
+    .style('cursor', side==='left'?'pointer':'default');
 
-  // Island insets
-  islandFeatures.forEach(f=>{
-    const cn = featureCounty(f);
-    const inset = ISLAND_INSETS[cn];
-    if(!inset) return;
-    const [[x0,y0],[x1,y1]] = d3.geoBounds(f);
-    const islandProj = d3.geoMercator()
-      .center([(x0+x1)/2,(y0+y1)/2])
-      .scale(4000*inset.scale)
-      .translate([inset.x+22, inset.y+18]);
-    const islandPath = d3.geoPath().projection(islandProj);
-    const v = flowLookup[cn]||0;
-    const totalOut = Object.values(flowData).reduce((a,b)=>a+b,0)||1;
-
-    const g = svg.append('g')
-      .on('mouseenter', ev=>{
-        const p = v ? ((v/totalOut)*100).toFixed(1)+'%' : '0%';
-        showTip(ev,`出生地：<strong>${fromCounty}</strong><br>現居：<strong>${cn}</strong><br>${fmt(v)} 人（${p}）`);
-      })
-      .on('mousemove', moveTip)
-      .on('mouseleave', hideTip);
-
-    g.append('rect').attr('x',inset.x).attr('y',inset.y)
-      .attr('width',44).attr('height',36)
-      .attr('fill','#f5f5f5').attr('stroke','#ccc').attr('stroke-width',.5).attr('rx',2);
-
-    g.append('path').attr('d', islandPath(f))
-      .attr('fill', v ? BLUE_SCALE(v) : '#eeeeee')
-      .attr('stroke', cn===normFrom ? '#1a1916' : '#fff').attr('stroke-width', cn===normFrom ? 2 : .5);
-
-    g.append('text').attr('class','island-label')
-      .attr('x', inset.x+22).attr('y', inset.y+37)
-      .attr('text-anchor','middle').text(inset.label);
-  });
-
-  // Labels
-  mainFeatures.forEach(f=>{
-    const cn = featureCounty(f);
-    const centroid = path.centroid(f);
-    if(isNaN(centroid[0])) return;
-    svg.append('text')
-      .attr('x', centroid[0]).attr('y', centroid[1]+1)
+  // County name labels on main island
+  mainF.forEach(f=>{
+    const cn=featureCounty(f);
+    const c=pathFn.centroid(f);
+    if(isNaN(c[0])) return;
+    g.append('text')
+      .attr('x',c[0]).attr('y',c[1]+1)
       .attr('text-anchor','middle').attr('dominant-baseline','middle')
-      .attr('font-family','var(--sans)').attr('font-size', 9)
-      .attr('fill', '#333').attr('pointer-events','none')
+      .attr('font-family','var(--sans)').attr('font-size',9)
+      .attr('fill','#222').attr('pointer-events','none')
       .text(cn.replace(/[縣市]/,''));
   });
 
-  const totalOut = Object.values(flowData).reduce((a,b)=>a+b,0);
-  document.getElementById('mapRightSub').textContent =
-    `出生於 ${fromCounty} 共 ${fmt(totalOut)} 人`;
+  // ── Island insets (top-left strip) ──
+  islandF.forEach(f=>{
+    const cn=featureCounty(f);
+    const cfg=ISLAND_CFG[cn]; if(!cfg) return;
+    const BW=44, BH=56;
+
+    // Local projection for each island
+    const [[x0,y0],[x1,y1]]=d3.geoBounds(f);
+    const cx=(x0+x1)/2, cy=(y0+y1)/2;
+    const span=Math.max(x1-x0,y1-y0)||0.3;
+    const sc=Math.min(BW,BH)*0.7/span*0.0174533; // rough deg→px
+    const islandProj=d3.geoMercator().center([cx,cy]).scale(3600/span).translate([cfg.bx+BW/2, cfg.by+BH/2-6]);
+    const islandPath=d3.geoPath().projection(islandProj);
+
+    const ig=svg.append('g')
+      .style('cursor', side==='left'?'pointer':'default')
+      .on('mouseenter',ev=>{ mapTip(ev,f,side,fromCounty,valueOf,yr); })
+      .on('mousemove',moveTip)
+      .on('mouseleave',hideTip)
+      .on('click',()=>{
+        if(side==='left'){
+          mapSelectedCounty=cn;
+          drawMap('map-left-svg',null,'left');
+          drawMap('map-right-svg',cn,'right');
+          document.getElementById('mapLeftSub').textContent='已選：'+cn;
+          const fromKey=counties.find(c2=>normName(c2)===normName(cn))||cn;
+          const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
+          document.getElementById('mapRightSub').textContent=`出生於 ${cn}：${fmt(tot)} 人`;
+        }
+      });
+
+    // Box
+    ig.append('rect').attr('x',cfg.bx).attr('y',cfg.by)
+      .attr('width',BW).attr('height',BH)
+      .attr('fill','#f0f0f0').attr('stroke','#ccc').attr('stroke-width',.6).attr('rx',3);
+
+    // Island shape
+    const v=valueOf(cn);
+    const isSelected = side==='left'
+      ? mapSelectedCounty && normName(mapSelectedCounty)===normName(cn)
+      : fromCounty && normName(fromCounty)===normName(cn);
+    ig.append('path').attr('d',islandPath(f))
+      .attr('fill', v?colScale(v):'#ddd')
+      .attr('stroke', isSelected?'#1a1916':'#fff')
+      .attr('stroke-width', isSelected?2:.6);
+
+    // Label
+    ig.append('text').attr('x',cfg.bx+BW/2).attr('y',cfg.by+BH-4)
+      .attr('text-anchor','middle')
+      .attr('font-family','var(--sans)').attr('font-size',9).attr('fill','#555')
+      .text(cfg.label);
+  });
+}
+
+function mapTip(ev,f,side,fromCounty,valueOf,yr){
+  const cn=featureCounty(f);
+  const v=valueOf(cn);
+  if(side==='left'){
+    showTip(ev,`<strong>${cn}</strong><br>出生人口：${fmt(v)} 人`);
+  } else {
+    const fromKey=counties.find(c=>normName(c)===normName(fromCounty))||fromCounty;
+    const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0)||1;
+    const p=((v/tot)*100).toFixed(1);
+    showTip(ev,`出生地：<strong>${fromCounty}</strong><br>現居地：<strong>${cn}</strong><br>${fmt(v)} 人（${p}%）`);
+  }
 }
 
 function buildYearTabs() {
