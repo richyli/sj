@@ -68,7 +68,7 @@ header{background:var(--text);color:#fff;padding:.85rem 1.4rem}
 #sankey-svg{width:100%;display:block}
 
 /* MATRIX */
-.matrix-layout{display:grid;grid-template-columns:1fr 290px;gap:1rem;align-items:start}
+.matrix-layout{display:grid;grid-template-columns:1fr 560px;gap:1rem;align-items:start}
 .panel{background:var(--surface);border:1px solid var(--border)}
 .panel-header{padding:.75rem 1.1rem .65rem;border-bottom:1px solid var(--border);display:flex;align-items:baseline;justify-content:space-between;gap:1rem}
 .panel-title{font-weight:700;font-size:.85rem}
@@ -391,11 +391,14 @@ function drawBothMaps() {
     document.getElementById('mapRightSub').textContent='請先選擇出生地或現居地';
   }
 
-  drawMap('map-left-svg',  'left',  leftVal,  mapLeftSel);
-  drawMap('map-right-svg', 'right', rightVal, mapRightSel);
+  // grayOthers: on clicked map, non-selected counties → gray; on other map → colored by data
+  const grayLeft  = !!(mapLeftSel  && !mapRightSel);
+  const grayRight = !!(mapRightSel && !mapLeftSel);
+  drawMap('map-left-svg',  'left',  leftVal,  mapLeftSel,  grayLeft);
+  drawMap('map-right-svg', 'right', rightVal, mapRightSel, grayRight);
 }
 
-function drawMap(svgId, side, valueOf, thisSel) {
+function drawMap(svgId, side, valueOf, thisSel, grayOthers) {
   const W=380, H=380, PAD_LEFT=52;
   const svg = d3.select('#'+svgId).attr('viewBox',`0 0 ${W} ${H}`);
   svg.selectAll('*').remove();
@@ -404,7 +407,7 @@ function drawMap(svgId, side, valueOf, thisSel) {
     svg.append('text').attr('x',W/2).attr('y',H/2)
       .attr('text-anchor','middle').attr('font-family','var(--sans)')
       .attr('font-size',13).attr('fill','#bbb')
-      .text(side==='right'?'← 點擊左側出生地 或 右側現居地':'← 點擊右側縣市');
+      .text(side==='right'?'← 點擊左圖出生地 或 右圖現居地':'↓ 點擊縣市');
     return;
   }
 
@@ -413,19 +416,25 @@ function drawMap(svgId, side, valueOf, thisSel) {
   const proj    = d3.geoMercator().fitExtent([[PAD_LEFT+4,8],[W-4,H-8]],{type:'FeatureCollection',features:mainF});
   const pathFn  = d3.geoPath().projection(proj);
 
-  // Sqrt colour scale — moderate compression, preserves visual contrast
+  // Sqrt colour scale
   const allVals = TW_GEO.features.map(f=>valueOf(featureCounty(f))).filter(v=>v>0);
   const sqrtMax = allVals.length ? Math.sqrt(Math.max(...allVals)) : 1;
   const interp  = side==='left' ? d3.interpolateGreens : d3.interpolateBlues;
-  const colFn   = v => v ? interp(Math.sqrt(v)/sqrtMax*0.88+0.06) : '#e4e4e4';
+  const dataColFn = v => v ? interp(Math.sqrt(v)/sqrtMax*0.88+0.06) : '#e4e4e4';
 
   const yr = allData['2025']||{};
+
+  // Fill logic: if grayOthers=true, non-selected counties → uniform gray
+  const fillFn = (cn) => {
+    if(grayOthers && thisSel && normName(cn)!==normName(thisSel)) return '#d8d8d8';
+    return dataColFn(valueOf(cn));
+  };
 
   svg.selectAll('.county-path')
     .data(mainF).join('path')
     .attr('class', d=>'county-path'+(normName(featureCounty(d))===normName(thisSel||'')?' selected':''))
     .attr('d', pathFn)
-    .attr('fill', d=>colFn(valueOf(featureCounty(d))))
+    .attr('fill', d=>fillFn(featureCounty(d)))
     .attr('stroke','#fff').attr('stroke-width',.6)
     .style('cursor','pointer')
     .on('mouseenter',(ev,d)=>{ mapTip(ev, featureCounty(d), side, valueOf, yr); })
@@ -441,13 +450,12 @@ function drawMap(svgId, side, valueOf, thisSel) {
       .text(featureCounty(f).replace(/[縣市]/,''));
   });
 
-  // Island insets
   islandF.forEach(f=>{
     const cn=featureCounty(f), cfg=ISLAND_CFG[cn]; if(!cfg) return;
     const BW=44, BH=54;
     const ip=d3.geoMercator().fitExtent([[cfg.bx+2,cfg.by+2],[cfg.bx+BW-2,cfg.by+BH-10]],f);
     const ipath=d3.geoPath().projection(ip);
-    const v=valueOf(cn), isSel=normName(cn)===normName(thisSel||'');
+    const isSel=normName(cn)===normName(thisSel||'');
 
     const ig=svg.append('g').style('cursor','pointer')
       .on('mouseenter',ev=>{ mapTip(ev,cn,side,valueOf,yr); })
@@ -458,7 +466,7 @@ function drawMap(svgId, side, valueOf, thisSel) {
       .attr('width',BW).attr('height',BH)
       .attr('fill','#f0f0f0').attr('stroke','#ccc').attr('stroke-width',.5).attr('rx',3);
     ig.append('path').attr('d',ipath(f))
-      .attr('fill',colFn(v))
+      .attr('fill',fillFn(cn))
       .attr('stroke',isSel?'#1a1916':'#fff').attr('stroke-width',isSel?2:.6);
     ig.append('text').attr('x',cfg.bx+BW/2).attr('y',cfg.by+BH-2)
       .attr('text-anchor','middle')
@@ -555,57 +563,55 @@ function renderSankey() {
     outflowTot[f.from]=(outflowTot[f.from]||0)+f.value;
   });
 
-  // VERTICAL: top=出生地, bottom=現居地
-  // top row sorted by outflow desc; bottom row sorted by inflow desc
   const topOrder=[...new Set(flows.map(f=>f.from))].sort((a,b)=>(outflowTot[b]||0)-(outflowTot[a]||0));
   const botOrder=[...new Set(flows.map(f=>f.to))].sort((a,b)=>(inflowTot[b]||0)-(inflowTot[a]||0));
 
   const wrap=document.getElementById('sankey-wrap');
-  const W=wrap.clientWidth-8;  // no side padding needed now
-  const MIN_NODE=sankeyFiltered?20:14;
-  const GAP=5, LABEL_H=28, NODE_H=16;
-  const BAND_H=80; // ribbon zone height
+  // Fixed width = wrap width, no horizontal scroll
+  const W=wrap.clientWidth-18;
+  const GAP=4, NODE_H=20, LABEL_H=32, BAND_H=160;
+  const ISLANDS_SET=new Set(['連江縣','金門縣','澎湖縣']);
 
-  // Node widths proportional to sqrt(value), clamped to MIN_NODE
+  // Node widths: mainland = sqrt-proportional, islands always visible minimum
   function computeWidths(order, totalFn) {
     if(!order.length) return [];
     const tots=order.map(c=>totalFn(c)||0);
     const sqrts=tots.map(t=>Math.sqrt(t));
     const sqrtSum=sqrts.reduce((a,b)=>a+b,0)||1;
     const available=W - GAP*(order.length-1);
-    return sqrts.map(s=>Math.max(MIN_NODE,(s/sqrtSum)*available));
+    // mainland min=16, island min=24 (always legible)
+    return sqrts.map((s,i)=>Math.max(ISLANDS_SET.has(order[i])?24:14, (s/sqrtSum)*available));
   }
 
   const tSizes=computeWidths(topOrder,c=>outflowTot[c]);
   const bSizes=computeWidths(botOrder,c=>inflowTot[c]);
 
-  // x positions
-  function xPos(sizes) {
-    const pos=[]; let x=0;
-    sizes.forEach(s=>{ pos.push(x); x+=s+GAP; });
-    return pos;
-  }
-
+  function xPos(sizes){ const pos=[]; let x=0; sizes.forEach(s=>{pos.push(x);x+=s+GAP;}); return pos; }
   const tX=xPos(tSizes), bX=xPos(bSizes);
   const tMap={}, bMap={};
   topOrder.forEach((c,i)=>{ tMap[c]={x:tX[i],w:tSizes[i]}; });
   botOrder.forEach((c,i)=>{ bMap[c]={x:bX[i],w:bSizes[i]}; });
 
-  const topY=LABEL_H, nodeY=topY+NODE_H, ribbonY=nodeY+NODE_H, botNodeY=ribbonY+BAND_H;
-  const H=botNodeY+NODE_H+LABEL_H+6;
+  const topY=LABEL_H, nodeY=topY, ribbonY=topY+NODE_H, botNodeY=ribbonY+BAND_H;
+  const H=botNodeY+NODE_H+LABEL_H+4;
 
   const svg=d3.select('#sankey-svg')
     .attr('width',W).attr('height',H)
     .attr('viewBox',`0 0 ${W} ${H}`)
-    .style('max-width','100%');
+    .style('max-width','100%').style('overflow','visible');
   svg.selectAll('*').remove();
 
-  // Fill tracking
+  // helper: desaturate a hex colour
+  function desaturate(hex) {
+    const c=d3.color(hex); if(!c) return '#ccc';
+    const hsl=d3.hsl(c); hsl.s*=0.15; hsl.l=0.82;
+    return hsl.formatHex();
+  }
+
   const tFill={}, bFill={};
   topOrder.forEach(c=>{ tFill[c]=0; });
   botOrder.forEach(c=>{ bFill[c]=0; });
 
-  // Sort flows for stacking
   const sorted=[...flows].sort((a,b)=>{
     const d=topOrder.indexOf(a.from)-topOrder.indexOf(b.from);
     return d||botOrder.indexOf(a.to)-botOrder.indexOf(b.to);
@@ -614,15 +620,19 @@ function renderSankey() {
   // Ribbons
   const rG=svg.append('g');
   sorted.forEach(flow=>{
-    const tn=tMap[flow.from], bn=bMap[flow.to];
-    if(!tn||!bn) return;
+    const tn=tMap[flow.from], bn=bMap[flow.to]; if(!tn||!bn) return;
     const tW=(flow.value/(outflowTot[flow.from]||1))*tn.w;
     const bW=(flow.value/(inflowTot[flow.to]||1))*bn.w;
     const x0=tn.x+tFill[flow.from], x1=bn.x+bFill[flow.to];
     tFill[flow.from]+=tW; bFill[flow.to]+=bW;
     const y0=ribbonY, y1=botNodeY, cy=(y0+y1)/2;
-    const path=`M${x0},${y0} C${x0},${cy} ${x1},${cy} ${x1},${y1}
-                L${x1+bW},${y1} C${x1+bW},${cy} ${x0+tW},${cy} ${x0+tW},${y0} Z`;
+    const path=`M${x0},${y0} C${x0},${cy} ${x1},${cy} ${x1},${y1} L${x1+bW},${y1} C${x1+bW},${cy} ${x0+tW},${cy} ${x0+tW},${y0} Z`;
+
+    // Desaturate if filtered and this flow is not from/to the filtered county
+    const dim = sankeyFiltered && flow.from!==sankeyFiltered && flow.to!==sankeyFiltered;
+    const baseColor = flow.self?'#aaa':colorMap[flow.from];
+    const fillColor = dim ? desaturate(baseColor) : baseColor;
+    const baseOp = flow.self?.22:.30;
 
     const fromPct=((flow.value/(outflowTot[flow.from]||1))*100).toFixed(1);
     const toPct=((flow.value/(inflowTot[flow.to]||1))*100).toFixed(1);
@@ -631,29 +641,27 @@ function renderSankey() {
       :`出生地：<strong>${flow.from}</strong><br>現居地：<strong>${flow.to}</strong><br>${fmt(flow.value)} 人<br>佔出生地 ${fromPct}%・佔現居地 ${toPct}%`;
 
     rG.append('path').attr('d',path)
-      .attr('fill',flow.self?'#aaa':colorMap[flow.from])
-      .attr('opacity',flow.self?.2:.28)
-      .attr('stroke',flow.self?'#999':colorMap[flow.from])
-      .attr('stroke-width',.3)
+      .attr('fill',fillColor).attr('opacity',dim?0.18:baseOp)
+      .attr('stroke',fillColor).attr('stroke-width',.3)
       .style('cursor','pointer')
-      .on('mouseenter',function(ev){ d3.select(this).attr('opacity',flow.self?.45:.65); showTip(ev,tipHtml); })
+      .on('mouseenter',function(ev){ d3.select(this).attr('opacity',dim?0.28:0.65); showTip(ev,tipHtml); })
       .on('mousemove',moveTip)
-      .on('mouseleave',function(){ d3.select(this).attr('opacity',flow.self?.2:.28); hideTip(); });
+      .on('mouseleave',function(){ d3.select(this).attr('opacity',dim?0.18:baseOp); hideTip(); });
   });
 
   // Top nodes (出生地)
   topOrder.forEach(c=>{
     const n=tMap[c];
+    const isActive = !sankeyFiltered || sankeyFiltered===c;
+    const nodeColor = isActive ? colorMap[c] : desaturate(colorMap[c]);
     const g=svg.append('g').style('cursor','pointer')
       .on('click',()=>{ sankeyFiltered=sankeyFiltered===c?null:c; renderSankey(); });
     g.append('rect').attr('x',n.x).attr('y',nodeY).attr('width',n.w).attr('height',NODE_H)
-      .attr('fill',colorMap[c]).attr('rx',2);
-    // Label above
-    if(n.w>20){
-      const labelG=g.append('g').attr('transform',`translate(${n.x+n.w/2},${topY+14})`);
-      labelG.append('text').attr('text-anchor','middle')
-        .attr('font-family','var(--sans)').attr('font-size',10)
-        .attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)')
+      .attr('fill',nodeColor).attr('opacity',isActive?1:0.4).attr('rx',2);
+    if(n.w>18){
+      g.append('text').attr('x',n.x+n.w/2).attr('y',nodeY-4)
+        .attr('text-anchor','middle').attr('font-family','var(--sans)').attr('font-size',10)
+        .attr('fill',isActive?(sankeyFiltered===c?'var(--accent)':'var(--text)'):'#aaa')
         .text(c.replace(/[縣市]/,''));
     }
   });
@@ -661,22 +669,22 @@ function renderSankey() {
   // Bottom nodes (現居地)
   botOrder.forEach(c=>{
     const n=bMap[c];
+    const isActive = !sankeyFiltered || sankeyFiltered===c;
+    const nodeColor = isActive ? colorMap[c] : desaturate(colorMap[c]);
     const g=svg.append('g').style('cursor','pointer')
       .on('click',()=>{ sankeyFiltered=sankeyFiltered===c?null:c; renderSankey(); });
     g.append('rect').attr('x',n.x).attr('y',botNodeY).attr('width',n.w).attr('height',NODE_H)
-      .attr('fill',colorMap[c]).attr('rx',2);
-    // Label below
-    if(n.w>20){
+      .attr('fill',nodeColor).attr('opacity',isActive?1:0.4).attr('rx',2);
+    if(n.w>18){
       g.append('text').attr('x',n.x+n.w/2).attr('y',botNodeY+NODE_H+13)
-        .attr('text-anchor','middle')
-        .attr('font-family','var(--sans)').attr('font-size',10)
-        .attr('fill',sankeyFiltered===c?'var(--accent)':'var(--text)')
+        .attr('text-anchor','middle').attr('font-family','var(--sans)').attr('font-size',10)
+        .attr('fill',isActive?(sankeyFiltered===c?'var(--accent)':'var(--text)'):'#aaa')
         .text(c.replace(/[縣市]/,''));
     }
   });
 
   // Axis labels
-  svg.append('text').attr('x',0).attr('y',topY-4)
+  svg.append('text').attr('x',0).attr('y',nodeY-18)
     .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('出生地 ↓');
   svg.append('text').attr('x',0).attr('y',botNodeY+NODE_H+28)
     .attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--muted)').text('現居地 ↑');
@@ -684,11 +692,11 @@ function renderSankey() {
   if(sankeyFiltered){
     svg.append('text').attr('x',W/2).attr('y',ribbonY+BAND_H/2)
       .attr('text-anchor','middle').attr('font-family','var(--mono)').attr('font-size',10).attr('fill','var(--accent)')
-      .text(`篩選：${sankeyFiltered}　（點擊取消）`);
+      .text(`篩選：${sankeyFiltered}　（再次點擊取消）`);
   }
 
   document.getElementById('sankeyTitle').textContent=`${currentYear} 年 ${showSelf?'全部（含留鄉）':'跨縣市'}人口流動`;
-  document.getElementById('sankeyHint').textContent=showSelf?'灰色帶 = 留在出生縣市 · 點擊節點篩選':'僅顯示跨縣市移動 · 點擊節點篩選';
+  document.getElementById('sankeyHint').textContent=showSelf?'灰色帶=留鄉 · 點擊縣市篩選':'跨縣市流動 · 點擊縣市篩選';
 }
 
 
