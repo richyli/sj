@@ -313,135 +313,131 @@ const ISLAND_CFG = {
   '澎湖縣': {bx:8,  by:134, label:'澎湖'},
 };
 
-let mapSelectedCounty = null;
+// ── MAP STATE ──
+let mapLeftSel  = null;  // county clicked on left  (出生地)
+let mapRightSel = null;  // county clicked on right (現居地)
 
 function normName(s){ return (s||'').trim().replace(/台/g,'臺'); }
 function featureCounty(f){ return f.properties.COUNTYNAME || ''; }
 
-function renderMapTab() {
-  drawMap('map-left-svg',  null,        'left');
-  if(mapSelectedCounty) drawMap('map-right-svg', mapSelectedCounty, 'right');
+function renderMapTab() { drawBothMaps(); }
+
+function drawBothMaps() {
+  const yr = allData['2025']||{};
+
+  // LEFT: default=born totals; rightSel=birth origins of rightSel residents
+  let leftVal;
+  if(mapRightSel) {
+    const dest=counties.find(c=>normName(c)===normName(mapRightSel))||mapRightSel;
+    const lk={};
+    counties.forEach(c=>{ lk[normName(c)]=(yr[c]||{})[dest]||0; });
+    leftVal = cn => lk[normName(cn)]||0;
+  } else {
+    const bt={};
+    counties.forEach(c=>{ bt[normName(c)]=Object.values(yr[c]||{}).reduce((a,b)=>a+b,0); });
+    leftVal = cn => bt[normName(cn)]||0;
+  }
+
+  // RIGHT: leftSel=outflow from leftSel; rightSel=inflow origins to rightSel; else null
+  let rightVal = null;
+  if(mapLeftSel) {
+    const fromKey=counties.find(c=>normName(c)===normName(mapLeftSel))||mapLeftSel;
+    const fd=yr[fromKey]||{};
+    const lk={};
+    Object.entries(fd).forEach(([to,v])=>{ lk[normName(to)]=v; });
+    rightVal = cn => lk[normName(cn)]||0;
+  } else if(mapRightSel) {
+    const dest=counties.find(c=>normName(c)===normName(mapRightSel))||mapRightSel;
+    const lk={};
+    counties.forEach(c=>{ lk[normName(c)]=(yr[c]||{})[dest]||0; });
+    rightVal = cn => lk[normName(cn)]||0;
+  }
+
+  // Header labels
+  if(mapLeftSel && !mapRightSel) {
+    document.getElementById('mapLeftSub').textContent='已選：'+mapLeftSel;
+    const fromKey=counties.find(c=>normName(c)===normName(mapLeftSel))||mapLeftSel;
+    const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
+    document.getElementById('mapRightSub').textContent=`出生於 ${mapLeftSel}：${fmt(tot)} 人`;
+  } else if(mapRightSel && !mapLeftSel) {
+    document.getElementById('mapLeftSub').textContent=`出生地（現居 ${mapRightSel} 者）`;
+    const dest=counties.find(c=>normName(c)===normName(mapRightSel))||mapRightSel;
+    const tot=counties.reduce((s,c)=>s+((yr[c]||{})[dest]||0),0);
+    document.getElementById('mapRightSub').textContent='已選：'+mapRightSel+`（共 ${fmt(tot)} 人）`;
+  } else {
+    document.getElementById('mapLeftSub').textContent='點擊縣市查看流向';
+    document.getElementById('mapRightSub').textContent='請先選擇出生地或現居地';
+  }
+
+  drawMap('map-left-svg',  'left',  leftVal,  mapLeftSel);
+  drawMap('map-right-svg', 'right', rightVal, mapRightSel);
 }
 
-// ── core map draw ──
-function drawMap(svgId, fromCounty, side) {
-  const W=380, H=500;
-  const PAD_LEFT=52; // room for island insets
+function drawMap(svgId, side, valueOf, thisSel) {
+  const W=380, H=500, PAD_LEFT=52;
   const svg = d3.select('#'+svgId).attr('viewBox',`0 0 ${W} ${H}`);
   svg.selectAll('*').remove();
 
-  const yr = allData['2025']||{};
-
-  // Colour value lookup
-  let valueOf;
-  if(side==='left'){
-    const bornTot={};
-    counties.forEach(c=>{ bornTot[normName(c)]=Object.values(yr[c]||{}).reduce((a,b)=>a+b,0); });
-    valueOf = cn => bornTot[normName(cn)]||0;
-  } else {
-    const fromKey = counties.find(c=>normName(c)===normName(fromCounty))||fromCounty;
-    const flowData = yr[fromKey]||{};
-    const flowLookup={};
-    Object.entries(flowData).forEach(([to,v])=>{ flowLookup[normName(to)]=v; });
-    valueOf = cn => flowLookup[normName(cn)]||0;
+  if(!valueOf) {
+    svg.append('text').attr('x',W/2).attr('y',H/2)
+      .attr('text-anchor','middle').attr('font-family','var(--sans)')
+      .attr('font-size',13).attr('fill','#bbb')
+      .text(side==='right'?'← 點擊左側出生地 或 右側現居地':'← 點擊右側縣市');
+    return;
   }
 
   const mainF   = TW_GEO.features.filter(f=>!ISLANDS.has(featureCounty(f)));
   const islandF = TW_GEO.features.filter(f=> ISLANDS.has(featureCounty(f)));
+  const proj    = d3.geoMercator().fitExtent([[PAD_LEFT+4,8],[W-4,H-8]],{type:'FeatureCollection',features:mainF});
+  const pathFn  = d3.geoPath().projection(proj);
 
-  // fitExtent: [[left,top],[right,bottom]] — leave PAD_LEFT for island insets
-  const proj = d3.geoMercator()
-    .fitExtent([[PAD_LEFT+4, 8],[W-4, H-8]], {type:'FeatureCollection',features:mainF});
-  const pathFn = d3.geoPath().projection(proj);
+  // Log1p colour scale — reduces extreme skew between 臺北 and 連江
+  const allVals = TW_GEO.features.map(f=>valueOf(featureCounty(f))).filter(v=>v>0);
+  const logMax  = allVals.length ? Math.log1p(Math.max(...allVals)) : 1;
+  const interp  = side==='left' ? d3.interpolateGreens : d3.interpolateBlues;
+  const colFn   = v => v ? interp(Math.log1p(v)/logMax*0.82+0.1) : '#e4e4e4';
 
-  const maxVal = d3.max(TW_GEO.features.map(f=>valueOf(featureCounty(f))))||1;
-  const colScale = side==='left'
-    ? d3.scaleSequential(d3.interpolateGreens).domain([0, maxVal])
-    : d3.scaleSequential(d3.interpolateBlues).domain([0, maxVal]);
+  const yr = allData['2025']||{};
 
-  // ── Main island counties ──
   svg.selectAll('.county-path')
-    .data(mainF)
-    .join('path')
-    .attr('class', d=>{
-      const cn=featureCounty(d);
-      const isSel = side==='left'
-        ? mapSelectedCounty && normName(mapSelectedCounty)===normName(cn)
-        : fromCounty && normName(fromCounty)===normName(cn);
-      return 'county-path'+(isSel?' selected':'');
-    })
+    .data(mainF).join('path')
+    .attr('class', d=>'county-path'+(normName(featureCounty(d))===normName(thisSel||'')?' selected':''))
     .attr('d', pathFn)
-    .attr('fill', d=>{ const v=valueOf(featureCounty(d)); return v?colScale(v):'#e0e0e0'; })
+    .attr('fill', d=>colFn(valueOf(featureCounty(d))))
     .attr('stroke','#fff').attr('stroke-width',.6)
-    .on('mouseenter',(ev,d)=>{ mapTip(ev,d,side,fromCounty,valueOf,yr); })
-    .on('mousemove', moveTip)
-    .on('mouseleave', hideTip)
-    .on('click',(ev,d)=>{
-      if(side!=='left') return;
-      mapSelectedCounty = featureCounty(d);
-      drawMap('map-left-svg', null, 'left');
-      drawMap('map-right-svg', mapSelectedCounty, 'right');
-      document.getElementById('mapLeftSub').textContent='已選：'+mapSelectedCounty;
-      const fromKey=counties.find(c=>normName(c)===normName(mapSelectedCounty))||mapSelectedCounty;
-      const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
-      document.getElementById('mapRightSub').textContent=`出生於 ${mapSelectedCounty}：${fmt(tot)} 人`;
-    })
-    .style('cursor', side==='left'?'pointer':'default');
+    .style('cursor','pointer')
+    .on('mouseenter',(ev,d)=>{ mapTip(ev, featureCounty(d), side, valueOf, yr); })
+    .on('mousemove',moveTip).on('mouseleave',hideTip)
+    .on('click',(ev,d)=>{ handleMapClick(side, featureCounty(d)); });
 
-  // County name labels
   mainF.forEach(f=>{
-    const c=pathFn.centroid(f);
-    if(isNaN(c[0])||isNaN(c[1])) return;
-    const cn=featureCounty(f);
-    svg.append('text')
-      .attr('x',c[0]).attr('y',c[1]+1)
+    const c=pathFn.centroid(f); if(isNaN(c[0])||isNaN(c[1])) return;
+    svg.append('text').attr('x',c[0]).attr('y',c[1]+1)
       .attr('text-anchor','middle').attr('dominant-baseline','middle')
       .attr('font-family','var(--sans)').attr('font-size',9)
       .attr('fill','#1a1916').attr('pointer-events','none')
-      .text(cn.replace(/[縣市]/,''));
+      .text(featureCounty(f).replace(/[縣市]/,''));
   });
 
-  // ── Island insets (left strip) ──
+  // Island insets
   islandF.forEach(f=>{
-    const cn=featureCounty(f);
-    const cfg=ISLAND_CFG[cn]; if(!cfg) return;
+    const cn=featureCounty(f), cfg=ISLAND_CFG[cn]; if(!cfg) return;
     const BW=44, BH=54;
+    const ip=d3.geoMercator().fitExtent([[cfg.bx+2,cfg.by+2],[cfg.bx+BW-2,cfg.by+BH-10]],f);
+    const ipath=d3.geoPath().projection(ip);
+    const v=valueOf(cn), isSel=normName(cn)===normName(thisSel||'');
 
-    // Fit island to its inset box
-    const islandProj = d3.geoMercator()
-      .fitExtent([[cfg.bx+2, cfg.by+2],[cfg.bx+BW-2, cfg.by+BH-10]], f);
-    const islandPath = d3.geoPath().projection(islandProj);
-
-    const ig=svg.append('g')
-      .style('cursor', side==='left'?'pointer':'default')
-      .on('mouseenter',ev=>{ mapTip(ev,f,side,fromCounty,valueOf,yr); })
-      .on('mousemove',moveTip)
-      .on('mouseleave',hideTip)
-      .on('click',()=>{
-        if(side!=='left') return;
-        mapSelectedCounty=cn;
-        drawMap('map-left-svg',null,'left');
-        drawMap('map-right-svg',cn,'right');
-        document.getElementById('mapLeftSub').textContent='已選：'+cn;
-        const fromKey=counties.find(c2=>normName(c2)===normName(cn))||cn;
-        const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0);
-        document.getElementById('mapRightSub').textContent=`出生於 ${cn}：${fmt(tot)} 人`;
-      });
+    const ig=svg.append('g').style('cursor','pointer')
+      .on('mouseenter',ev=>{ mapTip(ev,cn,side,valueOf,yr); })
+      .on('mousemove',moveTip).on('mouseleave',hideTip)
+      .on('click',()=>{ handleMapClick(side, cn); });
 
     ig.append('rect').attr('x',cfg.bx).attr('y',cfg.by)
       .attr('width',BW).attr('height',BH)
-      .attr('fill','#f5f5f5').attr('stroke','#d0d0d0').attr('stroke-width',.5).attr('rx',3);
-
-    const v=valueOf(cn);
-    const isSel = side==='left'
-      ? mapSelectedCounty && normName(mapSelectedCounty)===normName(cn)
-      : fromCounty && normName(fromCounty)===normName(cn);
-
-    ig.append('path').attr('d',islandPath(f))
-      .attr('fill', v?colScale(v):'#ddd')
-      .attr('stroke', isSel?'#1a1916':'#fff')
-      .attr('stroke-width', isSel?2:.6);
-
+      .attr('fill','#f0f0f0').attr('stroke','#ccc').attr('stroke-width',.5).attr('rx',3);
+    ig.append('path').attr('d',ipath(f))
+      .attr('fill',colFn(v))
+      .attr('stroke',isSel?'#1a1916':'#fff').attr('stroke-width',isSel?2:.6);
     ig.append('text').attr('x',cfg.bx+BW/2).attr('y',cfg.by+BH-2)
       .attr('text-anchor','middle')
       .attr('font-family','var(--sans)').attr('font-size',9).attr('fill','#555')
@@ -449,18 +445,43 @@ function drawMap(svgId, fromCounty, side) {
   });
 }
 
-function mapTip(ev,f,side,fromCounty,valueOf,yr){
-  const cn=featureCounty(f);
-  const v=valueOf(cn);
-  if(side==='left'){
-    showTip(ev,`<strong>${cn}</strong><br>出生人口：${fmt(v)} 人`);
+function handleMapClick(side, cn) {
+  if(side==='left') {
+    mapLeftSel  = (mapLeftSel && normName(mapLeftSel)===normName(cn)) ? null : cn;
+    mapRightSel = null;
   } else {
-    const fromKey=counties.find(c=>normName(c)===normName(fromCounty))||fromCounty;
-    const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0)||1;
-    const p=((v/tot)*100).toFixed(1);
-    showTip(ev,`出生地：<strong>${fromCounty}</strong><br>現居地：<strong>${cn}</strong><br>${fmt(v)} 人（${p}%）`);
+    mapRightSel = (mapRightSel && normName(mapRightSel)===normName(cn)) ? null : cn;
+    mapLeftSel  = null;
+  }
+  drawBothMaps();
+}
+
+function mapTip(ev, cn, side, valueOf, yr) {
+  const v = valueOf(cn);
+  if(side==='left') {
+    if(mapRightSel) {
+      const dest=counties.find(c=>normName(c)===normName(mapRightSel))||mapRightSel;
+      const tot=counties.reduce((s,c)=>s+((yr[c]||{})[dest]||0),0)||1;
+      showTip(ev,`出生地：<strong>${cn}</strong><br>現居 ${mapRightSel}：${fmt(v)} 人（${(v/tot*100).toFixed(1)}%）`);
+    } else {
+      showTip(ev,`<strong>${cn}</strong><br>出生人口：${fmt(v)} 人`);
+    }
+  } else {
+    if(!valueOf||!v){ showTip(ev,`<strong>${cn}</strong><br>點擊選取現居地`); return; }
+    if(mapLeftSel) {
+      const fromKey=counties.find(c=>normName(c)===normName(mapLeftSel))||mapLeftSel;
+      const tot=Object.values(yr[fromKey]||{}).reduce((a,b)=>a+b,0)||1;
+      showTip(ev,`出生地：<strong>${mapLeftSel}</strong><br>現居地：<strong>${cn}</strong><br>${fmt(v)} 人（${(v/tot*100).toFixed(1)}%）`);
+    } else if(mapRightSel) {
+      const dest=counties.find(c=>normName(c)===normName(mapRightSel))||mapRightSel;
+      const tot=counties.reduce((s,c)=>s+((yr[c]||{})[dest]||0),0)||1;
+      showTip(ev,`現居地：<strong>${cn}</strong><br>出生於此現居 ${mapRightSel}：${fmt(v)} 人（${(v/tot*100).toFixed(1)}%）`);
+    } else {
+      showTip(ev,`<strong>${cn}</strong><br>點擊選取現居地`);
+    }
   }
 }
+
 
 function buildYearTabs() {
   document.getElementById('yearTabs').innerHTML=years.map(y=>
