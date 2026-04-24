@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>查詢結果 · 金權錄 · 2016 立委政治獻金</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+<!-- ═══════════ 頂部導覽 ═══════════ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="crest">₲</span>
+      <span>金 權 錄 &nbsp;·&nbsp; <b>The Gilded Ledger</b></span>
+    </div>
+    <nav>
+      <a href="2016.html">首頁</a>
+      <a href="2016.html#picks">編輯精選</a>
+      <a href="2016.html#narrative">緣起</a>
+    </nav>
+    <span class="year-mark">A. D. 2016</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════ 結果標頭 ═══════════ -->
+<section class="wrap results-header">
+  <a class="back" href="2016.html">❮ &nbsp; 返回首頁</a>
+  <h1 id="result-title">檢閱結果</h1>
+  <div class="crumb" id="result-crumb">—</div>
+
+  <!-- 簡易再搜尋 -->
+  <form id="mini-form" class="mini-search" onsubmit="return onMiniSubmit(event)">
+    <div class="field">
+      <label for="m-q">關鍵字</label>
+      <input type="text" id="m-q" placeholder="姓名 / 選區">
+    </div>
+    <div class="field">
+      <label for="m-party">政黨</label>
+      <select id="m-party"><option value="">── 不限 ──</option></select>
+    </div>
+    <div class="field">
+      <label for="m-status">當選</label>
+      <select id="m-status">
+        <option value="">── 不限 ──</option>
+        <option value="elected">當選</option>
+        <option value="unelected">未當選</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="m-gender">性別</label>
+      <select id="m-gender">
+        <option value="">── 不限 ──</option>
+        <option value="男">男</option>
+        <option value="女">女</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-mini">再 · 檢 · 索</button>
+  </form>
+</section>
+
+<!-- ═══════════ Quick Summary ═══════════ -->
+<section class="wrap">
+  <div class="quick-summary" id="quick-summary"><!-- filled by JS --></div>
+</section>
+
+<!-- ═══════════ 排序列 ═══════════ -->
+<section class="wrap">
+  <div class="sort-bar">
+    <div class="count" id="count-display">—</div>
+    <div class="sort-group">
+      <span class="label">排序 · SORT BY</span>
+      <button class="sort-btn" data-sort="total_income">總收入</button>
+      <button class="sort-btn" data-sort="corp_income">企業捐贈</button>
+      <button class="sort-btn" data-sort="ind_income">個人捐贈</button>
+      <button class="sort-btn" data-sort="donor_companies">金主家數</button>
+      <button class="sort-btn" data-sort="votes">得票數</button>
+      <button class="sort-btn" data-sort="vote_pct">得票率</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 名冊 ═══════════ -->
+<section class="wrap">
+  <div id="results-list" class="results-list" role="list"><!-- filled by JS --></div>
+  <div id="pager" class="pager"><!-- filled by JS --></div>
+</section>
+
+</main>
+
+<!-- ═══════════ 頁尾 ═══════════ -->
+<footer class="site-footer">
+  <div class="wrap">
+    <span class="crest">❦ · ₲ · ❦</span>
+    資料來源：監察院「政治獻金公開專區」第九屆立法委員選舉會計報告書<br>
+    <span style="font-family:var(--f-caps); font-size:11px; letter-spacing:.3em; color:var(--gold-deep);">
+      — MMXVI · A GILDED LEDGER —
+    </span>
+  </div>
+</footer>
+
+<!-- Data + App logic -->
+<script src="data.js"></script>
+<script>
+/* ======================================================================
+   State & URL
+   ====================================================================== */
+const PARTY_COLORS = {
+  '民主進步黨':        'var(--p-dpp)',
+  '中國國民黨':        'var(--p-kmt)',
+  '親民黨':            'var(--p-pfp)',
+  '時代力量':          'var(--p-npp)',
+  '無黨籍':            'var(--p-ind)',
+  '民國黨':            '#7a2238',
+  '綠黨社會民主黨聯盟': '#3e7a4a',
+  '軍公教聯盟黨':      '#5a4a24',
+  '信心希望聯盟':      '#6a3a78',
+  '樹黨':              '#4a6a3a',
+};
+const partyColor = p => PARTY_COLORS[p] || 'var(--p-other)';
+
+const PAGE_SIZE = 12;
+
+const state = {
+  q: '',
+  party: '',
+  status: '',
+  gender: '',
+  sort: 'total_income',
+  dir: 'desc',
+  page: 1,
+  expandedId: null,
+};
+
+function readURL() {
+  const p = new URLSearchParams(location.search);
+  state.q      = (p.get('q')      || '').trim();
+  state.party  = (p.get('party')  || '').trim();
+  state.status = (p.get('status') || '').trim();
+  state.gender = (p.get('gender') || '').trim();
+  state.sort   = p.get('sort') || 'total_income';
+  state.dir    = p.get('dir')  || 'desc';
+  state.page   = Math.max(1, parseInt(p.get('page') || '1', 10));
+}
+
+function writeURL(push=false) {
+  const p = new URLSearchParams();
+  if (state.q)      p.set('q', state.q);
+  if (state.party)  p.set('party', state.party);
+  if (state.status) p.set('status', state.status);
+  if (state.gender) p.set('gender', state.gender);
+  p.set('sort', state.sort);
+  p.set('dir',  state.dir);
+  if (state.page > 1) p.set('page', state.page);
+  const url = '?' + p.toString();
+  if (push) history.pushState(null, '', url);
+  else history.replaceState(null, '', url);
+}
+
+/* ======================================================================
+   Filtering + sorting
+   ====================================================================== */
+function applyFilters(arr) {
+  let out = arr;
+  if (state.q) {
+    const q = state.q.toLowerCase();
+    out = out.filter(r =>
+      r.name.toLowerCase().includes(q) ||
+      r.district.toLowerCase().includes(q) ||
+      (r.committee || '').toLowerCase().includes(q)
+    );
+  }
+  if (state.party)  out = out.filter(r => r.party === state.party);
+  if (state.status === 'elected')   out = out.filter(r => r.elected);
+  if (state.status === 'unelected') out = out.filter(r => !r.elected);
+  if (state.gender) out = out.filter(r => r.gender === state.gender);
+  return out;
+}
+function applySort(arr) {
+  const k = state.sort, dir = state.dir === 'asc' ? 1 : -1;
+  return [...arr].sort((a, b) => {
+    const av = a[k], bv = b[k];
+    if (typeof av === 'string') return av.localeCompare(bv, 'zh-Hant') * dir;
+    return ((av ?? 0) - (bv ?? 0)) * dir;
+  });
+}
+
+/* ======================================================================
+   Formatters
+   ====================================================================== */
+const fmtInt = n => (n || 0).toLocaleString('en-US');
+function fmtNT(n) {
+  if (!n) return 'NT$ 0';
+  if (n >= 1e8)  return 'NT$ ' + (n/1e8).toFixed(2) + ' 億';
+  if (n >= 1e4)  return 'NT$ ' + Math.round(n/1e4).toLocaleString() + ' 萬';
+  return 'NT$ ' + fmtInt(n);
+}
+const fmtPct = n => (n || 0).toFixed(1) + '%';
+
+/* ======================================================================
+   Rendering
+   ====================================================================== */
+const SORT_LABEL = {
+  total_income: '總收入',
+  corp_income: '營利事業捐贈',
+  ind_income: '個人捐贈',
+  donor_companies: '金主家數',
+  votes: '得票數',
+  vote_pct: '得票率',
+};
+
+function renderTitle(filtered) {
+  let title = '檢閱結果';
+  const bits = [];
+  if (state.q)     bits.push(`「${state.q}」`);
+  if (state.party) bits.push(state.party);
+  if (state.status === 'elected')   bits.push('當選者');
+  if (state.status === 'unelected') bits.push('未當選者');
+  if (state.gender) bits.push(state.gender + '性');
+
+  if (bits.length) {
+    document.getElementById('result-title').innerHTML = `<em>${bits.join(' · ')}</em> 的名冊`;
+  } else {
+    document.getElementById('result-title').innerHTML = `全體名冊 <em>261 位候選人</em>`;
+  }
+  const sortLabel = SORT_LABEL[state.sort] || state.sort;
+  const dirLabel = state.dir === 'desc' ? '高→低' : '低→高';
+  document.getElementById('result-crumb').innerHTML =
+    `依 <span class="q">${sortLabel}</span> ${dirLabel} 排序，共 <span class="q">${filtered.length}</span> 筆。`;
+}
+
+function renderQuickSummary(filtered) {
+  const wrap = document.getElementById('quick-summary');
+  if (!filtered.length) { wrap.innerHTML = ''; return; }
+
+  const sum = key => filtered.reduce((s, r) => s + (r[key] || 0), 0);
+  const totalIncome = sum('total_income');
+  const totalCorp   = sum('corp_income');
+  const totalInd    = sum('ind_income');
+  const elected     = filtered.filter(r => r.elected).length;
+  const avgIncome   = totalIncome / filtered.length;
+  const corpShare   = totalIncome ? (totalCorp / totalIncome * 100) : 0;
+
+  const cards = [
+    { k: '本名冊 · 總募款', v: fmtNT(totalIncome), d: `平均每人 ${fmtNT(Math.round(avgIncome))}`, gold: true },
+    { k: '營利事業捐贈合計', v: fmtNT(totalCorp),   d: `占總收入 ${corpShare.toFixed(1)}%` },
+    { k: '個人捐贈合計',     v: fmtNT(totalInd),    d: `占總收入 ${totalIncome ? (totalInd/totalIncome*100).toFixed(1):'0'}%` },
+    { k: '當選者',           v: `${elected} / ${filtered.length}`, d: `${filtered.length ? (elected/filtered.length*100).toFixed(1) : 0}% 榮登國會`, gold: true },
+  ];
+  wrap.innerHTML = cards.map(c => `
+    <div class="qs-card">
+      <div class="k">${c.k}</div>
+      <div class="v ${c.gold ? 'gold' : ''}">${c.v}</div>
+      <div class="d">${c.d}</div>
+    </div>
+  `).join('');
+}
+
+function renderSortButtons() {
+  document.querySelectorAll('.sort-btn').forEach(btn => {
+    const k = btn.dataset.sort;
+    btn.classList.toggle('active', k === state.sort);
+    btn.setAttribute('data-dir', state.dir === 'desc' ? '↓' : '↑');
+  });
+}
+
+function renderCard(r, pageIndex) {
+  const total = r.total_income || 1;
+  const corpW  = (r.corp_income  / total) * 100;
+  const indW   = (r.ind_income   / total) * 100;
+  const partyW = (r.party_income / total) * 100;
+  const otherW = 100 - corpW - indW - partyW;
+  const color  = partyColor(r.party);
+
+  const absoluteRank = pageIndex;
+  const expanded = state.expandedId === r.id;
+
+  return `
+  <article class="card ${expanded ? 'expanded' : ''}" data-id="${r.id}" style="--party-color:${color}">
+    <div class="card-rank">
+      ${absoluteRank}<small>RANK</small>
+    </div>
+
+    <div class="card-identity">
+      <div class="name">${r.name}
+        ${r.elected ? '<span class="win" title="當選">✓</span>' : ''}
+      </div>
+      <div class="meta">
+        <span class="tag-party">${r.party}</span>
+        <span class="tag-dot">·</span>
+        <span>${r.gender}　${r.birth_year ? r.birth_year + ' 年次' : ''}</span>
+        ${r.incumbent ? '<span class="tag-dot">·</span><span style="color:var(--gold-lite)">現任</span>' : ''}
+      </div>
+    </div>
+
+    <div class="card-district">
+      ${r.district}
+      ${r.committee ? `<span class="committee">⚜ ${r.committee}委員會</span>` : ''}
+    </div>
+
+    <div class="card-income">
+      <div class="big">${fmtNT(r.total_income)}</div>
+      <span class="small">總收入 · 金主 ${r.donor_companies} 家</span>
+      <div style="margin-top:10px;">
+        <div class="breakdown" title="收入結構">
+          <span class="bd-corp"  style="width:${corpW}%"></span>
+          <span class="bd-ind"   style="width:${indW}%"></span>
+          <span class="bd-party" style="width:${partyW}%"></span>
+          <span class="bd-other" style="width:${otherW}%"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-action">
+      <div class="vote-pct">${fmtPct(r.vote_pct)}</div>
+      <span class="vote-label">${fmtInt(r.votes)} 票</span>
+    </div>
+
+    <div style="text-align:right;">
+      <button class="sort-btn" data-toggle="${r.id}"
+              style="font-family:var(--f-caps); font-size:10px; letter-spacing:.26em;">
+        ${expanded ? '收起 ▲' : '展開 ▼'}
+      </button>
+    </div>
+
+    ${expanded ? renderDetail(r) : ''}
+  </article>`;
+}
+
+function renderDetail(r) {
+  const rows = [
+    { name: '營利事業捐贈', amt: r.corp_income,  pct: r.corp_pct  },
+    { name: '個人捐贈',     amt: r.ind_income,   pct: r.ind_pct   },
+    { name: '政黨捐贈',     amt: r.party_income, pct: r.party_pct },
+    { name: '人民團體捐贈', amt: r.civic_income, pct: r.civic_pct },
+    { name: '匿名捐贈',     amt: r.anon_income,  pct: r.anon_pct  },
+    { name: '其他收入',     amt: r.other_income, pct: r.other_pct },
+  ];
+  const surplus = r.total_income - r.total_expense;
+  const corpDep = r.total_income ? (r.corp_income / r.total_income * 100) : 0;
+
+  let storyLead = '';
+  if (corpDep >= 50) {
+    storyLead = `<b>超過一半</b>的收入來自企業荷包（${corpDep.toFixed(1)}%），是名副其實的企業寵兒。`;
+  } else if (corpDep >= 35) {
+    storyLead = `企業捐贈占比 <b>${corpDep.toFixed(1)}%</b>，在產業界有相當的聲量與人脈。`;
+  } else if (r.ind_pct >= 50) {
+    storyLead = `以個人小額為主（占 <b>${r.ind_pct.toFixed(1)}%</b>），走的是群眾路線。`;
+  } else {
+    storyLead = `資金結構相對分散，企業與個人捐款並重。`;
+  }
+
+  return `
+  <div class="card-detail">
+    <div>
+      <h4>◆ 獻 金 分 項 明 細 · LEDGER</h4>
+      <div class="ledger">
+        ${rows.map(x => `
+          <div class="row">
+            <span class="name">${x.name}</span>
+            <span class="amt">${fmtNT(x.amt)}</span>
+            <span class="pct">${fmtPct(x.pct)}</span>
+          </div>`).join('')}
+        <div class="row" style="margin-top:8px; border-top:1px solid var(--gold); padding-top:8px;">
+          <span class="name" style="font-style:normal; color:var(--gold-hot);">總 收 入</span>
+          <span class="amt" style="color:var(--gold-hot);">${fmtNT(r.total_income)}</span>
+          <span class="pct">100.0%</span>
+        </div>
+        <div class="row">
+          <span class="name">總 支 出</span>
+          <span class="amt">${fmtNT(r.total_expense)}</span>
+          <span class="pct">—</span>
+        </div>
+        <div class="row">
+          <span class="name" style="font-style:normal;">結 餘</span>
+          <span class="amt" style="color:${surplus >= 0 ? 'var(--gold-hot)' : '#c83a2a'};">
+            ${surplus >= 0 ? '+' : ''}${fmtNT(surplus)}
+          </span>
+          <span class="pct">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="summary-block">
+      <div class="big-num">${r.donor_companies}</div>
+      <div class="big-label">家企業列隊捐輸 · CORPORATE DONORS</div>
+      <p>${storyLead}</p>
+      <p>本屆得票 <b>${fmtInt(r.votes)}</b> 票，占選區 <b>${fmtPct(r.vote_pct)}</b>，${r.elected ? '<b>成功當選</b>。' : '未能進入國會。'}</p>
+      ${r.committee ? `<p>進入<b>${r.committee}</b>委員會。該委員會的議題關乎其企業金主的利益結構。</p>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderList(filtered) {
+  const root = document.getElementById('results-list');
+  if (!filtered.length) {
+    root.innerHTML = `
+      <div class="empty">
+        <div class="orn">❦</div>
+        <h3>名冊中查無此人</h3>
+        <p>本次檢索條件未命中任何候選人。請調整關鍵字或解除篩選。</p>
+      </div>`;
+    return;
+  }
+  const start = (state.page - 1) * PAGE_SIZE;
+  const pageRows = filtered.slice(start, start + PAGE_SIZE);
+  root.innerHTML = pageRows.map((r, i) => renderCard(r, start + i + 1)).join('');
+
+  root.querySelectorAll('[data-toggle]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const id = parseInt(btn.dataset.toggle, 10);
+      state.expandedId = (state.expandedId === id) ? null : id;
+      renderAll();
+    });
+  });
+  root.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('button, a')) return;
+      const id = parseInt(card.dataset.id, 10);
+      state.expandedId = (state.expandedId === id) ? null : id;
+      renderAll();
+    });
+  });
+}
+
+function renderPager(filtered) {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if (state.page > totalPages) state.page = totalPages;
+  const wrap = document.getElementById('pager');
+  if (totalPages <= 1) { wrap.innerHTML = ''; return; }
+
+  const btn = (label, page, opts={}) => {
+    const cls = opts.active ? 'active' : '';
+    const extra = opts.nav ? 'nav' : '';
+    const dis = opts.disabled ? 'disabled' : '';
+    return `<button class="${cls} ${extra}" ${dis} data-page="${page}">${label}</button>`;
+  };
+
+  const pages = new Set([1, totalPages, state.page, state.page-1, state.page+1, state.page-2, state.page+2]);
+  const valid = [...pages].filter(p => p >= 1 && p <= totalPages).sort((a,b)=>a-b);
+
+  let out = '';
+  out += btn('❮ PREV', state.page - 1, { nav: true, disabled: state.page === 1 });
+  let prev = 0;
+  valid.forEach(p => {
+    if (prev && p - prev > 1) out += '<span class="ellipsis">···</span>';
+    out += btn(String(p), p, { active: p === state.page });
+    prev = p;
+  });
+  out += btn('NEXT ❯', state.page + 1, { nav: true, disabled: state.page === totalPages });
+  wrap.innerHTML = out;
+
+  wrap.querySelectorAll('button:not([disabled])').forEach(b => {
+    b.addEventListener('click', () => {
+      state.page = parseInt(b.dataset.page, 10);
+      state.expandedId = null;
+      writeURL(true);
+      renderAll();
+      document.querySelector('.results-header').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+function renderCount(filtered) {
+  document.getElementById('count-display').innerHTML =
+    `檢閱到 <b>${filtered.length}</b> 筆紀錄　&nbsp;·&nbsp;　第 <b>${state.page}</b> / ${Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))} 頁`;
+}
+
+function renderAll() {
+  const filtered = applySort(applyFilters(CANDIDATES));
+  renderTitle(filtered);
+  renderQuickSummary(filtered);
+  renderCount(filtered);
+  renderSortButtons();
+  renderList(filtered);
+  renderPager(filtered);
+}
+
+/* ======================================================================
+   Event wiring
+   ====================================================================== */
+function onMiniSubmit(ev) {
+  ev.preventDefault();
+  state.q      = document.getElementById('m-q').value.trim();
+  state.party  = document.getElementById('m-party').value;
+  state.status = document.getElementById('m-status').value;
+  state.gender = document.getElementById('m-gender').value;
+  state.page = 1;
+  state.expandedId = null;
+  writeURL(true);
+  renderAll();
+  return false;
+}
+
+document.querySelectorAll('.sort-btn[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const k = btn.dataset.sort;
+    if (state.sort === k) {
+      state.dir = state.dir === 'desc' ? 'asc' : 'desc';
+    } else {
+      state.sort = k;
+      state.dir = 'desc';
+    }
+    state.page = 1;
+    state.expandedId = null;
+    writeURL(true);
+    renderAll();
+  });
+});
+
+window.addEventListener('popstate', () => {
+  readURL();
+  fillMiniSearch();
+  renderAll();
+});
+
+function fillMiniSearch() {
+  document.getElementById('m-q').value = state.q;
+  document.getElementById('m-party').value = state.party;
+  document.getElementById('m-status').value = state.status;
+  document.getElementById('m-gender').value = state.gender;
+}
+
+/* ======================================================================
+   Boot
+   ====================================================================== */
+(function init() {
+  // Populate party select from the data
+  const parties = [...new Set(CANDIDATES.map(r => r.party))].sort((a,b) => a.localeCompare(b,'zh-Hant'));
+  const sel = document.getElementById('m-party');
+  parties.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    sel.appendChild(o);
+  });
+
+  readURL();
+  fillMiniSearch();
+  renderAll();
+})();
+</script>
+
+</body>
+</html>

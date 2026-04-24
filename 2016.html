@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金權錄 · 2016 立委政治獻金查詢</title>
+<meta name="description" content="2016 第九屆立法委員選舉政治獻金公開資料查詢。261 位候選人、近 28 億元收入、營利事業捐贈流向一覽。">
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+<!-- ═══════════ 頂部導覽 ═══════════ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="crest">₲</span>
+      <span>金 權 錄 &nbsp;·&nbsp; <b>The Gilded Ledger</b></span>
+    </div>
+    <nav>
+      <a href="#search">搜尋</a>
+      <a href="#picks">編輯精選</a>
+      <a href="#narrative">緣起</a>
+      <a href="2016_result.html">全部名錄</a>
+    </nav>
+    <span class="year-mark">A. D. 2016</span>
+  </div>
+</header>
+
+<main>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero wrap">
+
+  <!-- 右上角裝飾印鑑 -->
+  <div class="hero-seal" aria-hidden="true">
+    <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="goldGrad" cx="50%" cy="35%" r="60%">
+          <stop offset="0%" stop-color="#fff4c8"/>
+          <stop offset="35%" stop-color="#f6d463"/>
+          <stop offset="70%" stop-color="#c9a961"/>
+          <stop offset="100%" stop-color="#8a6a1f"/>
+        </radialGradient>
+        <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fff4c8"/>
+          <stop offset="50%" stop-color="#8a6a1f"/>
+          <stop offset="100%" stop-color="#c9a961"/>
+        </linearGradient>
+      </defs>
+      <!-- Outer ring -->
+      <circle cx="200" cy="200" r="180" fill="none" stroke="url(#rim)" stroke-width="3"/>
+      <circle cx="200" cy="200" r="174" fill="none" stroke="#8a6a1f" stroke-width="1"/>
+      <circle cx="200" cy="200" r="166" fill="url(#goldGrad)" opacity=".25"/>
+      <!-- Decorative dots ring -->
+      <g fill="#c9a961">
+        <circle cx="200" cy="30"  r="3"/>
+        <circle cx="200" cy="370" r="3"/>
+        <circle cx="30"  cy="200" r="3"/>
+        <circle cx="370" cy="200" r="3"/>
+        <circle cx="80"  cy="80"  r="2.5"/>
+        <circle cx="320" cy="80"  r="2.5"/>
+        <circle cx="80"  cy="320" r="2.5"/>
+        <circle cx="320" cy="320" r="2.5"/>
+      </g>
+      <!-- Inner circle -->
+      <circle cx="200" cy="200" r="132" fill="none" stroke="#c9a961" stroke-width="1.5"/>
+      <circle cx="200" cy="200" r="120" fill="none" stroke="#c9a961" stroke-width=".8"/>
+      <!-- Dollar-ish crest -->
+      <text x="200" y="236" text-anchor="middle" font-family="DM Serif Display, serif" font-size="140" fill="url(#goldGrad)" font-style="italic">₲</text>
+      <!-- Text along bottom -->
+      <path id="arc" d="M 60 200 A 140 140 0 0 0 340 200" fill="none"/>
+      <text font-family="Cinzel, serif" font-size="14" fill="#c9a961" letter-spacing="6">
+        <textPath href="#arc" startOffset="0%">ANNO · MMXVI · THE GILDED LEDGER · REPVBLICA</textPath>
+      </text>
+      <!-- Ornaments -->
+      <text x="200" y="80" text-anchor="middle" font-family="DM Serif Display, serif" font-size="28" fill="#c9a961">❦</text>
+      <text x="200" y="340" text-anchor="middle" font-family="DM Serif Display, serif" font-size="28" fill="#c9a961" transform="rotate(180 200 340)">❦</text>
+    </svg>
+  </div>
+
+  <div class="hero-eyebrow">數 據 新 聞 · 資 料 檔 案 2016</div>
+  <h1 class="hero-title">
+    誰，在資助<br>
+    <span class="accent">你的</span>國會議員？
+    <small>一份關於金權、關係與權力的大眾讀本</small>
+  </h1>
+
+  <p class="hero-deck">
+    <b>2016 年第九屆立法委員選舉，</b>261 位候選人，共募得政治獻金近<b> 28 億新台幣</b>；其中超過<b> 9 億</b>來自營利事業。本專題將這些「合法的影響力」，攤在你眼前。
+  </p>
+
+</section>
+
+<!-- ═══════════ 關鍵統計 ═══════════ -->
+<section class="wrap">
+  <div class="stats" id="stats">
+    <div class="stat">
+      <div class="k">候選人 · Candidates</div>
+      <div class="v engraved-gold">261</div>
+      <div class="u">位候選人提交政治獻金會計報告</div>
+    </div>
+    <div class="stat">
+      <div class="k">總募款 · Total Raised</div>
+      <div class="v engraved-gold">$28.2<span style="font-size:.55em;">億</span></div>
+      <div class="u">新台幣，2,817,453,078 元</div>
+    </div>
+    <div class="stat">
+      <div class="k">營利事業捐贈 · Corporate</div>
+      <div class="v engraved-gold">32%</div>
+      <div class="u">約 9.03 億元來自企業口袋</div>
+    </div>
+    <div class="stat">
+      <div class="k">當選人 · The Elected</div>
+      <div class="v engraved-gold">79</div>
+      <div class="u">榮登國會殿堂</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 緣起 · Why it matters ═══════════ -->
+<section id="narrative" class="wrap-narrow narrative">
+  <aside class="chap">
+    <span class="roman">I.</span>
+    Prologue<br>
+    第 · 一 · 章
+  </aside>
+  <div class="text">
+    <p>在民主政治裡，<b>錢從哪裡來</b>，往往比選票從哪裡來更誠實。一家企業決定為哪位候選人站台、捐上多少錢，反映的是它押的賭注、是它希望看到的未來政策、是它相信會成為新局的人選。</p>
+    <p>本資料庫依據監察院公布之 2016 年立委選舉政治獻金會計報告整理，範圍涵蓋<b>全部 261 位候選人</b>，欄位包括個人、營利事業、政黨、人民團體與匿名之捐贈分項，以及總收入、總支出與當選結果。</p>
+    <p>獻金不是壞事，不透明才是。請打開這本<em style="color:var(--gold-hot);font-style:italic;">金權錄</em>──看看誰在請客，誰在收禮。</p>
+  </div>
+</section>
+
+<div class="wrap"><div class="rule"><span class="orn">❦</span>&nbsp;ENTER · THE · LEDGER&nbsp;<span class="orn">❦</span></div></div>
+
+<!-- ═══════════ 搜尋入口 ═══════════ -->
+<section id="search" class="search-section wrap">
+  <div class="search-frame">
+    <span class="corners" aria-hidden="true"></span>
+
+    <div class="search-kicker">◆ &nbsp; 請 &nbsp; 您 &nbsp; 入 &nbsp; 席 &nbsp; ◆</div>
+    <h2 class="search-title">從 261 位候選人中，查出您的<em>那一位</em></h2>
+
+    <form class="search-form" action="2016_result.html" method="GET">
+      <div class="field">
+        <label for="q">姓名 / 選區 關鍵字</label>
+        <input type="text" id="q" name="q" placeholder="例如：柯建銘、臺北市第一選區" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="party">推薦政黨</label>
+        <select id="party" name="party">
+          <option value="">── 不限 ──</option>
+          <option>中國國民黨</option>
+          <option>民主進步黨</option>
+          <option>無黨籍</option>
+          <option>民國黨</option>
+          <option>綠黨社會民主黨聯盟</option>
+          <option>軍公教聯盟黨</option>
+          <option>信心希望聯盟</option>
+          <option>樹黨</option>
+          <option>時代力量</option>
+          <option>親民黨</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="status">當選狀態</label>
+        <select id="status" name="status">
+          <option value="">── 不限 ──</option>
+          <option value="elected">當選</option>
+          <option value="unelected">未當選</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn-search">開 啟 · 名 冊 · Open the Ledger</button>
+    </form>
+
+    <div class="examples-row">
+      <div class="examples-label">— 不知如何入手？試試這幾份熱門名冊 —</div>
+      <a class="chip" href="2016_result.html?sort=total_income&dir=desc"><span class="dot">♦</span> 全台吸金王排行</a>
+      <a class="chip" href="2016_result.html?sort=corp_income&dir=desc"><span class="dot">♦</span> 企業最愛的立委</a>
+      <a class="chip" href="2016_result.html?sort=donor_companies&dir=desc"><span class="dot">♦</span> 金主最多的候選人</a>
+      <a class="chip" href="2016_result.html?party=%E6%B0%91%E4%B8%BB%E9%80%B2%E6%AD%A5%E9%BB%A8&sort=total_income&dir=desc"><span class="dot">♦</span> 民進黨候選人</a>
+      <a class="chip" href="2016_result.html?party=%E4%B8%AD%E5%9C%8B%E5%9C%8B%E6%B0%91%E9%BB%A8&sort=total_income&dir=desc"><span class="dot">♦</span> 國民黨候選人</a>
+      <a class="chip" href="2016_result.html?status=elected&sort=corp_income&dir=desc"><span class="dot">♦</span> 最多企業捐款的當選人</a>
+      <a class="chip" href="2016_result.html?q=%E6%9F%AF%E5%BB%BA%E9%8A%98"><span class="dot">♦</span> 柯建銘</a>
+      <a class="chip" href="2016_result.html?q=%E8%87%BA%E5%8C%97%E5%B8%82"><span class="dot">♦</span> 臺北市選區</a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ 編輯精選 ═══════════ -->
+<section id="picks" class="wrap">
+  <div class="rule"><span class="orn">❦</span>&nbsp;EDITOR'S PICKS · 編 者 · 擇 要&nbsp;<span class="orn">❦</span></div>
+
+  <div class="picks-header">
+    <h2>三份<span class="accent">值得細讀</span>的名單</h2>
+    <p class="picks-sub">錢的流向會說故事。以下是編輯部從 261 份報告中挑出的三個入口，建議您從這裡開始翻閱。</p>
+  </div>
+
+  <div class="picks-grid">
+
+    <a class="pick" href="2016_result.html?sort=total_income&dir=desc">
+      <div class="pick-kicker"><span class="num">I.</span> THE BIGGEST KITTY · 總募款榜</div>
+      <h3>最<em>會</em>要錢的人</h3>
+      <p class="pick-dek">從頭號吸金王<b style="color:var(--gold-hot)">柯建銘</b>開始，261 位候選人依總收入排序。數字本身就是故事——在單一選區能募到五千萬的人，他的競爭對手在募什麼？</p>
+      <div class="pick-stat">
+        <span class="label">榜首募款</span>
+        <span class="value">NT$ 51,641,147</span>
+      </div>
+      <div class="pick-cta">查閱總收入榜</div>
+    </a>
+
+    <a class="pick" href="2016_result.html?sort=corp_income&dir=desc">
+      <div class="pick-kicker"><span class="num">II.</span> CORPORATE DARLINGS · 企業寵兒</div>
+      <h3>企業最<em>捧</em>的立委</h3>
+      <p class="pick-dek">營利事業捐贈總計超過<b style="color:var(--gold-hot)">9 億新台幣</b>。哪些人最被產業界青睞？哪些委員會的成員吃到最大塊的蛋糕？此榜按企業捐贈金額由高至低排列。</p>
+      <div class="pick-stat">
+        <span class="label">全台企業總捐贈</span>
+        <span class="value">NT$ 902,948,872</span>
+      </div>
+      <div class="pick-cta">查閱企業捐贈榜</div>
+    </a>
+
+    <a class="pick" href="2016_result.html?sort=donor_companies&dir=desc">
+      <div class="pick-kicker"><span class="num">III.</span> MANY HANDS · 金主人海</div>
+      <h3>金主最<em>多</em>的人</h3>
+      <p class="pick-dek"><b style="color:var(--gold-hot)">王定宇</b>一人收受 163 家企業捐款，刷新本屆紀錄。這份名單按「捐贈企業數」排序，讓你看清哪位政治人物背後站著最龐大的產業網絡。</p>
+      <div class="pick-stat">
+        <span class="label">最多企業金主</span>
+        <span class="value">163 家</span>
+      </div>
+      <div class="pick-cta">查閱金主人數榜</div>
+    </a>
+
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════════ 頁尾 ═══════════ -->
+<footer class="site-footer">
+  <div class="wrap">
+    <span class="crest">❦ · ₲ · ❦</span>
+    資料來源：監察院「政治獻金公開專區」第九屆立法委員選舉會計報告書。<br>
+    本專題僅呈現公開揭露之合法捐贈，不涉任何不實指控。<br>
+    <span style="font-family:var(--f-caps); font-size:11px; letter-spacing:.3em; color:var(--gold-deep);">
+      — MMXVI · A GILDED LEDGER —
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>
