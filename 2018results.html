@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>查詢結果 · 2018 立委捐獻</title>
+  <link rel="stylesheet" href="2018.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="2018.html" class="logo">
+      立委獻金
+      <span class="logo-badge">2018</span>
+    </a>
+    <nav class="header-nav">
+      <a href="index.html#party">政黨統計</a>
+      <a href="index.html#county">縣市統計</a>
+      <a href="index.html#ranking">捐獻排行</a>
+      <a href="2018results.html">完整資料</a>
+    </nav>
+  </div>
+</header>
+
+<!-- RESULTS HERO -->
+<div class="results-hero">
+  <div class="results-inner">
+    <p class="results-breadcrumb"><a href="2018.html">首頁</a> / 查詢結果</p>
+    <h1 class="results-title" id="resultsTitle">完整<em>候選人資料</em></h1>
+    <p class="results-meta" id="resultsMeta">載入中…</p>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls-bar">
+  <div class="controls-inner">
+    <span class="sort-label">排序：</span>
+    <div class="sort-btns">
+      <button class="sort-btn" data-field="rank">排名</button>
+      <button class="sort-btn active" data-field="總收入">總收入</button>
+      <button class="sort-btn" data-field="營利事業捐贈收入">企業捐贈</button>
+      <button class="sort-btn" data-field="個人捐贈收入">個人捐贈</button>
+      <button class="sort-btn" data-field="捐贈企業數">企業數</button>
+      <button class="sort-btn" data-field="得票數">得票數</button>
+      <button class="sort-btn" data-field="總支出">總支出</button>
+    </div>
+
+    <select class="filter-select" id="partyFilter">
+      <option value="">所有政黨</option>
+    </select>
+
+    <select class="filter-select" id="countyFilter">
+      <option value="">所有縣市</option>
+    </select>
+
+    <select class="filter-select" id="electedFilter">
+      <option value="">全部</option>
+      <option value="1">當選</option>
+      <option value="0">落選</option>
+    </select>
+
+    <div style="margin-left:8px;">
+      <input type="text" class="filter-select" id="nameSearch"
+        placeholder="搜尋姓名…" style="width:120px;cursor:text;">
+    </div>
+
+    <span class="results-count" id="resultsCount"></span>
+  </div>
+</div>
+
+<!-- RESULTS TABLE -->
+<div class="section" style="padding-top:28px;">
+  <div id="tableWrap" style="overflow-x:auto;">
+    <div class="loading"><div class="spinner"></div><br>載入資料中…</div>
+  </div>
+</div>
+
+<!-- PAGINATION -->
+<div style="max-width:1200px;margin:0 auto 20px;padding:0 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;" id="paginationWrap"></div>
+
+<footer class="site-footer">
+  資料來源：中央選舉委員會 2018 年立法委員選舉 ·
+  <span>2018.csv</span> ·
+  僅供學術研究參考
+</footer>
+
+<script>
+let allData = [];
+let filteredData = [];
+let sortField = '總收入';
+let sortDir = 'desc';
+let currentPage = 1;
+const PAGE_SIZE = 30;
+
+// ── URL params ──
+const params = new URLSearchParams(location.search);
+const initQ = params.get('q') || '';
+const initParty = params.get('party') || '';
+const initCounty = params.get('county') || '';
+
+function loadPapa(cb) {
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function parseMoney(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  return parseInt(String(v).replace(/,/g, '')) || 0;
+}
+
+function formatMoney(n) {
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '億';
+  if (n >= 1e4) return Math.round(n / 1e4).toLocaleString() + '萬';
+  return n.toLocaleString();
+}
+
+function formatMoneyFull(n) {
+  return n.toLocaleString() + '元';
+}
+
+function partyTagClass(p) {
+  if (p === '民主進步黨') return 'tag-dpp';
+  if (p === '中國國民黨') return 'tag-kmt';
+  if (p === '親民黨') return 'tag-pfp';
+  if (p === '時代力量') return 'tag-npp';
+  return 'tag-other';
+}
+
+function getCounty(district) {
+  const m = district.match(/^(.+?[市縣])/);
+  return m ? m[1] : district;
+}
+
+// ── Load & Init ──
+loadPapa(() => {
+  fetch('2018.csv')
+    .then(r => r.text())
+    .then(csv => {
+      const result = Papa.parse(csv, { header: true, skipEmptyLines: true });
+      allData = result.data.map((r, i) => ({
+        ...r,
+        _idx: i,
+        總收入: parseMoney(r['總收入']),
+        總支出: parseMoney(r['總支出']),
+        營利事業捐贈收入: parseMoney(r['營利事業捐贈收入']),
+        個人捐贈收入: parseMoney(r['個人捐贈收入']),
+        政黨捐贈收入: parseMoney(r['政黨捐贈收入']),
+        人民團體捐贈收入: parseMoney(r['人民團體捐贈收入']),
+        匿名捐贈收入: parseMoney(r['匿名捐贈收入']),
+        超過三萬元之收入: parseMoney(r['超過三萬元之收入']),
+        捐贈企業數: parseInt(r['捐贈企業數']) || 0,
+        得票數: parseInt(r['得票數']) || 0,
+        縣市: getCounty(r['地區'] || ''),
+        elected: r['當選註記'] === '*',
+      }));
+
+      // Compute rank by 總收入
+      const sorted = [...allData].sort((a, b) => b.總收入 - a.總收入);
+      sorted.forEach((r, i) => { r._totalRank = i + 1; });
+
+      populateFilters();
+      applyInitParams();
+      applyFilters();
+    })
+    .catch(() => {
+      document.getElementById('tableWrap').innerHTML =
+        '<p style="color:var(--red);padding:20px 0;">❌ 無法載入 2018.csv，請確認檔案在同一資料夾中</p>';
+      document.getElementById('resultsMeta').textContent = '載入失敗';
+    });
+});
+
+function applyInitParams() {
+  if (initQ) document.getElementById('nameSearch').value = initQ;
+  if (initParty) document.getElementById('partyFilter').value = initParty;
+  if (initCounty) document.getElementById('countyFilter').value = initCounty;
+}
+
+function populateFilters() {
+  const parties = [...new Set(allData.map(r => r['推薦政黨']))].sort();
+  const pSel = document.getElementById('partyFilter');
+  parties.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p;
+    pSel.appendChild(o);
+  });
+
+  const counties = [...new Set(allData.map(r => r.縣市))].sort();
+  const cSel = document.getElementById('countyFilter');
+  counties.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    cSel.appendChild(o);
+  });
+}
+
+function applyFilters() {
+  const q = document.getElementById('nameSearch').value.trim();
+  const party = document.getElementById('partyFilter').value;
+  const county = document.getElementById('countyFilter').value;
+  const elected = document.getElementById('electedFilter').value;
+
+  filteredData = allData.filter(r => {
+    if (q && !r['姓名'].includes(q) && !r['地區'].includes(q)) return false;
+    if (party && r['推薦政黨'] !== party) return false;
+    if (county && r.縣市 !== county) return false;
+    if (elected === '1' && !r.elected) return false;
+    if (elected === '0' && r.elected) return false;
+    return true;
+  });
+
+  sortData();
+  currentPage = 1;
+  updateTitle(q, party, county);
+  render();
+}
+
+function sortData() {
+  if (sortField === 'rank') {
+    filteredData.sort((a, b) => sortDir === 'asc'
+      ? a._totalRank - b._totalRank
+      : b._totalRank - a._totalRank);
+  } else {
+    filteredData.sort((a, b) => sortDir === 'asc'
+      ? a[sortField] - b[sortField]
+      : b[sortField] - a[sortField]);
+  }
+}
+
+function updateTitle(q, party, county) {
+  const titleEl = document.getElementById('resultsTitle');
+  const metaEl = document.getElementById('resultsMeta');
+  if (party) {
+    titleEl.innerHTML = `<em>${party}</em>候選人`;
+  } else if (county) {
+    titleEl.innerHTML = `<em>${county}</em>候選人`;
+  } else if (q) {
+    titleEl.innerHTML = `「<em>${q}</em>」搜尋結果`;
+  } else {
+    titleEl.innerHTML = '完整<em>候選人資料</em>';
+  }
+  metaEl.textContent = `共 ${filteredData.length} 筆資料 · 依${sortField}排序`;
+  document.getElementById('resultsCount').textContent = `${filteredData.length} 筆`;
+}
+
+// ── Render Table ──
+function render() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredData.slice(start, start + PAGE_SIZE);
+  const maxIncome = filteredData[0]?.總收入 || 1;
+
+  let html = `<table class="full-table">
+    <thead><tr>
+      <th data-field="rank" class="th-sort">#</th>
+      <th>候選人</th>
+      <th>政黨</th>
+      <th data-field="總收入" class="th-sort">總收入</th>
+      <th data-field="個人捐贈收入" class="th-sort">個人捐贈</th>
+      <th data-field="營利事業捐贈收入" class="th-sort">企業捐贈</th>
+      <th data-field="捐贈企業數" class="th-sort">企業數</th>
+      <th data-field="政黨捐贈收入" class="th-sort">政黨捐贈</th>
+      <th data-field="人民團體捐贈收入" class="th-sort">人民團體</th>
+      <th data-field="超過三萬元之收入" class="th-sort">超三萬捐贈</th>
+      <th data-field="總支出" class="th-sort">總支出</th>
+      <th data-field="得票數" class="th-sort">得票數</th>
+    </tr></thead><tbody>`;
+
+  pageData.forEach((r, i) => {
+    const globalRank = start + i + 1;
+    const barPct = Math.min(100, Math.round(r.總收入 / maxIncome * 100));
+    const tagCls = partyTagClass(r['推薦政黨']);
+    const electedBadge = r.elected ? '<span class="elected-badge">當選</span>' : '';
+    const voteRate = r['得票率'] || '';
+
+    html += `<tr>
+      <td class="row-rank">${r._totalRank}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <strong style="font-size:0.95rem;">${r['姓名']}</strong>
+          ${electedBadge}
+        </div>
+        <div style="font-size:0.72rem;color:var(--gray-light);margin-top:2px;">${r['地區']}</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:4px;">
+          <div style="width:80px;height:3px;background:var(--paper-warm);border-radius:2px;overflow:hidden;">
+            <div style="width:${barPct}%;height:100%;background:var(--red);border-radius:2px;"></div>
+          </div>
+        </div>
+      </td>
+      <td><span class="party-tag ${tagCls}">${r['推薦政黨']}</span></td>
+      <td class="money">${formatMoney(r.總收入)}</td>
+      <td class="money">${formatMoney(r.個人捐贈收入)}</td>
+      <td class="money">${formatMoney(r.營利事業捐贈收入)}</td>
+      <td class="money">${r.捐贈企業數}</td>
+      <td class="money">${formatMoney(r.政黨捐贈收入)}</td>
+      <td class="money">${formatMoney(r.人民團體捐贈收入)}</td>
+      <td class="money">${formatMoney(r.超過三萬元之收入)}</td>
+      <td class="money">${formatMoney(r.總支出)}</td>
+      <td class="money">${r.得票數.toLocaleString()}<br><span style="font-size:0.7rem;color:var(--gray-light)">${voteRate}</span></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableWrap').innerHTML = html;
+
+  // Sort indicators
+  document.querySelectorAll('.th-sort').forEach(th => {
+    const f = th.dataset.field;
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (f === sortField) th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    th.style.cursor = 'pointer';
+    th.onclick = () => {
+      if (sortField === f) {
+        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortField = f;
+        sortDir = 'desc';
+      }
+      document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.sort-btn').forEach(b => {
+        if (b.dataset.field === sortField) b.classList.add('active');
+      });
+      sortData();
+      currentPage = 1;
+      render();
+    };
+  });
+
+  renderPagination();
+  document.getElementById('resultsMeta').textContent =
+    `共 ${filteredData.length} 筆資料 · 依${sortField}排序 · 第 ${currentPage}/${Math.ceil(filteredData.length/PAGE_SIZE)} 頁`;
+}
+
+// ── Pagination ──
+function renderPagination() {
+  const total = Math.ceil(filteredData.length / PAGE_SIZE);
+  if (total <= 1) { document.getElementById('paginationWrap').innerHTML = ''; return; }
+
+  let html = '';
+  const pages = [];
+  for (let i = 1; i <= total; i++) {
+    if (i === 1 || i === total || Math.abs(i - currentPage) <= 2) pages.push(i);
+    else if (pages[pages.length-1] !== '…') pages.push('…');
+  }
+
+  pages.forEach(p => {
+    if (p === '…') {
+      html += `<span style="color:var(--gray-light);padding:0 4px;">…</span>`;
+    } else {
+      html += `<button class="sort-btn ${p === currentPage ? 'active' : ''}"
+        onclick="gotoPage(${p})">${p}</button>`;
+    }
+  });
+
+  document.getElementById('paginationWrap').innerHTML =
+    `<span class="sort-label">頁碼：</span>${html}`;
+}
+
+function gotoPage(p) {
+  currentPage = p;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Sort buttons ──
+document.querySelectorAll('.sort-btn[data-field]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const f = btn.dataset.field;
+    if (sortField === f) {
+      sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortField = f;
+      sortDir = 'desc';
+    }
+    document.querySelectorAll('.sort-btn[data-field]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    sortData();
+    currentPage = 1;
+    render();
+  });
+});
+
+// ── Filter events ──
+['partyFilter', 'countyFilter', 'electedFilter'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+let searchTimer;
+document.getElementById('nameSearch').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 250);
+});
+</script>
+
+</body>
+</html>

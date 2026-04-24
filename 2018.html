@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2018 立委選舉捐獻查詢</title>
+  <link rel="stylesheet" href="2018.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a href="2018.html" class="logo">
+      立委獻金
+      <span class="logo-badge">2018</span>
+    </a>
+    <nav class="header-nav">
+      <a href="#party">政黨統計</a>
+      <a href="#county">縣市統計</a>
+      <a href="#ranking">捐獻排行</a>
+      <a href="2018results.html">完整資料</a>
+    </nav>
+  </div>
+</header>
+
+<!-- HERO / SEARCH -->
+<section class="hero">
+  <p class="hero-year">2018 · 中華民國第九屆立法委員</p>
+  <h1>立委<em>競選獻金</em>查詢</h1>
+  <p class="hero-sub">涵蓋 261 位候選人資料 · 個人、企業、政黨、人民團體捐獻明細</p>
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <input class="search-input" type="text" id="searchInput"
+        placeholder="輸入候選人姓名或選區，例如：柯建銘、臺北市" autocomplete="off">
+      <button class="search-btn" onclick="doSearch()">查詢</button>
+    </div>
+    <p class="search-hint">按 Enter 搜尋 · 或點選下方統計直接篩選</p>
+  </div>
+</section>
+
+<!-- PARTY STATS -->
+<div class="section" id="party">
+  <div class="section-header">
+    <h2 class="section-title">政黨捐獻統計</h2>
+    <span class="section-num">PARTY STATISTICS</span>
+  </div>
+  <div id="partyGrid" class="party-grid">
+    <div class="loading"><div class="spinner"></div><br>載入中…</div>
+  </div>
+</div>
+
+<!-- COUNTY STATS -->
+<div class="section" id="county" style="background:white;max-width:100%;padding:56px 0;">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div class="section-header">
+      <h2 class="section-title">縣市捐獻統計</h2>
+      <span class="section-num">COUNTY STATISTICS</span>
+    </div>
+    <div id="countyGrid" class="county-grid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- RANKING -->
+<div class="section" id="ranking">
+  <div class="section-header">
+    <h2 class="section-title">捐獻金額排行榜</h2>
+    <span class="section-num">TOP RANKINGS</span>
+  </div>
+
+  <div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <span class="sort-label">排序：</span>
+    <div class="sort-btns">
+      <button class="sort-btn active" onclick="loadRanking('總收入')">總收入</button>
+      <button class="sort-btn" onclick="loadRanking('營利事業捐贈收入')">企業捐贈</button>
+      <button class="sort-btn" onclick="loadRanking('捐贈企業數')">企業數量</button>
+      <button class="sort-btn" onclick="loadRanking('總支出')">總支出</button>
+      <button class="sort-btn" onclick="loadRanking('得票數')">得票數</button>
+    </div>
+    <select class="filter-select" id="rankPartyFilter" onchange="applyRankFilter()">
+      <option value="">所有政黨</option>
+    </select>
+  </div>
+
+  <div id="rankingTable" style="overflow-x:auto;">
+    <div class="loading"><div class="spinner"></div><br>載入中…</div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  資料來源：中央選舉委員會 2018 年立法委員選舉 ·
+  <span>2018.csv</span> ·
+  僅供學術研究參考
+</footer>
+
+<script>
+let allData = [];
+let currentRankField = '總收入';
+let rankPartyFilter = '';
+
+// ── 讀取 CSV ──
+Papa = null;
+function loadPapa(cb) {
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function parseMoney(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  return parseInt(String(v).replace(/,/g, '')) || 0;
+}
+
+function formatMoney(n) {
+  if (n >= 1e8) return (n / 1e8).toFixed(1) + ' 億';
+  if (n >= 1e4) return Math.round(n / 1e4) + ' 萬';
+  return n.toLocaleString();
+}
+
+function partyClass(p) {
+  if (p === '民主進步黨') return 'dpp';
+  if (p === '中國國民黨') return 'kmt';
+  if (p === '親民黨') return 'pfp';
+  if (p === '時代力量') return 'npp';
+  return 'other';
+}
+
+function partyTagClass(p) {
+  if (p === '民主進步黨') return 'tag-dpp';
+  if (p === '中國國民黨') return 'tag-kmt';
+  if (p === '親民黨') return 'tag-pfp';
+  if (p === '時代力量') return 'tag-npp';
+  return 'tag-other';
+}
+
+function getCounty(district) {
+  const m = district.match(/^(.+?[市縣])/);
+  return m ? m[1] : district;
+}
+
+// ── 初始化 ──
+loadPapa(function() {
+  fetch('2018.csv')
+    .then(r => r.text())
+    .then(csv => {
+      const result = Papa.parse(csv, { header: true, skipEmptyLines: true });
+      allData = result.data.map(r => ({
+        ...r,
+        總收入: parseMoney(r['總收入']),
+        總支出: parseMoney(r['總支出']),
+        營利事業捐贈收入: parseMoney(r['營利事業捐贈收入']),
+        捐贈企業數: parseInt(r['捐贈企業數']) || 0,
+        得票數: parseInt(r['得票數']) || 0,
+        個人捐贈收入: parseMoney(r['個人捐贈收入']),
+        政黨捐贈收入: parseMoney(r['政黨捐贈收入']),
+        人民團體捐贈收入: parseMoney(r['人民團體捐贈收入']),
+        超過三萬元之收入: parseMoney(r['超過三萬元之收入']),
+        縣市: getCounty(r['地區'] || ''),
+        elected: r['當選註記'] === '*',
+      }));
+      renderPartyStats();
+      renderCountyStats();
+      loadRanking('總收入');
+      populatePartyFilter();
+    })
+    .catch(e => {
+      document.getElementById('partyGrid').innerHTML =
+        '<p style="color:var(--red);padding:20px;">無法載入 2018.csv，請確認檔案在同一資料夾中</p>';
+    });
+});
+
+// ── 政黨統計 ──
+function renderPartyStats() {
+  const parties = {};
+  allData.forEach(r => {
+    const p = r['推薦政黨'] || '無黨籍';
+    if (!parties[p]) parties[p] = { total: 0, count: 0, elected: 0 };
+    parties[p].total += r.總收入;
+    parties[p].count++;
+    if (r.elected) parties[p].elected++;
+  });
+
+  const sorted = Object.entries(parties)
+    .sort((a, b) => b[1].total - a[1].total);
+
+  const maxTotal = sorted[0][1].total;
+  const mainParties = sorted.filter(([, v]) => v.count >= 5).slice(0, 6);
+  const others = sorted.filter(([, v]) => v.count < 5);
+  const otherTotal = others.reduce((s, [, v]) => s + v.total, 0);
+  const otherCount = others.reduce((s, [, v]) => s + v.count, 0);
+
+  let html = '';
+  const displayList = [...mainParties, ['其他政黨', { total: otherTotal, count: otherCount, elected: 0 }]];
+
+  displayList.forEach(([name, data]) => {
+    const cls = partyClass(name);
+    const pct = Math.round(data.total / maxTotal * 100);
+    html += `
+    <div class="party-card ${cls}" onclick="filterByParty('${name}')">
+      <div class="party-name">${name}</div>
+      <div class="party-count">${data.count} 位候選人 · ${data.elected} 人當選</div>
+      <div class="party-total">${formatMoney(data.total)}</div>
+      <div class="party-label">元 · 總收入</div>
+      <div class="party-bar-wrap">
+        <div class="party-bar" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('partyGrid').innerHTML = html;
+}
+
+// ── 縣市統計 ──
+function renderCountyStats() {
+  const counties = {};
+  allData.forEach(r => {
+    const c = r.縣市;
+    if (!counties[c]) counties[c] = { total: 0, count: 0 };
+    counties[c].total += r.總收入;
+    counties[c].count++;
+  });
+
+  const sorted = Object.entries(counties)
+    .sort((a, b) => b[1].total - a[1].total);
+
+  let html = '';
+  sorted.forEach(([name, data]) => {
+    html += `
+    <div class="county-card" onclick="filterByCounty('${name}')">
+      <div class="county-name">${name}</div>
+      <div class="county-total">${formatMoney(data.total)}</div>
+      <div class="county-candidates">${data.count} 位候選人</div>
+    </div>`;
+  });
+
+  document.getElementById('countyGrid').innerHTML = html;
+}
+
+// ── 排行榜 ──
+function loadRanking(field) {
+  currentRankField = field;
+  document.querySelectorAll('.sort-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === fieldLabel(field));
+  });
+  renderRanking();
+}
+
+function fieldLabel(f) {
+  const map = { 總收入:'總收入', 營利事業捐贈收入:'企業捐贈', 捐贈企業數:'企業數量', 總支出:'總支出', 得票數:'得票數' };
+  return map[f] || f;
+}
+
+function applyRankFilter() {
+  rankPartyFilter = document.getElementById('rankPartyFilter').value;
+  renderRanking();
+}
+
+function renderRanking() {
+  let data = [...allData];
+  if (rankPartyFilter) data = data.filter(r => r['推薦政黨'] === rankPartyFilter);
+  data.sort((a, b) => b[currentRankField] - a[currentRankField]);
+  const top20 = data.slice(0, 20);
+  const maxVal = top20[0]?.[currentRankField] || 1;
+
+  const isMoney = currentRankField !== '捐贈企業數' && currentRankField !== '得票數';
+  const unit = currentRankField === '捐贈企業數' ? '家' : currentRankField === '得票數' ? '票' : '元';
+
+  let html = `<table class="ranking-table">
+    <thead><tr>
+      <th>#</th>
+      <th>候選人</th>
+      <th>政黨</th>
+      <th>${currentRankField}</th>
+      <th></th>
+      <th>詳細</th>
+    </tr></thead><tbody>`;
+
+  top20.forEach((r, i) => {
+    const val = r[currentRankField];
+    const display = isMoney ? formatMoney(val) : val.toLocaleString();
+    const barPct = Math.round(val / maxVal * 100);
+    const cls = i < 3 ? `rank-${i+1}` : '';
+    const tagCls = partyTagClass(r['推薦政黨']);
+    const electedBadge = r.elected ? '<span class="elected-badge">當選</span>' : '';
+
+    html += `<tr class="${cls}">
+      <td class="rank-num">${i+1}</td>
+      <td>
+        <div class="candidate-name">
+          <a href="2018results.html?q=${encodeURIComponent(r['姓名'])}">${r['姓名']}</a>
+          &nbsp;${electedBadge}
+        </div>
+        <div class="candidate-district">${r['地區']}</div>
+      </td>
+      <td><span class="party-tag ${tagCls}">${r['推薦政黨']}</span></td>
+      <td class="money">${display} ${unit}</td>
+      <td>
+        <div class="donate-bar-wrap">
+          <div class="donate-mini-bar"><div class="donate-mini-fill" style="width:${barPct}%"></div></div>
+        </div>
+      </td>
+      <td><a href="2018results.html?q=${encodeURIComponent(r['姓名'])}" style="color:var(--red);font-size:0.78rem;text-decoration:none;">→ 查看</a></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('rankingTable').innerHTML = html;
+}
+
+function populatePartyFilter() {
+  const parties = [...new Set(allData.map(r => r['推薦政黨']))].sort();
+  const sel = document.getElementById('rankPartyFilter');
+  parties.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    sel.appendChild(opt);
+  });
+}
+
+// ── 搜尋 ──
+function filterByParty(party) {
+  window.location.href = `2018results.html?party=${encodeURIComponent(party)}`;
+}
+
+function filterByCounty(county) {
+  window.location.href = `2018results.html?county=${encodeURIComponent(county)}`;
+}
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (q) window.location.href = `2018results.html?q=${encodeURIComponent(q)}`;
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+</script>
+
+</body>
+</html>
