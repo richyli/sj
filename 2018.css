@@ -581,6 +581,12 @@ body {
   border-collapse: collapse;
   font-size: 0.85rem;
 }
+.full-table thead {
+  position: sticky;
+  top: 103px; /* site-header(57px) + controls-bar(46px) */
+  z-index: 80;
+}
+
 .full-table th {
   font-family: 'Inconsolata', monospace;
   font-size: 0.72rem;
@@ -593,6 +599,8 @@ body {
   cursor: pointer;
   user-select: none;
   transition: color 0.15s;
+  background: var(--paper);
+  box-shadow: 0 2px 0 var(--ink);
 }
 .full-table th:first-child,
 .full-table th:nth-child(2),
